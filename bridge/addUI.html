@@ -1,0 +1,958 @@
+
+ 
+
+
+<!DOCTYPE html>
+<html>
+<head>
+<META HTTP-EQUIV="pragma" CONTENT="no-cache"> 
+<META HTTP-EQUIV="Cache-Control" CONTENT="no-cache, must-revalidate"> 
+<META HTTP-EQUIV="expires" CONTENT="0"> 
+
+    
+
+<meta charset="UTF-8">
+<META HTTP-EQUIV="pragma" CONTENT="no-cache"> 
+<META HTTP-EQUIV="Cache-Control" CONTENT="no-cache, must-revalidate"> 
+<META HTTP-EQUIV="expires" CONTENT="0"> 
+
+<title>Elizabeth</title>
+<link rel="shortcut icon" type="image/x-icon" href="/resources/images/logo.min.ico"/>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="/resources/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+<link href="/resources/plugins/font-awesome-4.7.0/css/font-awesome.min.css" rel="stylesheet">
+<link href="/resources/adminlte/css/AdminLTE.min.css" rel="stylesheet">
+<link href="/resources/adminlte/css/skins/skin-hua.css" rel="stylesheet">
+<link href="/resources/plugins/datetimepicker/css/bootstrap-datetimepicker.min.css" rel="stylesheet">
+<link href="/resources/jquery/jquery-confirm.min.css" rel="stylesheet">
+<link href="/resources/css/styles.css" rel="stylesheet">
+<!--[if lt IE 9]> 
+<script src="/resources/bootstrap/js/html5shiv.min.js"></script>
+<script src="/resources/bootstrap/js/respond.min.js"></script>
+<![endif]-->
+
+    <link href="/resources/plugins/ztree/css/zTreeStyle/zTreeStyle.css" rel="stylesheet">
+</head>
+<body class="hold-transition skin-hua sidebar-mini">
+<div class="wrapper">
+	  
+
+<header class="main-header">
+   <a href="../index/home" class="logo">
+     <span class="logo-mini"><b>Elizabeth</b></span>
+     <span class="logo-lg">Elizabeth</span>
+   </a>
+   <nav class="navbar navbar-static-top" role="navigation">
+   	 <a href="#" class="sidebar-toggle" data-toggle="push-menu" role="button">
+        <span class="sr-only">Toggle navigation</span>
+     </a>
+     <div class="navbar-custom-menu">
+       <ul class="nav navbar-nav" >
+         <li class="dropdown user user-menu">
+           <a href="#" class="dropdown-toggle" data-toggle="dropdown">
+             <span>eli<span class="caret"></span></span>
+           </a>
+           <ul class="dropdown-menu" style="width:400px">
+             <li class="user-footer">
+               <div class="pull-left"> 
+                 <a id="btn-modify-pwd" href="#" class="btn btn-success btn-flat">Modify Password </a>
+               </div>
+               <div class="pull-right">
+                 <a href="../index/logout" class="btn btn-danger btn-flat">Logout</a>
+               </div>
+             </li>
+           </ul>
+         </li>
+       </ul>
+     </div>
+   </nav>
+</header>
+<div id="modal-pwd" class="modal fade" role="dialog" data-backdrop="static">
+  <div class="modal-dialog modal-hua">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h4 class="modal-title">Modify Password </h4>
+      </div>
+      <form id="form-modify-pwd" name="formModifyPwd" class="form-horizontal" action="#">
+	      <div class="modal-body">
+	        	<div class="form-group">
+	        		<label class="control-label col-xs-3">Old Password</label>
+	        		<div class="col-xs-9">
+	        			<input type="password" class="form-control" name="oldPwd">
+	        		</div>
+	        	</div>
+	        	<div class="form-group">
+	        		<label class="control-label col-xs-3">New Password</label>
+	        		<div class="col-xs-9">
+	        			<input id="form-modify-newPwd" type="password" class="form-control" name="newPwd">
+	        		</div>
+	        	</div>
+	        	<div class="form-group">
+	        		<label class="control-label col-xs-3">Verify Password</label>
+	        		<div class="col-xs-9">
+	        			<input type="password" class="form-control" name="rePwd">
+	        		</div>
+	        	</div>
+	      </div>
+	      <div class="modal-footer">
+	        <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
+	        <button type="submit" class="btn btn-primary">Modify</button>
+	      </div>
+        </form>
+    </div>
+  </div>
+</div>
+	
+
+
+
+<aside class="main-sidebar">
+    <section class="sidebar">
+        <ul class="sidebar-menu" data-widget="tree">
+            
+                <li class="treeview"><a href="#"> <i
+                        class="fa fa-user-circle-o"></i><span>Person Management</span> <span
+                        class="pull-right-container"><i
+                        class="fa fa-angle-left pull-right"></i></span>
+                </a>
+                    <ul class="treeview-menu">
+                        
+                            <li id="li-staff"><a href="../staff/index"><i
+                                    class="fa fa-circle-o"></i>
+                                Person Information</a></li>
+                        
+                        
+                            
+                                <li id="li-dimission"><a href="../dimission/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Leave Registration</a></li>
+                            
+                        
+                    </ul>
+                </li>
+            
+            
+                
+                    <li class="treeview"><a href="#"> <i
+                            class="fa fa-id-card-o"></i><span>Attendance Management</span> <span
+                            class="pull-right-container"><i
+                            class="fa fa-angle-left pull-right"></i></span>
+                    </a>
+                        <ul class="treeview-menu">
+                            
+                                <li id="li-simpleShift"><a href="../simpleShift/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Shift Management</a></li>
+                            
+                            
+                                <li id="li-shift"><a href="../shift/staffShift"><i
+                                        class="fa fa-circle-o"></i>
+                                    Person Scheduling </a></li>
+                            
+                            
+                                <li id="li-cardRecord"><a href="../cardRecord/monthIndex"><i
+                                        class="fa fa-circle-o"></i>
+                                    Punch Record</a></li>
+                            
+                            
+                                <li id="li-supplement"><a href="../supplement/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Manual Punch</a></li>
+                            
+                            
+                                <li id="li-overtime"><a href="../overtime/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Overtime Record </a></li>
+                            
+                            
+                                <li id="li-leave"><a href="../leave/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Leave Management</a></li>
+                            
+                            
+                                <li id="li-report"><a href="../report/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Attendance Report </a></li>
+                            
+                                
+                        </ul>
+                    </li>
+                
+            
+
+            
+                
+                    <li class="treeview"><a href="#"> <i
+                            class="fa fa-drivers-license"></i><span>Access Management</span> <span
+                            class="pull-right-container"><i
+                            class="fa fa-angle-left pull-right"></i></span>
+                    </a>
+                        <ul class="treeview-menu">
+                            
+                                <li id="li-accessDay"><a href="../accessDay/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Day Time Zone</a></li>
+                            
+                            
+                                <li id="li-accessWeek"><a href="../accessWeek/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Week Time Zone</a></li>
+                            
+                            
+                                <li id="li-alwaysOpen"><a href="../alwaysOpen/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Door open time</a></li>
+                            
+                            
+                                <li id="li-staffAccess"><a href="../staffAccess/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Access Permission</a></li>
+                            
+						
+							<li id="li-staffAccessList"><a href="../staffAccessList/index"><i
+									class="fa fa-circle-o"></i>
+								Access Authorized</a></li>
+						
+
+                            
+                                <li id="li-staffVerifyMode"><a href="../staffVerifyMode/listIndex"><i
+                                        class="fa fa-circle-o"></i>
+                                    Staff Verify Mode</a></li>
+                            
+                            
+                                <li id="li-doorStatus"><a href="../doorStatus/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Realtime Monitoring</a></li>
+                            
+                            
+                                <li id="li-accessRecord"><a href="../accessRecord/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Access Record</a></li>
+                            
+                            
+                                
+                                    <li id="li-machineDoorPermStaff"><a
+                                            href="../machineDoorPermStaff/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        Mobile Open Door</a></li>
+                                
+                                
+                                    <li id="li-openDoorOrder"><a href="../openDoorOrder/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        Open Door Record</a></li>
+                                
+                            
+
+                            
+                                <li id="li-machineAlarm"><a href="../machineAlarm/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Door Status Record</a></li>
+                            
+
+                        </ul>
+                    </li>
+                
+            
+            
+                
+                    
+                
+            
+            
+                
+                    <li class="treeview"><a href="#"> <i
+                            class="fa fa-drivers-license"></i><span>Elevator Control</span> <span
+                            class="pull-right-container"><i
+                            class="fa fa-angle-left pull-right"></i></span>
+                    </a>
+                        <ul class="treeview-menu">
+                            
+                                <li id="li-optionalFloor"><a href="../optionalFloor/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Elevator Settings</a></li>
+                            
+
+<li id="li-authorizedFloor"><a href="../authorizedFloor/index"><i
+									class="fa fa-circle-o"></i>
+								Elevator Authorized</a></li>
+						   
+                        </ul>
+                    </li>
+                
+            
+            
+                
+                    <li class="treeview"><a href="#"> <i
+                            class="fa fa-drivers-license"></i><span>Locker Management</span> <span
+                            class="pull-right-container"><i
+                            class="fa fa-angle-left pull-right"></i></span>
+                    </a>
+                        <ul class="treeview-menu">
+                            
+                                <li id="li-locker"><a href="../locker/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Locker Settings</a></li>
+                            
+
+                        </ul>
+                    </li>
+                
+            
+            
+                
+                        <li class="treeview"><a href="#"> <i class="fa fa-clock-o"></i><span>Visitor Manage</span> <span
+                                class="pull-right-container"><i
+                                class="fa fa-angle-left pull-right"></i></span>
+                        </a>
+                            <ul class="treeview-menu">
+                                
+                                    <li id="li-QRcodeAuthorization"><a
+                                            href="../QRcodeAuthorization/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        QRcode Authorization</a></li>
+                                
+                                
+                                    <li id="li-QRcodeCardRecord"><a href="../QRcodeCardRecord/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        QRcode Open Door Record</a></li>
+                                
+                                
+                                    <li id="li-QRcodePW"><a
+                                            href="../QRcodePW/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        QRcode PWD Management</a></li>
+                                
+                                
+                                    <li id="li-QRcodePWAuthorization"><a
+                                            href="../QRcodePWAuthorization/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        QRcode PWD Authorization</a></li>
+                                
+
+
+                                
+                                    <li id="li-generateQRcode"><a href="../generateQRcode/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        Generate QRcode</a></li>
+                                
+                                
+                                    <li id="li-QRcodeRecord"><a href="../QRcodeRecord/index"><i
+                                            class="fa fa-circle-o"></i>
+                                        QRcode Generation Record</a></li>
+                                
+                            </ul>
+                        </li>
+                
+            
+
+            
+
+            
+                <li class="treeview"><a href="#"> <i class="glyphicon glyphicon-cog"></i><span>System Settings</span> <span
+                        class="pull-right-container"><i
+                        class="fa fa-angle-left pull-right"></i></span>
+                </a>
+                    <ul class="treeview-menu">
+                        
+                            <li id="li-attenceMachine"><a href="../attenceMachine/index"><i
+                                    class="fa fa-circle-o"></i>
+                                Device Management</a></li>
+                        
+
+                        
+                            
+                                <li id="li-config"><a href="../config/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Parameter Settings</a></li>
+                            
+                        
+
+
+                        
+                            <li id="li-customerInfo">
+                                <a href="../customerInfo/index">
+                                    <i class="fa fa-circle-o"></i>
+                                    
+                                        
+                                            Company Information
+                                        
+                                        
+                                    
+                                </a>
+                            </li>
+                        
+
+                        
+                            <li id="li-department"><a href="../department/index"><i
+                                    class="fa fa-circle-o"></i>
+                                Department</a></li>
+                        
+                        
+                            
+                        
+                        
+                            <li id="li-admin"><a href="../admin/index"><i
+                                    class="fa fa-circle-o"></i>
+                                User Account</a></li>
+                        
+                        
+                            
+                                <li id="li-monthData"><a href="../monthData/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Month Management</a></li>
+                            
+                            
+                                <li id="li-holiday"><a href="../holiday/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Holiday Management</a></li>
+                            
+                        
+                        
+                            
+                                <li id="li-building"><a href="../building/index"><i
+                                        class="fa fa-circle-o"></i>
+                                    Building Management</a></li>
+                            
+                        
+                    </ul>
+                </li>
+            
+
+
+        </ul>
+    </section>
+</aside>
+	<div class="content-wrapper">
+	    <section class="content-header">
+	      <h1>
+	      	
+	        	New Person Info
+	        	
+	        
+	      </h1>
+	      <ol class="breadcrumb">
+	        <li><a href="../index/home"><i class="fa fa-home"></i> Home</a></li>
+	        <li><a href="../staff/index">Person Information</a></li>
+	        
+	        	<li class="active">New Person Info</li>
+	        	
+	        
+	      </ol>
+	    </section>
+	    <section class="content">
+	    	<div class="box box-hua">
+	    		<form id="form-staff" name="formStaff" class="form-horizontal" method="post" enctype="multipart/form-data"
+	    				
+				        	action="../staff/add" 
+				        	
+				        
+				>
+	    			<div class="box-body">
+	    				
+				    	<input type="hidden" name="id" value="">
+				    	<input type="hidden" name="longid" value="10">
+				    	<input type="hidden" id="loginType" value="1">
+				    	<fieldset>
+				    	<!-- <div class="row"> -->
+				       
+				 
+				    	<div class="col-xs-8" >
+				    	<div class="row"  >
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+									<label class="col-xs-3 control-label" for="enrollid">User ID<span class="danger">*</span></label> 
+									<div class="col-xs-7">
+										<input id="enrollid" type="text" name="enrollid" class="form-control" value="" >
+									</div>
+								</div>	
+				    		</div>
+				    		<div class="col-xs-6" >
+				    			<div class="form-group">
+				    				<label class="col-xs-3 control-label"></label>
+				    				<div class="col-xs-7">
+										
+										<label >
+										  	<input type="checkbox" name="punch" value="1" >Whether to participate in attendance
+										</label>
+										
+										<label >
+										 	 <input type="checkbox" name="senior" value="1" >Senior Mode
+										</label>
+										
+										<label >
+										  	<input type="checkbox" name="vi" value="1" >Mobile Phone Video Intercom
+										</label>
+										
+									</div>
+								</div>	
+				    		</div>
+				    		<div class="col-xs-6">
+				    		</div>
+				    	</div>
+				    	<div class="row">
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+									<label class="col-xs-3 control-label" for="staffNumber">Person Code<span class="danger">*</span></label> 
+									<div class="col-xs-7">
+										<input id="staffNumber" type="text" name="staffNumber" class="form-control" value="">
+									</div>
+								</div>	
+				    		</div>
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+				    				<label class="col-xs-3 control-label">Name<span class="danger">*</span></label>
+									<div class="col-xs-7">
+										<input type="text" name="name" class="form-control" value="">
+									</div>
+				    			</div>
+				    		</div>
+				    	</div>
+				    	<div class="row">
+				    		
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+				    				<label class="col-xs-3 control-label">Gender</label>
+									<div class="col-xs-7">
+										<select name="sex" class="form-control">
+											<option value="">Please Choose</option>
+											<option value="0" >Male</option>
+											<option value="1" >Female</option>
+										</select>
+									</div>
+								</div>	
+				    		</div>
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+									<label class="col-xs-3 control-label">ID No</label>
+									<div class="col-xs-7">
+										<input type="text" name="idNumber" class="form-control" value="">
+									</div>
+								</div>	
+				    		</div>
+				    		
+				    	</div>
+						<div class="row">
+							<div class="col-xs-6">
+				    			<div class="form-group">
+				    				<label class="col-xs-3 control-label">Card No</label>
+									<div class="col-xs-7">
+										<input type="text" name="icCard" class="form-control" value="">
+									</div>
+				    			</div>
+				    		</div>
+				    		<div class="col-xs-6">
+								<div class="form-group">
+									<label class="col-xs-3 control-label">Punch Pwd</label>
+									<div class="col-xs-7">
+										<input type="text" name="punchPwd" class="form-control" value="">
+									</div>
+								</div>
+				    		</div>
+							
+				    	</div>	
+				    	<div class="row">
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+									<label class="col-xs-3 control-label">Mobile No</label>
+									<div class="col-xs-7">
+										<input type="text" name="mobile" class="form-control" value="">
+									</div>
+								</div>	
+				    		</div>
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+				    				<label class="col-xs-3 control-label">Email</label>
+									<div class="col-xs-7">
+										<input type="text" name="email" class="form-control" value="">
+									</div>
+								</div>	
+				    		</div>
+				    		
+				    	</div>	
+				    	<div class="row">
+				    		
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+					    			<label class="col-xs-3 control-label">Password</label>
+									<div class="col-xs-7">
+										
+								        	<input type="text" name="password" class="form-control" >
+								        	<p class="help-block">Default Pwd 123456</p>
+								        	
+								        	
+								        
+									</div>
+								</div>	
+				    		</div>
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+									<label class="col-xs-3 control-label">Department</label>
+									<div class="col-xs-7" style="position: relative;">
+										<div class="ztree-height">
+			                        		<input id="form-dpt" name="department" class="form-control" readonly="readonly">
+			                        		<input name="departmentId" type="hidden">
+			                        		<div id="form-tree-wrap" class="combo-tree"><ul id="form-tree" class="ztree"></ul></div>
+			                       	 	</div>
+									</div>
+								</div>	
+				    		</div>
+							
+				    		
+				    	</div>
+						
+				    	<div class="row">
+							<div class="col-xs-6">
+								<div class="form-group">
+									<label class="col-xs-3 control-label">Position</label>
+									<div class="col-xs-7">
+										<select class="form-control" name="stationId">
+											<option value="">Please Choose</option>
+											
+										</select>
+									</div>
+								</div>
+				    		</div>
+				    		<div class="col-xs-6">
+				    			<div class="form-group">
+				    				<label class="col-xs-3 control-label">Person Type</label>
+									<div class="col-xs-7">
+										<select class="form-control" name="staffTypeId">
+											<option value="">Please Choose</option>
+											
+										</select>
+									</div>
+								</div>	
+				    		</div>
+				    	</div>
+				    	<div class="row">
+				    		
+							<div class="col-xs-6">
+								<div class="form-group">
+									<label class="col-xs-3 control-label">Degree</label>
+									<div class="col-xs-7">
+										<select name="degreeId" class="form-control">
+											<option value="">Please Choose</option>
+											
+										</select>
+									</div>
+								</div>
+				    		</div> 
+							<div class="col-xs-6">
+					    		<div class="form-group">
+										<label class="col-xs-3 control-label">Entry Status</label>
+										<div class="col-xs-7">
+											<select class="form-control" name="staffStatus">
+												<option value="0" >Official</option>
+												<option value="1" >Probationary</option>
+												<option value="2" >Part-time </option>
+											</select>
+										</div>
+								</div>
+							</div>
+				    	</div>
+						
+				    	<div class="row">
+							
+				    		<div class="col-xs-6">
+								
+								<div class="form-group">
+									<label class="col-xs-3 control-label">Register Date</label>
+									<div class="col-xs-7">
+										<input type="text" name="staffDate" class="form-control date" >
+									</div>
+								</div>
+				    		</div>
+
+							<div class="col-xs-6">
+								<div class="form-group">
+									<label class="col-xs-3 control-label">App Token</label>
+									<div class="col-xs-7">
+										<input type="text" name="appToken" class="form-control" value="">
+									</div>
+								</div>
+							</div>
+				    	</div>
+
+
+							<div class="row">
+			    			<div class="form-group">
+			    				<label class="col-xs-2 control-label">Address</label>
+								<div class="col-xs-8">
+									<input type="text" name="address" class="form-control" value="">
+								</div>
+							</div>	
+				    	</div>
+						<div class="row">	
+							<div class="form-group">
+								<label class="col-xs-2 control-label">Remark</label>
+								<div class="col-xs-8">
+									<textarea name="remark" class="form-control"></textarea>
+								</div>
+							</div>
+						</div>
+						
+						</div>
+						<div class="row">	
+						<div class="col-xs-2 "  >
+		                       
+			                      <div style="width:100%; margin-left:0px;">
+			                        <span class="profile-picture" >
+			                            <img class="editable img-responsive" id="myphoto" alt="Photo" title="Click to upload photo" src="" style=" width:180px; height:200px;">
+			                            <input id="photo" name="pic" type="file" accept="image/*" onChange="changImg(event)" style=" width:100%; height: 200px;
+			                                cursor: pointer;  font-size: 30px; outline: medium none; position: absolute; filter: alpha(opacity=0);
+			                                -moz-opacity: 0; opacity: 0; left: 0px; top: 0px;">
+										<input hidden id="imgSrc" type="text" name="imgSrc" value="">
+			                        </span>
+			                       </div>
+									<div style="display: flex;align-items: center;margin-top: 20px">
+										<button type="button" id="opencapture" style="margin-right: 20px">Open Camera</button>
+										<button type="button" id="closecapture">Close Camera</button>
+									</div>
+									<style>
+										#camera {
+											width: 200px;
+											height: 250px;
+											margin: 20px 0;
+											border: 2px dashed #ccc;
+											display: flex;
+											justify-content: center;
+											align-items: center;
+											overflow: hidden;
+										}
+										video {
+											width: 100%;
+											height: 100%;
+											object-fit: cover; /* 确保视频内容填充且不失真 */
+										}
+										#preview canvas {
+											max-width: 100%;
+											max-height: 100%;
+										}
+										/*button {*/
+										/*	padding: 10px 20px;*/
+										/*	font-size: 16px;*/
+										/*	cursor: pointer;*/
+										/*}*/
+										#preview {
+											width: 200px;
+											height: 250px;
+											margin: 20px auto;
+											border: 2px solid #ccc;
+											display: flex;
+											justify-content: center;
+											align-items: center;
+										}
+									</style>
+								   <!-- 摄像头预览 -->
+								   <div id="camera">
+									   <video id="video" autoplay></video>
+								   </div>
+								   <!-- 拍照按钮 -->
+								   <button type="button" id="capture">Capture</button>
+								   <!-- 预览区域 -->
+								   <div style="display: none" id="preview"></div>
+								   <!-- 上传按钮 -->
+
+			                   
+		                  </div>
+		                 </div>
+		                
+						</fieldset>
+		    		</div>
+		    		<div class="box-footer text-center">
+		    			<a href="../staff/index" class="btn btn-default">Cancel</a>
+		    			<button class="btn btn-primary">Save</button>
+		    		</div>
+	    		</form>
+	    	</div>
+	    </section>
+	</div>   
+</div> 		
+
+<script type="text/javascript" src="/resources/jquery/jquery-2.2.3.min.js"></script>
+<script type="text/javascript" src="/resources/jquery/jquery.i18n.properties.min.js"></script>
+<script type="text/javascript" src="/resources/js/language.js"></script>
+<script type="text/javascript" src="/resources/bootstrap/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="/resources/plugins/datetimepicker/js/bootstrap-datetimepicker.min.js"></script>
+<script type="text/javascript" src="/resources/jquery/jquery-confirm.min.js"></script>
+<script type="text/javascript" src="/resources/jquery/jquery.validate.min.js"></script>
+<script type="text/javascript" src="/resources/adminlte/js/adminlte.min.js"></script>
+<script type="text/javascript" src="/resources/js/public.js"></script>
+
+<script type="text/javascript" src="/resources/plugins/ztree/js/jquery.ztree.all.min.js"></script>
+<script type="text/javascript" src="/resources/js/staffUI.js?v=1.1"></script>
+<script type="text/javascript">
+execI18n(function(){
+	staffUIOpt.init("", "false");
+});
+function changImg(e){  
+	              for (var i = 0; i < e.target.files.length; i++) {  
+	                 var file = e.target.files.item(i);  
+	                
+	                  
+	                  if (!(/^image\/.*$/i.test(file.type))) {  
+	                     continue; //不是图片 就跳出这一次循环  
+	                  }  
+	              
+	                  if(e.target.files.item(0).size>300*1024){
+	                	  
+	                	  var logtype=$("#loginType").val();
+	                	 
+	                      if(logtype=='1'){
+	                    	  alert('Image can not more than 300k');
+	                      }else{
+	                    	  alert('图片不能大于300k');
+	                      }
+	                    	               
+		                  }else{
+	                  //实例化FileReader API  
+	                 var freader = new FileReader();  
+	                 freader.readAsDataURL(file);  
+	                 freader.onload = function(e) {  
+	                	
+	                     $("#myphoto").attr("src",e.target.result);  
+	                 }  
+		                  }
+	             }  
+	        }  
+
+// let mediaStreamTrack=null; // 视频对象(全局)
+// let video ;
+// function openMedia() {
+//     let constraints = {
+//         video: { width: 500, height: 500 },
+//         audio: false
+//     };
+//     //获得video摄像头
+//      video = document.getElementById('video');
+//     let promise = navigator.mediaDevices.getUserMedia(constraints);
+//     promise.then((mediaStream) => {
+//        // mediaStreamTrack = typeof mediaStream.stop === 'function' ? mediaStream : mediaStream.getTracks()[1];
+//        mediaStreamTrack=mediaStream.getVideoTracks()
+//         video.srcObject = mediaStream;
+//         video.play();
+//     });
+// }
+
+//拍照
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//关闭摄像头
+// function closeMedia() {
+//       let stream = document.getElementById('video').srcObject;
+//       let tracks = stream.getTracks();
+//
+//       tracks.forEach(function(track) {
+//         track.stop();
+//       });
+//
+//      document.getElementById('video').srcObject = null;
+// }
+// 获取 DOM 元素
+$('#camera').hide()
+$('#capture').hide()
+$('#closecapture').hide()
+const video1 = document.getElementById('video');
+const captureButton = document.getElementById('capture');
+const preview = document.getElementById('preview');
+const uploadButton = document.getElementById('upload');
+const  opencapture =document.getElementById("opencapture");
+const  closecapture =document.getElementById("closecapture");
+let mediaStream=null;
+let canvas = null; // 用于存储拍照后的图像
+	opencapture.addEventListener('click',()=>{
+		// 请求访问用户摄像头
+		navigator.mediaDevices.getUserMedia({ video: true })
+				.then(stream => {
+					mediaStream=stream
+					video1.srcObject = stream;
+					$('#camera').show()
+					$('#capture').show()
+					$('#opencapture').hide()
+					$('#closecapture').show()
+				})
+				.catch(err => {
+					console.error('无法访问摄像头:', err);
+					alert('无法访问摄像头，请检查权限设置！');
+      });
+	});
+
+	closecapture.addEventListener('click',()=>{
+		$('#camera').hide()
+		$('#capture').hide()
+		$('#closecapture').hide()
+		$('#opencapture').show()
+		if (mediaStream) {
+			const tracks = mediaStream.getTracks(); // 获取所有轨道
+			tracks.forEach(track => track.stop()); // 停止每个轨道
+			mediaStream = null; // 清空媒体流对象
+			const videoElement = document.getElementById('video1');
+			//videoElement.srcObject = null; // 清空视频源
+		}
+	})
+
+// 拍照功能
+captureButton.addEventListener('click', () => {
+	// 创建一个 canvas 元素来保存截图
+	canvas = document.createElement('canvas');
+	// 保持7:5比例
+	const ratio = 3 / 4;
+	let width = video1.videoWidth;
+	let height = video1.videoHeight;
+	// 根据视频源的实际尺寸调整画布尺寸，同时保持比例
+	if (width / height > ratio) {
+		width = height * ratio;
+	} else {
+		height = width / ratio;
+	}
+	canvas.width = width;
+	canvas.height = height;
+	const ctx = canvas.getContext('2d');
+	ctx.drawImage(video1, (video1.videoWidth - width) / 2, (video1.videoHeight - height) / 2, width, height, 0, 0, canvas.width, canvas.height);
+	// 显示预览图像
+	preview.innerHTML = '';
+	preview.appendChild(canvas);
+// 将 canvas 转换为 base64 图片数据
+	const imageData = canvas.toDataURL('image/jpeg');
+	//console.log(imageData)
+	// 使用 fetch 将图片上传到后端
+	$("#myphoto").attr("src",imageData);
+	// 启用上传按钮
+	$("#imgSrc").val(imageData.replace(/^data:.+;base64,/, ''));
+});
+</script>
+</body>
+</html>

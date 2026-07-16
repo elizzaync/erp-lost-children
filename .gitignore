@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+
+# Logs
+*.log
+*.log.err
+
+# Certificados y llaves — NUNCA subir
+bridge/ssl/
+
+# Fotos de personas (datos sensibles de menores) — NUNCA subir
+bridge/static/fotos/
+static/fotos/
+
+# Comprobantes subidos (datos de producción)
+bridge/static/comprobantes/
+
+# Variables de entorno / secretos locales (las credenciales van en bridge/.env)
+.env
+bridge/.env
+*.local.py
+
+# Sistema
+Thumbs.db
+Desktop.ini

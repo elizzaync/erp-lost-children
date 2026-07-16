@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control de Acceso — Lost Children</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Segoe UI',system-ui,sans-serif;background:#0f1117;color:#e8eaf0;min-height:100vh;}
+
+  /* ── HEADER ── */
+  .header{background:#161b27;border-bottom:1px solid #2a2f3e;padding:16px 28px;display:flex;align-items:center;gap:16px;}
+  .header h1{font-size:20px;font-weight:700;color:#fff;}
+  .header .sub{font-size:13px;color:#6b7280;margin-top:2px;}
+  .dot{width:10px;height:10px;border-radius:50%;flex:none;}
+  .dot.online{background:#22c55e;box-shadow:0 0 8px #22c55e88;animation:pulse 2s infinite;}
+  .dot.offline{background:#ef4444;}
+  .dot.waiting{background:#f59e0b;animation:pulse 1.5s infinite;}
+  @keyframes pulse{0%,100%{opacity:.6;}50%{opacity:1;}}
+
+  .badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700;}
+  .badge.green{background:#14532d;color:#4ade80;}
+  .badge.red{background:#450a0a;color:#f87171;}
+  .badge.gray{background:#1f2937;color:#9ca3af;}
+  .badge.yellow{background:#422006;color:#fbbf24;}
+
+  /* ── LAYOUT ── */
+  .main{display:grid;grid-template-columns:320px 1fr;gap:0;height:calc(100vh - 61px);}
+
+  /* ── PANEL IZQUIERDO ── */
+  .sidebar{background:#161b27;border-right:1px solid #2a2f3e;display:flex;flex-direction:column;overflow:hidden;}
+  .sidebar-header{padding:16px 20px;border-bottom:1px solid #2a2f3e;display:flex;align-items:center;justify-content:space-between;}
+  .sidebar-header h2{font-size:14px;font-weight:700;color:#fff;}
+  .sidebar-body{overflow-y:auto;flex:1;}
+
+  .person-row{display:flex;align-items:center;gap:12px;padding:11px 20px;border-bottom:1px solid #1f2937;cursor:default;transition:background .15s;}
+  .person-row:hover{background:#1d2333;}
+  .person-row.presente{border-left:3px solid #22c55e;}
+  .person-row.ausente{border-left:3px solid #374151;}
+  .avatar{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;flex:none;}
+  .person-info{flex:1;min-width:0;}
+  .person-name{font-size:13.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .person-meta{font-size:11.5px;color:#6b7280;margin-top:2px;}
+  .hora-badge{font-size:12px;font-weight:700;color:#22c55e;white-space:nowrap;}
+
+  /* ── CONTENIDO PRINCIPAL ── */
+  .content{display:flex;flex-direction:column;overflow:hidden;}
+
+  /* ── KPIs ── */
+  .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:#2a2f3e;border-bottom:1px solid #2a2f3e;}
+  .kpi{background:#161b27;padding:18px 22px;}
+  .kpi .label{font-size:11.5px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  .kpi .value{font-size:32px;font-weight:800;color:#fff;line-height:1;}
+  .kpi .sub{font-size:12px;color:#6b7280;margin-top:4px;}
+  .kpi .value.green{color:#4ade80;}
+  .kpi .value.yellow{color:#fbbf24;}
+
+  /* ── TABS ── */
+  .tabs{display:flex;gap:0;border-bottom:1px solid #2a2f3e;background:#161b27;padding:0 20px;}
+  .tab{padding:12px 18px;font-size:13px;font-weight:600;color:#6b7280;cursor:pointer;border-bottom:2px solid transparent;transition:all .15s;}
+  .tab.active{color:#818cf8;border-bottom-color:#818cf8;}
+  .tab:hover:not(.active){color:#d1d5db;}
+
+  /* ── LOGS TABLE ── */
+  .table-wrap{flex:1;overflow-y:auto;padding:16px 20px;}
+  .table{width:100%;border-collapse:collapse;}
+  .table th{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;padding:8px 12px;text-align:left;border-bottom:1px solid #2a2f3e;position:sticky;top:0;background:#0f1117;z-index:1;}
+  .table td{padding:10px 12px;font-size:13px;border-bottom:1px solid #1f2937;vertical-align:middle;}
+  .table tr:hover td{background:#161b27;}
+  .method{display:inline-flex;align-items:center;gap:5px;padding:2px 8px;border-radius:6px;font-size:11.5px;font-weight:700;}
+  .method.huella{background:#1e3a5f;color:#60a5fa;}
+  .method.teclado{background:#2d1b69;color:#a78bfa;}
+  .method.tarjeta{background:#14532d;color:#4ade80;}
+  .method.otro{background:#1f2937;color:#9ca3af;}
+
+  /* ── HISTORIAL CHART ── */
+  .chart-wrap{padding:20px;flex:1;overflow-y:auto;}
+  .chart-title{font-size:14px;font-weight:700;color:#fff;margin-bottom:16px;}
+  .bar-row{display:flex;align-items:center;gap:10px;margin-bottom:8px;}
+  .bar-date{font-size:11.5px;color:#6b7280;width:60px;flex:none;text-align:right;}
+  .bar-track{flex:1;background:#1f2937;border-radius:4px;height:22px;position:relative;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;display:flex;align-items:center;padding-left:8px;font-size:11px;font-weight:700;color:#fff;transition:width .6s ease;min-width:2px;}
+  .bar-pct{font-size:11.5px;color:#9ca3af;width:38px;text-align:right;flex:none;}
+
+  /* ── EMPTY / LOADING ── */
+  .empty{text-align:center;padding:60px 20px;color:#4b5563;}
+  .empty svg{margin-bottom:12px;opacity:.3;}
+  .loading{display:flex;align-items:center;justify-content:center;gap:10px;padding:40px;color:#6b7280;font-size:13px;}
+  .spinner{width:20px;height:20px;border:2px solid #374151;border-top-color:#818cf8;border-radius:50%;animation:spin .8s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* ── DEVICE INFO ── */
+  .device-bar{background:#1a1f2e;border-top:1px solid #2a2f3e;padding:10px 20px;display:flex;align-items:center;gap:16px;font-size:12px;color:#6b7280;}
+  .device-bar b{color:#9ca3af;}
+
+  ::-webkit-scrollbar{width:5px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:#2a2f3e;border-radius:4px;}
+
+  @media(max-width:700px){
+    .main{grid-template-columns:1fr;height:auto;}
+    .sidebar{height:260px;border-right:none;border-bottom:1px solid #2a2f3e;}
+    .sidebar-body{display:flex;flex-direction:column;}
+    .content{min-height:calc(100vh - 61px - 260px);}
+    .kpis{grid-template-columns:repeat(2,1fr);}
+    .tabs{overflow-x:auto;padding:0 12px;flex-wrap:nowrap;}
+    .tabs::-webkit-scrollbar{display:none;}
+    .tab{white-space:nowrap;padding:12px 14px;font-size:12px;}
+    .table-wrap{padding:10px 12px;}
+    .chart-wrap{padding:12px;}
+    .header{padding:12px 16px;}
+    .header h1{font-size:16px;}
+    .kpi{padding:12px 14px;}
+    .kpi .value{font-size:24px;}
+    .device-bar{flex-wrap:wrap;gap:8px;padding:8px 12px;}
+  }
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="dot waiting" id="status-dot"></div>
+  <div>
+    <h1>Control de Acceso · ZKTeco SF420</h1>
+    <div class="sub" id="status-text">Conectando…</div>
+  </div>
+  <div style="margin-left:auto;display:flex;align-items:center;gap:12px;">
+    <span id="last-update" style="font-size:12px;color:#4b5563;"></span>
+    <button onclick="cargar()" style="background:#1f2937;color:#d1d5db;border:1px solid #374151;border-radius:8px;padding:7px 14px;font-size:12px;font-weight:600;cursor:pointer;">↺ Actualizar</button>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SIDEBAR: lista de asistencia de hoy -->
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h2>Asistencia de hoy</h2>
+      <span id="conteo" class="badge gray">—</span>
+    </div>
+    <div class="sidebar-body" id="lista-personas">
+      <div class="loading"><div class="spinner"></div>Cargando…</div>
+    </div>
+  </div>
+
+  <!-- CONTENT -->
+  <div class="content">
+
+    <!-- KPIs -->
+    <div class="kpis" id="kpis">
+      <div class="kpi"><div class="label">Presentes hoy</div><div class="value green" id="k-presentes">—</div></div>
+      <div class="kpi"><div class="label">Ausentes</div><div class="value" id="k-ausentes">—</div></div>
+      <div class="kpi"><div class="label">Niños activos</div><div class="value" id="k-total">—</div></div>
+      <div class="kpi"><div class="label">% Asistencia</div><div class="value yellow" id="k-pct">—</div></div>
+    </div>
+
+    <!-- TABS -->
+    <div class="tabs">
+      <div class="tab active" onclick="setTab('logs',this)">Registros del dispositivo</div>
+      <div class="tab" onclick="setTab('historial',this)">Historial 30 días</div>
+      <div class="tab" onclick="setTab('dump',this)">Base de datos del SF420</div>
+    </div>
+
+    <!-- TAB LOGS -->
+    <div id="tab-logs" class="table-wrap">
+      <div class="loading"><div class="spinner"></div>Cargando registros…</div>
+    </div>
+
+    <!-- TAB HISTORIAL -->
+    <div id="tab-historial" class="chart-wrap" style="display:none;">
+      <div class="loading"><div class="spinner"></div>Cargando historial…</div>
+    </div>
+
+    <!-- TAB DUMP -->
+    <div id="tab-dump" class="table-wrap" style="display:none;">
+      <div style="padding:20px 0;">
+        <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+          <div>
+            <div style="font-size:14px;font-weight:700;color:#fff;">Volcado completo de la base de datos del SF420</div>
+            <div style="font-size:12.5px;color:#6b7280;margin-top:3px;">Descarga todos los registros históricos del dispositivo y los guarda en MySQL.</div>
+          </div>
+          <button id="btn-dump" onclick="ejecutarDump()" style="margin-left:auto;background:#4f46e5;color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer;">⬇ Recopilar datos del dispositivo</button>
+        </div>
+        <div id="dump-result"></div>
+      </div>
+    </div>
+
+    <!-- DEVICE BAR -->
+    <div class="device-bar">
+      <span>Dispositivo: <b id="d-ip">—</b></span>
+      <span>·</span>
+      <span>Usuarios enrollados: <b id="d-usuarios">—</b></span>
+      <span>·</span>
+      <span>Último sync: <b id="d-sync">—</b></span>
+      <span>·</span>
+      <span id="d-error" style="color:#ef4444;"></span>
+    </div>
+
+  </div>
+</div>
+
+<script>
+const API = window.location.protocol === 'file:'
+  ? 'http://localhost:7793'
+  : window.location.origin;
+let _tab = 'logs';
+let _data = null;
+
+async function cargar() {
+  try {
+    const r = await fetch(`${API}/data`, {signal: AbortSignal.timeout(8000)});
+    _data = await r.json();
+    renderTodo();
+  } catch(e) {
+    document.getElementById('status-dot').className = 'dot offline';
+    document.getElementById('status-text').textContent = 'No se pudo conectar al bridge (localhost:7793)';
+  }
+}
+
+function renderTodo() {
+  if (!_data) return;
+  const { dispositivo, kpis, asistencia_hoy, logs_zkteco, historial_30d } = _data;
+
+  // ── Estado dispositivo ──
+  const dot = document.getElementById('status-dot');
+  dot.className = 'dot ' + (dispositivo.online ? 'online' : 'offline');
+  document.getElementById('status-text').textContent = dispositivo.online
+    ? `SF420 en línea · ${dispositivo.ip}:${dispositivo.port}`
+    : `SF420 sin conexión — ${dispositivo.error || 'Verificar bridge'}`;
+  document.getElementById('d-ip').textContent = `${dispositivo.ip}:${dispositivo.port}`;
+  document.getElementById('d-usuarios').textContent = dispositivo.total_usuarios;
+  document.getElementById('d-sync').textContent = dispositivo.ultimo_sync
+    ? new Date(dispositivo.ultimo_sync).toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',second:'2-digit'})
+    : '—';
+  document.getElementById('d-error').textContent = (!dispositivo.online && dispositivo.error) ? dispositivo.error : '';
+  document.getElementById('last-update').textContent = 'Actualizado: ' + new Date().toLocaleTimeString('es-PE');
+
+  // ── KPIs ──
+  const presentes = asistencia_hoy.filter(a=>a.presente).length;
+  const total     = asistencia_hoy.length;
+  const ausentes  = total - presentes;
+  const pct       = total ? Math.round(presentes/total*100) : 0;
+  document.getElementById('k-presentes').textContent = presentes;
+  document.getElementById('k-ausentes').textContent  = ausentes;
+  document.getElementById('k-total').textContent     = Math.round(kpis.ninos_activos || total);
+  document.getElementById('k-pct').textContent       = pct + '%';
+  document.getElementById('conteo').textContent      = `${presentes}/${total}`;
+  document.getElementById('conteo').className        = `badge ${pct>=80?'green':pct>=50?'yellow':'red'}`;
+
+  // ── Lista sidebar ──
+  const lista = [...asistencia_hoy].sort((a,b)=>{
+    if (a.presente !== b.presente) return b.presente - a.presente;
+    return (a.hora||'99:99').localeCompare(b.hora||'99:99');
+  });
+  document.getElementById('lista-personas').innerHTML = lista.length ? lista.map(p=>`
+    <div class="person-row ${p.presente?'presente':'ausente'}">
+      <div class="avatar" style="background:${p.avatar_bg};color:${p.avatar_fg};">${p.inicial||p.nombre[0]}</div>
+      <div class="person-info">
+        <div class="person-name">${p.nombre}</div>
+        <div class="person-meta">${p.metodo||'—'}</div>
+      </div>
+      ${p.presente
+        ? `<div class="hora-badge">✓ ${p.hora ? p.hora.substring(0,5) : '—'}</div>`
+        : `<div style="font-size:12px;color:#4b5563;">Ausente</div>`}
+    </div>`).join('')
+    : '<div class="empty">Sin registros de hoy</div>';
+
+  renderTab();
+}
+
+function renderTab() {
+  if (!_data) return;
+  if (_tab === 'logs') renderLogs();
+  else renderHistorial();
+}
+
+function renderLogs() {
+  const logs = _data.logs_zkteco || [];
+  const html = logs.length ? `
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Hora</th>
+          <th>Persona</th>
+          <th>ID dispositivo</th>
+          <th>Tipo</th>
+          <th>Método</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${logs.map(l=>{
+          const ts = new Date(l.timestamp);
+          const fecha = ts.toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+          const hora  = ts.toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+          const hoy   = new Date().toDateString() === ts.toDateString();
+          const met   = l.metodo||'';
+          const metClass = met.includes('huella')?'huella':met.includes('teclado')?'teclado':met.includes('tarjeta')?'tarjeta':'otro';
+          return `
+          <tr>
+            <td>
+              <div style="font-weight:700;color:#fff;">${hora}</div>
+              <div style="font-size:11px;color:#4b5563;">${hoy?'Hoy':fecha}</div>
+            </td>
+            <td>
+              <div style="font-weight:600;">${l.nombre||'—'}</div>
+            </td>
+            <td style="font-family:monospace;color:#6b7280;">${l.zk_user_id}</td>
+            <td><span class="badge ${l.tipo==='entrada'?'green':'gray'}">${l.tipo||'—'}</span></td>
+            <td><span class="method ${metClass}">${met||'desconocido'}</span></td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>` : '<div class="empty">Sin registros del dispositivo</div>';
+  document.getElementById('tab-logs').innerHTML = html;
+}
+
+function renderHistorial() {
+  const h = _data.historial_30d || [];
+  if (!h.length) {
+    document.getElementById('tab-historial').innerHTML = '<div class="empty">Sin historial disponible</div>';
+    return;
+  }
+  const maxPct = 100;
+  document.getElementById('tab-historial').innerHTML = `
+    <div class="chart-title">Asistencia diaria — últimos 30 días</div>
+    ${h.map(d=>{
+      const fecha = new Date(d.fecha+'T12:00:00').toLocaleDateString('es-PE',{day:'2-digit',month:'short'});
+      const color = d.pct>=80?'#22c55e':d.pct>=50?'#f59e0b':'#ef4444';
+      return `
+      <div class="bar-row">
+        <div class="bar-date">${fecha}</div>
+        <div class="bar-track">
+          <div class="bar-fill" style="width:${d.pct}%;background:${color};">
+            ${d.pct>15?`${d.presentes}/${d.total}`:''}
+          </div>
+        </div>
+        <div class="bar-pct">${d.pct}%</div>
+      </div>`;
+    }).join('')}`;
+}
+
+function setTab(tab, el) {
+  _tab = tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('tab-logs').style.display      = tab==='logs'      ? 'block' : 'none';
+  document.getElementById('tab-historial').style.display = tab==='historial' ? 'block' : 'none';
+  document.getElementById('tab-dump').style.display      = tab==='dump'      ? 'block' : 'none';
+  renderTab();
+}
+
+async function ejecutarDump() {
+  const btn = document.getElementById('btn-dump');
+  const res = document.getElementById('dump-result');
+  btn.disabled = true;
+  btn.textContent = '⟳ Conectando al dispositivo…';
+  res.innerHTML = '<div class="loading"><div class="spinner"></div>Descargando datos del SF420… puede tardar 10–30 segundos si hay muchos registros.</div>';
+
+  try {
+    const r = await fetch(`${API}/device/dump`, {signal: AbortSignal.timeout(60000)});
+    const d = await r.json();
+    if (!d.ok) {
+      res.innerHTML = `<div style="background:#450a0a;border:1px solid #7f1d1d;border-radius:10px;padding:16px;color:#f87171;">Error: ${d.error}</div>`;
+      return;
+    }
+
+    const info = d.dispositivo || {};
+    res.innerHTML = `
+      <!-- Resumen -->
+      <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px;">
+        ${[
+          ['Registros descargados', d.total_registros, '#4ade80'],
+          ['Guardados en MySQL',    d.guardados_mysql,  '#60a5fa'],
+          ['Usuarios en dispositivo', d.total_usuarios, '#a78bfa'],
+          ['Plantillas de huella',  info.total_plantillas||0, '#f59e0b'],
+        ].map(([label,val,color])=>`
+          <div style="background:#161b27;border:1px solid #2a2f3e;border-radius:10px;padding:16px;">
+            <div style="font-size:11px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">${label}</div>
+            <div style="font-size:28px;font-weight:800;color:${color};">${val}</div>
+          </div>`).join('')}
+      </div>
+
+      <!-- Info dispositivo -->
+      <div style="background:#161b27;border:1px solid #2a2f3e;border-radius:10px;padding:16px;margin-bottom:20px;">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:#6b7280;margin-bottom:12px;">Información del dispositivo</div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;font-size:13px;">
+          ${Object.entries(info).filter(([k])=>k!=='capacidad'&&k!=='total_plantillas').map(([k,v])=>`
+            <div><span style="color:#6b7280;">${k}:</span> <b style="color:#d1d5db;">${v||'—'}</b></div>`).join('')}
+          ${info.capacidad ? Object.entries(info.capacidad).map(([k,v])=>`
+            <div><span style="color:#6b7280;">${k}:</span> <b style="color:#d1d5db;">${v}</b></div>`).join('') : ''}
+        </div>
+      </div>
+
+      <!-- Usuarios -->
+      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">Usuarios (${d.total_usuarios})</div>
+      <div style="background:#161b27;border:1px solid #2a2f3e;border-radius:10px;overflow:hidden;margin-bottom:20px;">
+        <table class="table">
+          <thead><tr><th>UID</th><th>ID</th><th>Nombre</th><th>Rol</th><th>Huella</th></tr></thead>
+          <tbody>${(d.usuarios||[]).map(u=>`
+            <tr>
+              <td style="font-family:monospace;color:#6b7280;">#${u.uid}</td>
+              <td style="font-family:monospace;">${u.user_id||'—'}</td>
+              <td style="font-weight:600;">${u.nombre}</td>
+              <td>${u.privilegio===14?'<span class="badge red">Admin</span>':'<span class="badge gray">Usuario</span>'}</td>
+              <td>${u.tiene_huella
+                ? '<span class="badge green">✓ Registrada</span>'
+                : '<span class="badge yellow">! Pendiente</span>'}</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Últimos 20 registros del dump -->
+      <div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:10px;">Últimos registros descargados (${Math.min(20,d.total_registros)} de ${d.total_registros})</div>
+      <div style="background:#161b27;border:1px solid #2a2f3e;border-radius:10px;overflow:hidden;">
+        <table class="table">
+          <thead><tr><th>Fecha</th><th>Hora</th><th>ID usuario</th><th>Tipo</th><th>Método</th></tr></thead>
+          <tbody>${(d.registros||[]).slice(0,20).map(r=>`
+            <tr>
+              <td style="color:#6b7280;">${r.fecha}</td>
+              <td style="font-weight:700;">${r.hora}</td>
+              <td style="font-family:monospace;">${r.user_id}</td>
+              <td><span class="badge ${r.tipo==='entrada'?'green':'gray'}">${r.tipo}</span></td>
+              <td><span class="method ${r.metodo?.includes('huella')?'huella':r.metodo?.includes('teclado')?'teclado':'otro'}">${r.metodo||'—'}</span></td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e) {
+    res.innerHTML = `<div style="background:#450a0a;border:1px solid #7f1d1d;border-radius:10px;padding:16px;color:#f87171;">Error de conexión: ${e.message}</div>`;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '⬇ Recopilar datos del dispositivo';
+  }
+}
+
+// Carga inicial y auto-refresh cada 30 segundos
+cargar();
+setInterval(cargar, 30000);
+</script>
+</body>
+</html>

@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ERP Lost Children</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+
+<!-- SIDEBAR — contenido generado por app.js -->
+<aside id="sidebar"></aside>
+
+<!-- MAIN -->
+<div id="main">
+  <header><!-- generado por app.js --></header>
+  <main id="content">
+    <div class="loading"><div class="spinner"></div>Cargando ERP…</div>
+  </main>
+</div>
+
+<!-- Modal y toast roots -->
+<div id="modal-root"></div>
+
+<!--
+  Orden de carga obligatorio:
+  1. db.js      → store central (no depende de nada)
+  2. ui.js      → helpers de UI (depende de DB para notificaciones)
+  3. app.js     → router (depende de DB y UI)
+  4. módulos    → cada uno se auto-registra en App al cargar
+                  (dependen de DB, UI, App)
+-->
+<script src="js/db.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/app.js"></script>
+<script src="js/auth.js"></script>
+
+<!-- Módulos — orden no importa, todos se registran en App -->
+<script src="modules/dashboard.js"></script>
+<script src="modules/personas.js"></script>
+<script src="modules/asistencia.js"></script>
+<script src="modules/almacen.js"></script>
+<script src="modules/gastos.js"></script>
+<script src="modules/alimentacion.js"></script>
+<script src="modules/entregas.js"></script>
+<script src="modules/reportes.js"></script>
+<script src="modules/marcado.js"></script>
+<script src="modules/usuarios.js"></script>
+
+<script>
+  // Auth verifica la sesión; si hay token válido llama App.init() internamente
+  document.addEventListener('DOMContentLoaded', () => Auth.init());
+</script>
+</body>
+</html>
