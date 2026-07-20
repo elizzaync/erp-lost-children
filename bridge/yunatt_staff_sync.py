@@ -37,10 +37,10 @@ EMAIL       = env("YUNATT_EMAIL")
 PASSWORD    = env("YUNATT_PASSWORD")
 
 DB_CONFIG = {
-    "host":      "localhost",
-    "user":      "root",
-    "password":  "",
-    "database":  "erp_lost_children",
+    "host":      env("DB_HOST", "localhost"),
+    "user":      env("DB_USER", "root"),
+    "password":  env("DB_PASSWORD", ""),
+    "database":  env("DB_NAME", "erp_lost_children"),
     "charset":   "utf8mb4",
     "use_unicode": True,
 }
@@ -53,14 +53,15 @@ _last_result = {}
 # ─── TLS FIX ──────────────────────────────────────────────────────────────────
 # yunatt.com requiere TLS 1.3 explícito; la negociación automática de requests
 # (TLS 1.2/1.3) produce timeout de handshake en Windows con OpenSSL 3.x.
+# La verificación del certificado se deja en su valor por defecto
+# (check_hostname=True, verify_mode=CERT_REQUIRED): desactivarla permitiría un
+# MITM que capture credenciales de yunatt y fotos faciales del personal.
 
 class _TLS13Adapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
         ctx = create_urllib3_context()
         ctx.minimum_version = ssl.TLSVersion.TLSv1_3
         ctx.maximum_version = ssl.TLSVersion.TLSv1_3
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
         kwargs["ssl_context"] = ctx
         super().init_poolmanager(*args, **kwargs)
 
@@ -623,7 +624,11 @@ def enrolar_en_timmy(persona_id, nombre, metodo="cara", password="", foto_bytes=
         return {"ok": False, "error": "Sin sesión con yunatt.com"}
 
     if not password:
-        password = "0000"
+        # PIN aleatorio de 6 dígitos por persona (antes era "0000" fijo para
+        # todo el mundo — un PIN público, trivial y compartido para marcar
+        # por teclado como alternativa a la biometría).
+        import secrets as _secrets
+        password = "".join(_secrets.choice("0123456789") for _ in range(6))
 
     punch_val = _PUNCH.get(metodo, "1")
     staff_id_str = str(persona_id)

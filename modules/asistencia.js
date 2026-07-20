@@ -987,7 +987,7 @@ App.register('asistencia', (function () {
         <label>Pre-llenar desde personas del ERP</label>
         <select id="tu-erp" onchange="AsistenciaModule.prefillTimmyDesdeERP(this.value)">
           <option value="">— o llena manualmente —</option>
-          ${ninos.map(p=>`<option value="${p.id}">${p.nombre} (${p.tipo})</option>`).join('')}
+          ${ninos.map(p=>`<option value="${p.id}">${esc(p.nombre)} (${esc(p.tipo)})</option>`).join('')}
         </select>
       </div>
       <div class="form-grid">
@@ -1256,16 +1256,16 @@ App.register('asistencia', (function () {
   ══════════════════════════════════════════════════════════════ */
   function abrirAsignarPersona(timmyUserId, nombreTimmy) {
     UI.modal(`
-      <h2>Asignar persona a ${nombreTimmy || 'Timmy-'+timmyUserId}</h2>
+      <h2>Asignar persona a ${esc(nombreTimmy || 'Timmy-'+timmyUserId)}</h2>
       <div style="background:#FDF2D5;border-radius:10px;padding:12px;font-size:13px;color:#9A6B0A;margin-bottom:16px;">
-        Este usuario marcó en el Timmy (ID: ${timmyUserId}) pero no tiene una persona vinculada en el ERP.
+        Este usuario marcó en el Timmy (ID: ${esc(timmyUserId)}) pero no tiene una persona vinculada en el ERP.
         Selecciona a quién corresponde.
       </div>
       <div class="form-group">
         <label>Persona del ERP</label>
         <select id="asig-persona" style="font-size:14px;">
           <option value="">— selecciona —</option>
-          ${DB.personas.map(p=>`<option value="${p.id}">${p.nombre} (${p.tipo})</option>`).join('')}
+          ${DB.personas.map(p=>`<option value="${p.id}">${esc(p.nombre)} (${esc(p.tipo)})</option>`).join('')}
         </select>
       </div>
       <div style="font-size:12.5px;color:var(--muted);">
@@ -1333,6 +1333,10 @@ App.register('asistencia', (function () {
         <label>Escribe <b>CONFIRMAR</b> para continuar</label>
         <input type="text" id="reset-confirm" placeholder="CONFIRMAR" style="font-size:15px;">
       </div>
+      <div class="form-group">
+        <label>Tu contraseña (reautenticación obligatoria)</label>
+        <input type="password" id="reset-password" placeholder="Contraseña de tu cuenta" style="font-size:15px;" autocomplete="current-password">
+      </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
         <button class="btn" id="btn-reset-ejecutar" style="background:var(--danger);color:#fff;" onclick="AsistenciaModule.ejecutarResetCompleto()">
@@ -1347,6 +1351,11 @@ App.register('asistencia', (function () {
       UI.toast('Escribe CONFIRMAR para continuar', 'error');
       return;
     }
+    const password = document.getElementById('reset-password')?.value || '';
+    if (!password) {
+      UI.toast('Ingresa tu contraseña para confirmar', 'error');
+      return;
+    }
     const limpiarTimmy = document.getElementById('reset-timmy')?.checked === true;
     const btn = document.getElementById('btn-reset-ejecutar');
     if (btn) { btn.disabled = true; btn.textContent = limpiarTimmy ? 'Limpiando ERP + Timmy…' : 'Limpiando ERP…'; }
@@ -1355,7 +1364,7 @@ App.register('asistencia', (function () {
       const r = await fetch(`${BRIDGE}/db/reset`, {
         method: 'POST', signal: AbortSignal.timeout(120000),
         headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Auth.getToken()}` },
-        body: JSON.stringify({ confirmar: 'BORRAR_TODO', limpiar_timmy: limpiarTimmy }),
+        body: JSON.stringify({ confirmar: 'BORRAR_TODO', limpiar_timmy: limpiarTimmy, password }),
       });
       const d = await r.json();
       if (d.ok) {

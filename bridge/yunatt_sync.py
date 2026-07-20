@@ -28,10 +28,10 @@ EMAIL    = env("YUNATT_EMAIL")
 PASSWORD = env("YUNATT_PASSWORD")
 
 DB_CONFIG = {
-    "host":      "localhost",
-    "user":      "root",
-    "password":  "",
-    "database":  "erp_lost_children",
+    "host":      env("DB_HOST", "localhost"),
+    "user":      env("DB_USER", "root"),
+    "password":  env("DB_PASSWORD", ""),
+    "database":  env("DB_NAME", "erp_lost_children"),
     "charset":   "utf8mb4",
     "use_unicode": True,
 }
@@ -52,11 +52,14 @@ def _db():
 
 class _TLS13Adapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
+        # Fuerza TLS 1.3 (yunatt.com lo requiere explícito o el handshake
+        # da timeout). La verificación del certificado se deja en su valor
+        # por defecto (check_hostname=True, verify_mode=CERT_REQUIRED) —
+        # desactivarla permitiría un MITM que capture las credenciales de
+        # yunatt y las fotos faciales que este módulo sincroniza.
         ctx = create_urllib3_context()
         ctx.minimum_version = ssl.TLSVersion.TLSv1_3
         ctx.maximum_version = ssl.TLSVersion.TLSv1_3
-        ctx.check_hostname = False
-        ctx.verify_mode = ssl.CERT_NONE
         kwargs["ssl_context"] = ctx
         super().init_poolmanager(*args, **kwargs)
 

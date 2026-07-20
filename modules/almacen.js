@@ -81,20 +81,20 @@ App.register('almacen', (function () {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>
                 </div>`}
             <div>
-              <div style="font-size:14px;font-weight:600;">${a.nombre}</div>
-              <div style="font-size:11.5px;color:var(--faint);">${a.codigo ? '#'+a.codigo : (a.proveedor||'—')}</div>
+              <div style="font-size:14px;font-weight:600;">${esc(a.nombre)}</div>
+              <div style="font-size:11.5px;color:var(--faint);">${a.codigo ? '#'+esc(a.codigo) : esc(a.proveedor||'—')}</div>
             </div>
           </div>
-          <span style="font-size:13px;color:var(--muted);">${a.categoria}</span>
+          <span style="font-size:13px;color:var(--muted);">${esc(a.categoria)}</span>
           <div style="padding-right:16px;">
             <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:5px;">
               <b style="color:${col};">${a.stock}</b><span style="color:var(--faint);">mín ${a.minimo}</span>
             </div>
             ${UI.progressBar(pct, col, 7)}
           </div>
-          <span style="font-size:13px;color:var(--muted);">${a.unidad}</span>
+          <span style="font-size:13px;color:var(--muted);">${esc(a.unidad)}</span>
           <span style="font-size:13px;color:var(--muted);">${a.precio>0?'$'+a.precio.toFixed(2):'—'}</span>
-          <span style="font-size:12.5px;color:var(--muted);">${a.vence||'—'}</span>
+          <span style="font-size:12.5px;color:var(--muted);">${esc(a.vence)||'—'}</span>
           <div style="display:flex;gap:4px;">
             ${(!window.Auth || Auth.canWrite('almacen')) ? `
             <button class="btn btn-sm btn-outline" style="padding:6px 8px;" title="Entrada" onclick="AlmacenModule.abrirEntrada(${a.id})">+</button>
@@ -137,11 +137,11 @@ App.register('almacen', (function () {
         <div style="flex:1;">
           <div class="form-group" style="margin-bottom:10px;">
             <label>Nombre del artículo *</label>
-            <input type="text" id="art-nombre" value="${a ? a.nombre : ''}" placeholder="Ej: Arroz blanco parboil">
+            <input type="text" id="art-nombre" value="${esc(a ? a.nombre : '')}" placeholder="Ej: Arroz blanco parboil">
           </div>
           <div class="form-group" style="margin-bottom:0;">
             <label>Código / Referencia</label>
-            <input type="text" id="art-codigo" value="${a ? a.codigo : ''}" placeholder="Ej: ALM-001">
+            <input type="text" id="art-codigo" value="${esc(a ? a.codigo : '')}" placeholder="Ej: ALM-001">
           </div>
         </div>
       </div>
@@ -165,7 +165,7 @@ App.register('almacen', (function () {
           </div>
         </div>
         <div class="form-group"><label>Descripción</label>
-          <textarea id="art-desc" rows="2" placeholder="Marca, presentación, características relevantes…">${a ? a.descripcion : ''}</textarea>
+          <textarea id="art-desc" rows="2" placeholder="Marca, presentación, características relevantes…">${esc(a ? a.descripcion : '')}</textarea>
         </div>
       </div>
 
@@ -189,11 +189,11 @@ App.register('almacen', (function () {
         <div class="form-grid">
           <div class="form-group">
             <label>Fecha de vencimiento</label>
-            <input type="date" id="art-vence" value="${a && a.vence && a.vence !== '—' ? a.vence : ''}">
+            <input type="date" id="art-vence" value="${esc(a && a.vence && a.vence !== '—' ? a.vence : '')}">
           </div>
           <div class="form-group">
             <label>Ubicación en depósito</label>
-            <input type="text" id="art-ubicacion" value="${a ? a.ubicacion : ''}" placeholder="Ej: Estante A, Fila 2">
+            <input type="text" id="art-ubicacion" value="${esc(a ? a.ubicacion : '')}" placeholder="Ej: Estante A, Fila 2">
           </div>
         </div>
       </div>
@@ -207,7 +207,7 @@ App.register('almacen', (function () {
         <div class="form-grid">
           <div class="form-group">
             <label>Proveedor habitual</label>
-            <input type="text" id="art-prov" value="${a ? a.proveedor : ''}" placeholder="Ej: Mercado Central, Donación…">
+            <input type="text" id="art-prov" value="${esc(a ? a.proveedor : '')}" placeholder="Ej: Mercado Central, Donación…">
           </div>
           <div class="form-group">
             <label>Precio unitario ($)</label>
@@ -271,11 +271,11 @@ App.register('almacen', (function () {
     let artId = id;
     if (esEdicion) {
       await DB.actualizarArticulo(parseInt(id), datos);
-      UI.toast(`"${nombre}" actualizado`);
+      UI.toast(`"${esc(nombre)}" actualizado`);
     } else {
       const art = await DB.agregarArticulo(datos);
       artId = art.id;
-      UI.toast(`"${nombre}" agregado al catálogo`);
+      UI.toast(`"${esc(nombre)}" agregado al catálogo`);
     }
 
     // Subir imagen si se seleccionó una
@@ -298,12 +298,12 @@ App.register('almacen', (function () {
 
   function confirmarEliminar(id, nombre) {
     UI.confirm(
-      `¿Eliminar <b>${nombre}</b> del catálogo?<br><br>
+      `¿Eliminar <b>${esc(nombre)}</b> del catálogo?<br><br>
        <span style="color:var(--danger);font-size:13px;">Se eliminará el artículo y su historial de stock. Las entregas y servicios previos no se modifican.</span>`,
       () => {
         DB.eliminarArticulo(id);
         UI.closeModal();
-        UI.toast(`"${nombre}" eliminado del catálogo`, 'warn');
+        UI.toast(`"${esc(nombre)}" eliminado del catálogo`, 'warn');
       }
     );
   }
@@ -352,7 +352,7 @@ App.register('almacen', (function () {
         <div class="form-group">
           <label>Artículo *</label>
           <select id="ent-art" onchange="AlmacenModule._showStockInfo('ent')">
-            ${DB.articulos.map(a => `<option value="${a.id}" ${a.id===preId?'selected':''}>${a.nombre} (stock: ${a.stock} ${a.unidad})</option>`).join('')}
+            ${DB.articulos.map(a => `<option value="${a.id}" ${a.id===preId?'selected':''}>${esc(a.nombre)} (stock: ${a.stock} ${esc(a.unidad)})</option>`).join('')}
           </select>
         </div>
       </div>
@@ -563,10 +563,10 @@ App.register('almacen', (function () {
 
     if (esCompra) {
       const unit = costoTotal / qty;
-      UI.toast(`Compra: +${qty} ${artUnidad} de ${artNombre} · $${costoTotal.toFixed(2)} ($${unit.toFixed(2)}/${artUnidad}) · gasto registrado`, 'success');
+      UI.toast(`Compra: +${qty} ${esc(artUnidad)} de ${esc(artNombre)} · $${costoTotal.toFixed(2)} ($${unit.toFixed(2)}/${esc(artUnidad)}) · gasto registrado`, 'success');
     } else {
       const esNuevo = modeNuevo ? ' (artículo creado)' : '';
-      UI.toast(`Donación: +${qty} ${artUnidad} de ${artNombre}${prov?' de '+prov:''}${esNuevo}`, 'success');
+      UI.toast(`Donación: +${qty} ${esc(artUnidad)} de ${esc(artNombre)}${prov?' de '+esc(prov):''}${esNuevo}`, 'success');
     }
     App.refresh();
   }
@@ -578,7 +578,7 @@ App.register('almacen', (function () {
       <div class="form-group">
         <label>Artículo *</label>
         <select id="sal-art" onchange="AlmacenModule._showStockInfo('sal')">
-          ${DB.articulos.map(a=>`<option value="${a.id}" ${a.id===preId?'selected':''}>${a.nombre} (disponible: ${a.stock} ${a.unidad})</option>`).join('')}
+          ${DB.articulos.map(a=>`<option value="${a.id}" ${a.id===preId?'selected':''}>${esc(a.nombre)} (disponible: ${a.stock} ${esc(a.unidad)})</option>`).join('')}
         </select>
       </div>
       <div class="form-grid">
@@ -617,7 +617,7 @@ App.register('almacen', (function () {
     const res = await DB.salidaAlmacen(id, qty, motivo);
     if (res && res.error) { UI.toast(res.error, 'error'); if (btn) { btn.disabled = false; btn.textContent = 'Registrar salida'; } return; }
     UI.closeModal();
-    UI.toast(`−${qty} ${art.unidad} de ${art.nombre} registrado`, 'warn');
+    UI.toast(`−${qty} ${esc(art.unidad)} de ${esc(art.nombre)} registrado`, 'warn');
   }
 
   /* ── HELPERS ──────────────────────────────────────────────── */

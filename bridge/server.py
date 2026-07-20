@@ -23,6 +23,7 @@ from datetime import date, datetime
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from config import env
 
 try:
     import yunatt_sync
@@ -71,10 +72,10 @@ sock = Sock(app) if WS_AVAILABLE else None
 ERP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 DB_CONFIG = {
-    "host":      "localhost",
-    "user":      "root",
-    "password":  "",
-    "database":  "erp_lost_children",
+    "host":      env("DB_HOST", "localhost"),
+    "user":      env("DB_USER", "root"),
+    "password":  env("DB_PASSWORD", ""),
+    "database":  env("DB_NAME", "erp_lost_children"),
     "charset":   "utf8mb4",
     "use_unicode": True,
 }
@@ -88,6 +89,10 @@ _ROLES_VALIDOS  = ('admin', 'coordinador', 'voluntario', 'kiosko', 'donador')
 
 def _get_session():
     token = request.headers.get("Authorization", "").replace("Bearer ", "").strip()
+    if not token:
+        # El navegador no permite mandar headers custom en el handshake de
+        # WebSocket, así que /ws/asistencia manda el token por query string.
+        token = request.args.get("token", "").strip()
     if not token:
         return None
     s = _sessions.get(token)
@@ -131,19 +136,30 @@ def _check_rate_limit(ip, window=60, max_attempts=10):
     return True
 
 
+
+# Rutas que sirven el "shell" de la SPA (HTML/JS/CSS) y por lo tanto deben
+# quedar accesibles sin sesión: si exigiéramos login aquí, la propia pantalla
+# de login nunca podría cargar. El resto de rutas SIN extensión son API de
+# negocio (JSON) y deben exigir sesión — antes esta función hacía lo contrario
+# (dejaba pasar todo lo que NO tuviera extensión), lo que dejaba casi toda la
+# API pública sin darse cuenta.
+_PUBLIC_EXACT = ("/", "/visualizacion", "/visualizacion.html",
+                  "/auth/login", "/auth/logout", "/auth/me")
+_PUBLIC_EXTENSIONS = ('.html', '.js', '.css', '.png', '.jpg', '.jpeg',
+                       '.ico', '.svg', '.woff', '.woff2', '.ttf', '.webp', '.gif')
+
+
 @app.before_request
 def _require_auth_global():
-    PUBLIC = ("/auth/login", "/auth/logout", "/auth/me")
-    if request.path in PUBLIC or request.path.startswith("/static/"):
-        return None
     if request.method == "OPTIONS":
         return None
+    if request.path in _PUBLIC_EXACT or request.path.startswith("/static/"):
+        return None
     ext = os.path.splitext(request.path)[1].lower()
-    if ext in ('.html', '.js', '.css', '.png', '.jpg', '.jpeg',
-               '.ico', '.svg', '.woff', '.woff2', '.ttf', '.webp', '.gif'):
+    if ext in _PUBLIC_EXTENSIONS:
         return None
-    if not ext:
-        return None
+    # Todo lo demás (rutas de API sin extensión: /personas, /gastos, /asistencia,
+    # /yunatt/*, etc.) exige sesión válida.
     if _get_session() is None:
         return jsonify({"ok": False, "error": "No autenticado"}), 401
 
@@ -930,6 +946,20 @@ def get_entregas():
 def crear_entrega():
     body = request.get_json(silent=True) or {}
     try:
+        articulo_id = body.get("articulo_id")
+        cantidad    = float(body.get("cantidad", 1))
+        if cantidad <= 0:
+            return jsonify({"ok": False, "error": "Cantidad debe ser mayor a 0"}), 400
+
+        # Validación server-side: el frontend ya compara contra el stock en
+        # memoria, pero eso no protege contra una llamada directa a la API
+        # (curl/Postman). Sin esto, el stock podía quedar negativo.
+        art_rows = query("SELECT stock FROM articulos WHERE id=%s", (articulo_id,))
+        if not art_rows:
+            return jsonify({"ok": False, "error": "Artículo no encontrado"}), 404
+        if float(art_rows[0]["stock"]) < cantidad:
+            return jsonify({"ok": False, "error": f"Stock insuficiente. Disponible: {art_rows[0]['stock']}"}), 400
+
         campana_id = None
         campana    = body.get("campana", "General")
         rows = query("SELECT id FROM campanas WHERE nombre=%s", (campana,))
@@ -941,15 +971,15 @@ def crear_entrega():
         id_ = query("""
             INSERT INTO entregas (persona_id, articulo_id, campana_id, cantidad, fecha, notas)
             VALUES (%s, %s, %s, %s, CURRENT_DATE, %s)
-        """, (body.get("persona_id"), body.get("articulo_id"),
-              campana_id, body.get("cantidad", 1), body.get("notas", "")), fetch=False)
+        """, (body.get("persona_id"), articulo_id,
+              campana_id, cantidad, body.get("notas", "")), fetch=False)
 
-        query("UPDATE articulos SET stock = stock - %s WHERE id=%s",
-              (body.get("cantidad", 1), body.get("articulo_id")), fetch=False)
+        query("UPDATE articulos SET stock = stock - %s WHERE id=%s AND stock >= %s",
+              (cantidad, articulo_id, cantidad), fetch=False)
         query("""
             INSERT INTO movimientos_almacen (articulo_id, tipo, cantidad, motivo, fecha)
             VALUES (%s, 'salida', %s, 'Entrega a beneficiario', CURRENT_DATE)
-        """, (body.get("articulo_id"), body.get("cantidad", 1)), fetch=False)
+        """, (articulo_id, cantidad), fetch=False)
 
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
@@ -1609,11 +1639,24 @@ def db_reset():
     (comando ADMS remoto) y el staff de yunatt.com (protege superAdmins).
     NOTA: NO borra usuarios_sistema — los logins del ERP se conservan.
     """
-    if not _require_admin():
+    s = _require_admin()
+    if not s:
         return jsonify({"ok": False, "error": "Solo administradores"}), 403
     body = request.get_json(silent=True) or {}
     if body.get("confirmar") != "BORRAR_TODO":
         return jsonify({"ok": False, "error": "Se requiere confirmar: 'BORRAR_TODO'"}), 400
+
+    # Reautenticación: una acción destructiva e irreversible como esta no debe
+    # depender solo de tener un token de sesión válido (que puede haber sido
+    # robado por XSS o dejado abierto en un equipo) — se exige volver a
+    # escribir la contraseña del administrador actual.
+    password = (body.get("password") or "").strip()
+    if not password:
+        return jsonify({"ok": False, "error": "Se requiere tu contraseña para confirmar"}), 400
+    user_rows = query("SELECT password_hash FROM usuarios_sistema WHERE id=%s AND activo=TRUE", (s["user_id"],))
+    if not user_rows or not _verify_password(password, user_rows[0]["password_hash"]):
+        return jsonify({"ok": False, "error": "Contraseña incorrecta"}), 401
+
     limpiar_timmy = bool(body.get("limpiar_timmy"))
 
     tablas = [
@@ -1697,20 +1740,26 @@ def _init_usuarios():
                 pass
         count = query("SELECT COUNT(*) AS n FROM usuarios_sistema")
         if count and count[0]["n"] == 0:
+            # Contraseña aleatoria por instalación (no hardcodeada): antes esto
+            # creaba admin/admin123 (y equivalentes) idénticos en cada instalación,
+            # publicados en el propio repositorio — cualquiera que hubiera visto
+            # el código podía loguearse como administrador.
             demos = [
-                ('Administrador',  'admin',      'admin123',  'admin'),
-                ('Coordinadora',   'coord',       'coord123',  'coordinador'),
-                ('Voluntario Demo','voluntario',  'vol123',    'voluntario'),
-                ('Kiosko Entrada', 'kiosko',      'kiosko123', 'kiosko'),
-                ('Donador Demo',   'donador',     'dona123',   'donador'),
+                ('Administrador',   'admin',      'admin'),
+                ('Coordinadora',    'coord',      'coordinador'),
+                ('Voluntario Demo', 'voluntario', 'voluntario'),
+                ('Kiosko Entrada',  'kiosko',     'kiosko'),
+                ('Donador Demo',    'donador',    'donador'),
             ]
-            for nombre, username, pw, rol in demos:
+            log.info("Primer arranque: creando usuarios de sistema con contraseña aleatoria —")
+            for nombre, username, rol in demos:
+                pw = secrets.token_urlsafe(9)
                 ph = _hash_password(pw)
                 query("""
                     INSERT INTO usuarios_sistema (nombre, username, password_hash, rol)
                     VALUES (%s, %s, %s, %s)
                 """, (nombre, username, ph, rol), fetch=False)
-            log.info("Usuarios de demo creados.")
+                log.info(f"  {username:<12} -> {pw}  (cámbiala en el primer login)")
     except Exception as e:
         log.warning(f"_init_usuarios: {e}")
 
@@ -1774,6 +1823,10 @@ def _migrar_esquema():
         "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS imagen VARCHAR(255) DEFAULT ''",
         "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(100) DEFAULT ''",
         "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS notas TEXT",
+        # Faltaba en esta lista: sin esto, POST /entregas y el registro de
+        # servicios de alimentación fallaban con "Unknown column 'fecha'"
+        # en cualquier base que no viniera ya con esta columna.
+        "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS fecha DATE DEFAULT (CURRENT_DATE)",
         "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS origen ENUM('compra','donacion') DEFAULT 'compra'",
         "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS costo_total DECIMAL(10,2) DEFAULT 0.00",
         "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS proveedor_donante VARCHAR(200) DEFAULT ''",

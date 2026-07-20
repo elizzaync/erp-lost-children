@@ -1,5 +1,6 @@
+import os
 import sys
-sys.path.insert(0, r"C:\Users\NIEVES\ERP_Lost_Children\bridge")
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
 import yunatt_sync, logging
 logging.disable(logging.CRITICAL)
 sys.stdout.reconfigure(encoding="utf-8")
@@ -17,6 +18,22 @@ print(f"Usuario prueba: {test}")
 
 if test:
     staff_id = test["id"]
+
+    # ── Guarda de seguridad ────────────────────────────────────────────────
+    # Este script prueba varios endpoints de BORRADO contra la nube REAL de
+    # yunatt.com, identificando el registro solo por enrollid=="50" (sin
+    # confirmar que sea efectivamente un usuario de prueba). Si "50" llegara
+    # a corresponder a una persona real, esto la borra de yunatt sin aviso.
+    print(f"\nSe intentará BORRAR de yunatt.com al registro: {test}")
+    if os.environ.get("ALLOW_DESTRUCTIVE") != "1":
+        if not sys.stdin.isatty():
+            print("No hay terminal interactiva y ALLOW_DESTRUCTIVE!=1 — abortando sin borrar nada.")
+            sys.exit(1)
+        respuesta = input('Verifica que sea un registro de PRUEBA. Escribe CONFIRMAR para borrarlo (cualquier otra cosa cancela): ').strip()
+        if respuesta != "CONFIRMAR":
+            print("Cancelado — no se borró nada.")
+            sys.exit(1)
+
     for path in ["/staff/delete", "/staff/remove", "/staff/deleteById",
                  f"/staff/{staff_id}/delete", "/staff/batchDelete"]:
         r2 = s.post(BASE + path, data={"ids": str(staff_id)}, headers=hdrs, timeout=8)

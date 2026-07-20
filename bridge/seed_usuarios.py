@@ -1,11 +1,39 @@
 """
 Seed/migración de usuarios del sistema ERP Lost Children.
 Ejecutar: python bridge/seed_usuarios.py
+
+Genera una contraseña aleatoria por usuario en cada ejecución (no hay
+contraseñas fijas en el código) y la hashea con el mismo esquema que usa
+server.py para verificar login (PBKDF2-HMAC-SHA256, formato
+"pbkdf2$salt$hash"). Las contraseñas generadas se imprimen UNA sola vez al
+final para que quien ejecute el script las anote — no quedan guardadas en
+ningún archivo.
 """
 import pymysql
 import hashlib
+import secrets
 
-DB = dict(host='localhost', user='root', password='', database='erp_lost_children', charset='utf8mb4')
+from config import env
+
+DB = dict(
+    host=env("DB_HOST", "localhost"),
+    user=env("DB_USER", "root"),
+    password=env("DB_PASSWORD", ""),
+    database=env("DB_NAME", "erp_lost_children"),
+    charset='utf8mb4',
+)
+
+
+def _hash_password(password):
+    """Debe coincidir exactamente con _hash_password() de bridge/server.py."""
+    salt = secrets.token_hex(16)
+    h = hashlib.pbkdf2_hmac("sha256", password.encode(), salt.encode(), 260000)
+    return f"pbkdf2${salt}${h.hex()}"
+
+
+def _generar_password():
+    return secrets.token_urlsafe(9)  # ~12 caracteres, aleatorio por ejecución
+
 
 conn = pymysql.connect(**DB)
 cur  = conn.cursor()
@@ -24,18 +52,21 @@ except Exception as e:
     print(f"  ! ENUM ya actualizado o error: {e}")
     conn.rollback()
 
-# 2. Usuarios a sembrar
+# 2. Usuarios a sembrar (nombre, username, rol) — la contraseña se genera al vuelo
 USUARIOS = [
-    ('Administrador',       'admin',      'admin123',  'admin'),
-    ('Coordinadora',        'coord',       'coord123',  'coordinador'),
-    ('Voluntario Demo',     'voluntario',  'vol123',    'voluntario'),
-    ('Kiosko Entrada',      'kiosko',      'kiosko123', 'kiosko'),
-    ('Donador Demo',        'donador',     'dona123',   'donador'),
+    ('Administrador',    'admin',       'admin'),
+    ('Coordinadora',     'coord',       'coordinador'),
+    ('Voluntario Demo',  'voluntario',  'voluntario'),
+    ('Kiosko Entrada',   'kiosko',      'kiosko'),
+    ('Donador Demo',     'donador',     'donador'),
 ]
 
 print("\n── Usuarios ──")
-for nombre, username, password, rol in USUARIOS:
-    ph = hashlib.sha256(password.encode()).hexdigest()
+passwords_generadas = []
+for nombre, username, rol in USUARIOS:
+    password = _generar_password()
+    passwords_generadas.append((username, password))
+    ph = _hash_password(password)
     # Actualizar si existe, insertar si no
     cur.execute("SELECT id FROM usuarios_sistema WHERE username=%s", (username,))
     existing = cur.fetchone()
@@ -61,9 +92,10 @@ for row in cur.fetchall():
     estado = "activo" if row[4] else "inactivo"
     print(f"  [{row[0]}] {row[2]:<14} {row[3]:<14} {row[1]} ({estado})")
 
-print(f"\n  Contraseñas:")
-for _, username, password, _ in USUARIOS:
+print(f"\n  Contraseñas generadas ahora (anótalas, no se guardan en ningún archivo):")
+for username, password in passwords_generadas:
     print(f"  {username:<14} → {password}")
+print("\n  Recomendado: pide a cada usuario que la cambie en su primer login.")
 
 cur.close()
 conn.close()

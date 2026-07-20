@@ -75,9 +75,9 @@ App.register('alimentacion', (function () {
         </div>
         ${servicios.map(s => `
           <div class="table-row" style="grid-template-columns:90px 1.5fr 70px 70px 80px 80px;">
-            <span style="font-size:12.5px;color:var(--muted);">${s.fecha}</span>
+            <span style="font-size:12.5px;color:var(--muted);">${esc(s.fecha)}</span>
             <div>
-              <div style="font-size:13.5px;font-weight:600;">${s.menu}</div>
+              <div style="font-size:13.5px;font-weight:600;">${esc(s.menu)}</div>
               <div style="font-size:11.5px;color:var(--faint);">${s.insumos ? s.insumos.split('·').length+' insumos' : '—'}</div>
             </div>
             <span style="font-size:14px;font-weight:700;">${s.total}</span>
@@ -111,10 +111,10 @@ App.register('alimentacion', (function () {
           const col  = bad ? 'var(--danger)' : warn ? 'var(--warn)' : 'var(--success)';
           return `
           <div style="display:flex;align-items:center;justify-content:space-between;padding:9px 16px;border-bottom:1px solid var(--line);">
-            <span style="font-size:13.5px;font-weight:600;">${a.nombre}</span>
+            <span style="font-size:13.5px;font-weight:600;">${esc(a.nombre)}</span>
             <div style="display:flex;align-items:center;gap:8px;">
               <span style="font-size:14px;font-weight:800;color:${col};">${a.stock}</span>
-              <span style="font-size:12px;color:var(--faint);">${a.unidad}</span>
+              <span style="font-size:12px;color:var(--faint);">${esc(a.unidad)}</span>
             </div>
           </div>`;
         }).join('')}
@@ -151,7 +151,7 @@ App.register('alimentacion', (function () {
         <h2 style="margin:0;flex:1;">Registrar servicio de almuerzo</h2>
         ${plantilla ? `<div style="background:#edfde0;color:#3d8a20;border-radius:8px;padding:5px 11px;font-size:12px;font-weight:700;">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:3px;"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-          Plantilla: ${plantilla.menu}
+          Plantilla: ${esc(plantilla.menu)}
         </div>` : ''}
       </div>
       <p style="margin:0 0 18px;font-size:13px;color:var(--muted);">
@@ -167,7 +167,7 @@ App.register('alimentacion', (function () {
         <div class="form-grid">
           <div class="form-group">
             <label>Menú / Descripción *</label>
-            <input type="text" id="al-menu" value="${plantilla ? plantilla.menu : ''}" placeholder="Ej: Arroz con pollo, ensalada y jugo">
+            <input type="text" id="al-menu" value="${esc(plantilla ? plantilla.menu : '')}" placeholder="Ej: Arroz con pollo, ensalada y jugo">
           </div>
           <div class="form-group">
             <label>Fecha</label>
@@ -220,10 +220,10 @@ App.register('alimentacion', (function () {
             return `
             <div style="display:grid;grid-template-columns:1.8fr .8fr .9fr .9fr .9fr;gap:6px;padding:9px 14px;border-top:1px solid var(--line);align-items:center;">
               <div>
-                <div style="font-size:13.5px;font-weight:600;">${a.nombre}</div>
-                <div style="font-size:11px;color:var(--faint);">${a.categoria}</div>
+                <div style="font-size:13.5px;font-weight:600;">${esc(a.nombre)}</div>
+                <div style="font-size:11px;color:var(--faint);">${esc(a.categoria)}</div>
               </div>
-              <span style="font-size:13px;font-weight:700;color:${a.stock<a.minimo?'var(--danger)':'var(--ink)'};">${a.stock} <span style="font-size:11px;font-weight:400;color:var(--faint);">${a.unidad}</span></span>
+              <span style="font-size:13px;font-weight:700;color:${a.stock<a.minimo?'var(--danger)':'var(--ink)'};">${a.stock} <span style="font-size:11px;font-weight:400;color:var(--faint);">${esc(a.unidad)}</span></span>
               <input type="number" id="al-uso-${a.id}" value="${cantPrev}" min="0" step="0.01"
                 style="width:80px;padding:6px 8px;border:1.5px solid var(--border);border-radius:7px;font-size:13px;text-align:center;"
                 oninput="AlimentacionModule._onCantidadChange(this,${a.id},${a.precio})">
@@ -367,7 +367,7 @@ App.register('alimentacion', (function () {
     const desc = consumoValido.length
       ? `${consumoValido.length} insumo${consumoValido.length>1?'s':''} descontado${consumoValido.length>1?'s':''}`
       : 'sin insumos';
-    UI.toast(`"${menu}" registrado — ${total} comensales · $${costoTotal.toFixed(2)} · $${costoPlato.toFixed(2)}/plato`, 'success');
+    UI.toast(`"${esc(menu)}" registrado — ${total} comensales · $${costoTotal.toFixed(2)} · $${costoPlato.toFixed(2)}/plato`, 'success');
     App.refresh();
   }
 

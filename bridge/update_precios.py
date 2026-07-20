@@ -3,8 +3,15 @@ Actualiza precios, descripcion y proveedor de los productos ya insertados.
 python update_precios.py
 """
 import pymysql
+from config import env
 
-DB = dict(host='localhost', user='root', password='', database='erp_lost_children', charset='utf8mb4')
+DB = dict(
+    host=env("DB_HOST", "localhost"),
+    user=env("DB_USER", "root"),
+    password=env("DB_PASSWORD", ""),
+    database=env("DB_NAME", "erp_lost_children"),
+    charset='utf8mb4',
+)
 
 # (nombre, precio, descripcion, proveedor)
 productos = [

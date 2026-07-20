@@ -310,7 +310,9 @@ window.DB = (function () {
 
   function _conectarWS() {
     try {
-      const wsUrl = API.replace(/^http/, 'ws') + '/ws/asistencia';
+      const token = (window.Auth && Auth.getToken()) ? Auth.getToken() : '';
+      const wsUrl = API.replace(/^http/, 'ws') + '/ws/asistencia'
+                  + (token ? ('?token=' + encodeURIComponent(token)) : '');
       _ws = new WebSocket(wsUrl);
       _ws.onopen = () => { _wsRetry = 2000; };
       _ws.onmessage = (ev) => {
@@ -379,14 +381,20 @@ window.DB = (function () {
     });
     if (res && res.ok) {
       persona.id = res.id;
-      // Registrar en el ZKTeco — privilege=14 (Admin) para ignorar restricciones de horario
+      // Nota: el enrolamiento real en el dispositivo se hace vía /timmy/agregar
+      // (tab "Enrolar"), que llama a timmy_direct.agregar_usuario() con
+      // privilegio=0 (usuario normal) por defecto. Esta llamada a /users queda
+      // aquí por compatibilidad, pero /users no existe como ruta en server.py
+      // — si alguna vez se implementa, debe crearse con privilege=0, nunca 14
+      // (Admin): eso le daría a cada persona registrada acceso administrativo
+      // al dispositivo físico solo para evitar una restricción de horario.
       apiFetch('/users', {
         method: 'POST',
         body: JSON.stringify({
           uid:       res.id,
           user_id:   String(res.id),
           name:      persona.nombre.substring(0, 24),
-          privilege: 14,
+          privilege: 0,
           password:  '',
         }),
       });
@@ -783,15 +791,25 @@ window.DB = (function () {
     return alertas;
   }
 
-  /* ---------- INIT: carga datos y arranca refresco automático ---------- */
-  cargarTodo().then(() => {
-    // WebSocket: push instantáneo cuando hay marcas/cambios de asistencia
-    _conectarWS();
-    // Respaldo por si el WebSocket se cae: refresco cada 30s
-    setInterval(refrescarAsistencia, 30000);
-    // Refresca todos los datos cada 2 minutos para mantener dashboard actualizado
-    setInterval(cargarTodo, 120000);
-  });
+  /* ---------- INIT: carga datos y arranca refresco automático ----------
+     IMPORTANTE: antes esto se ejecutaba apenas se parseaba el script (antes
+     de que existiera sesión), así que salían peticiones sin token en cuanto
+     se abría la página, login incluido. Ahora es un método explícito que
+     Auth/App llaman recién cuando confirman que hay una sesión válida. */
+  let _dbInicializada = false;
+
+  function init() {
+    if (_dbInicializada) return cargarTodo();
+    _dbInicializada = true;
+    return cargarTodo().then(() => {
+      // WebSocket: push instantáneo cuando hay marcas/cambios de asistencia
+      _conectarWS();
+      // Respaldo por si el WebSocket se cae: refresco cada 30s
+      setInterval(refrescarAsistencia, 30000);
+      // Refresca todos los datos cada 2 minutos para mantener dashboard actualizado
+      setInterval(cargarTodo, 120000);
+    });
+  }
 
   /* ---------- API PÚBLICA ---------- */
   return {
@@ -834,5 +852,7 @@ window.DB = (function () {
 
     // utilidad para forzar recarga manual desde cualquier módulo
     recargar: cargarTodo,
+    // llamar solo tras confirmar sesión válida (ver auth.js)
+    init,
   };
 })();

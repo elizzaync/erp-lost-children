@@ -72,15 +72,15 @@ App.register('personas', (function () {
   /* ---------- HELPERS FORMULARIO ---------- */
   function _renderTutorField(val) {
     const padres = DB.personas.filter(p => p.tipo === 'padre');
-    if (!padres.length) return `<input type="text" id="p-tutor" value="${val}" placeholder="Nombre del responsable">`;
+    if (!padres.length) return `<input type="text" id="p-tutor" value="${esc(val)}" placeholder="Nombre del responsable">`;
     const manual = !padres.find(p => p.nombre === val);
     return `
       <select id="p-tutor-sel" onchange="PersonasModule.onTutorSelect(this.value)">
         <option value="">— selecciona —</option>
-        ${padres.map(p=>`<option value="${p.nombre}" ${p.nombre===val?'selected':''}>${p.nombre}</option>`).join('')}
+        ${padres.map(p=>`<option value="${esc(p.nombre)}" ${p.nombre===val?'selected':''}>${esc(p.nombre)}</option>`).join('')}
         <option value="__manual__" ${manual&&val?'selected':''}>Escribir manualmente…</option>
       </select>
-      <input type="text" id="p-tutor" value="${val}" style="margin-top:6px;${manual&&val?'':'display:none'}" placeholder="Nombre del tutor">`;
+      <input type="text" id="p-tutor" value="${esc(val)}" style="margin-top:6px;${manual&&val?'':'display:none'}" placeholder="Nombre del tutor">`;
   }
 
   function onTutorSelect(val) {
@@ -124,7 +124,7 @@ App.register('personas', (function () {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/></svg>
           Identificación
         </div>
-        <div class="form-group"><label>Nombre completo *</label><input type="text" id="p-nombre" value="${p?p.nombre:''}" placeholder="Ej: María García López"></div>
+        <div class="form-group"><label>Nombre completo *</label><input type="text" id="p-nombre" value="${esc(p?p.nombre:'')}" placeholder="Ej: María García López"></div>
         <div class="form-grid">
           <div class="form-group"><label>Tipo *</label>
             <select id="p-tipo" onchange="PersonasModule.onTipoChange(this.value)">
@@ -138,8 +138,8 @@ App.register('personas', (function () {
           </div>
         </div>
         <div class="form-grid">
-          <div class="form-group"><label>DNI / Cédula</label><input type="text" id="p-dni" value="${p?p.dni:''}" placeholder="Número de documento"></div>
-          <div class="form-group"><label>Fecha de nacimiento</label><input type="date" id="p-fnac" value="${p?p.fechaNacimiento:''}"></div>
+          <div class="form-group"><label>DNI / Cédula</label><input type="text" id="p-dni" value="${esc(p?p.dni:'')}" placeholder="Número de documento"></div>
+          <div class="form-group"><label>Fecha de nacimiento</label><input type="date" id="p-fnac" value="${esc(p?p.fechaNacimiento:'')}"></div>
         </div>
         <div class="form-grid">
           <div class="form-group"><label>Género</label>
@@ -148,17 +148,17 @@ App.register('personas', (function () {
               <option value="M" ${p&&p.genero==='M'?'selected':''}>Masculino</option>
             </select>
           </div>
-          <div class="form-group"><label>Nacionalidad</label><input type="text" id="p-nac" value="${p?p.nacionalidad:''}" placeholder="Ej: Venezolana"></div>
+          <div class="form-group"><label>Nacionalidad</label><input type="text" id="p-nac" value="${esc(p?p.nacionalidad:'')}" placeholder="Ej: Venezolana"></div>
         </div>
         <div class="form-grid">
-          <div class="form-group"><label>Procedencia</label><input type="text" id="p-proc" value="${p?p.procedencia:''}" placeholder="Ciudad o región de origen"></div>
+          <div class="form-group"><label>Procedencia</label><input type="text" id="p-proc" value="${esc(p?p.procedencia:'')}" placeholder="Ciudad o región de origen"></div>
           <div class="form-group"><label>Prioridad</label>
             <select id="p-prioridad">
               ${['alta','media','baja'].map(pr=>`<option value="${pr}" ${p&&p.prioridad===pr?'selected':''}>${{alta:'Alta',media:'Media',baja:'Baja'}[pr]}</option>`).join('')}
             </select>
           </div>
         </div>
-        <div class="form-group"><label>Fecha de ingreso al programa</label><input type="month" id="p-ingreso" value="${p?p.ingreso:''}"></div>
+        <div class="form-group"><label>Fecha de ingreso al programa</label><input type="month" id="p-ingreso" value="${esc(p?p.ingreso:'')}"></div>
       </div>
 
       <!-- CONTACTO (todos) -->
@@ -168,11 +168,11 @@ App.register('personas', (function () {
           Contacto y Ubicación
         </div>
         <div class="form-grid">
-          <div class="form-group"><label>Teléfono</label><input type="tel" id="p-tel" value="${p?p.telefono:''}" placeholder="+58 412 000 0000"></div>
-          <div class="form-group"><label>Email</label><input type="email" id="p-email" value="${p?p.email:''}" placeholder="correo@ejemplo.com"></div>
+          <div class="form-group"><label>Teléfono</label><input type="tel" id="p-tel" value="${esc(p?p.telefono:'')}" placeholder="+58 412 000 0000"></div>
+          <div class="form-group"><label>Email</label><input type="email" id="p-email" value="${esc(p?p.email:'')}" placeholder="correo@ejemplo.com"></div>
         </div>
-        <div class="form-group"><label>Dirección</label><input type="text" id="p-dir" value="${p?p.direccion:''}" placeholder="Calle, número, casa…"></div>
-        <div class="form-group"><label>Barrio / Sector</label><input type="text" id="p-barrio" value="${p?p.barrio:''}" placeholder="Nombre del barrio o sector"></div>
+        <div class="form-group"><label>Dirección</label><input type="text" id="p-dir" value="${esc(p?p.direccion:'')}" placeholder="Calle, número, casa…"></div>
+        <div class="form-group"><label>Barrio / Sector</label><input type="text" id="p-barrio" value="${esc(p?p.barrio:'')}" placeholder="Nombre del barrio o sector"></div>
       </div>
 
       <!-- SECCIÓN NIÑO -->
@@ -188,7 +188,7 @@ App.register('personas', (function () {
               ${['','Padre','Madre','Abuelo/a','Tío/a','Hermano/a','Padrino/Madrina','Otro'].map(r=>`<option value="${r}" ${p&&p.parentescoTutor===r?'selected':''}>${r||'— selecciona —'}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group"><label>Teléfono del tutor</label><input type="tel" id="p-tel-tutor" value="${p?p.telefonoTutor:''}" placeholder="+58 412 000 0000"></div>
+          <div class="form-group"><label>Teléfono del tutor</label><input type="tel" id="p-tel-tutor" value="${esc(p?p.telefonoTutor:'')}" placeholder="+58 412 000 0000"></div>
         </div>
         <div class="form-group"><label>Situación familiar</label>
           <select id="p-sit-familiar">
@@ -196,7 +196,7 @@ App.register('personas', (function () {
           </select>
         </div>
         <div class="form-group"><label>Motivo de ingreso al programa</label>
-          <textarea id="p-motivo" rows="2" placeholder="Describa brevemente el motivo…">${p?p.motivoIngreso:''}</textarea>
+          <textarea id="p-motivo" rows="2" placeholder="Describa brevemente el motivo…">${esc(p?p.motivoIngreso:'')}</textarea>
         </div>
         <div class="ficha-section-title" style="margin-top:14px;">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h20v7H2zM6 10v11M18 10v11M2 17h4M18 17h4"/></svg>
@@ -208,7 +208,7 @@ App.register('personas', (function () {
               ${['','Preescolar','1° Primaria','2° Primaria','3° Primaria','4° Primaria','5° Primaria','6° Primaria','1° Secundaria','2° Secundaria','3° Secundaria','4° Secundaria','5° Secundaria','Sin escolarizar'].map(e=>`<option value="${e}" ${p&&p.escolaridad===e?'selected':''}>${e||'— selecciona —'}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group"><label>Colegio / Escuela</label><input type="text" id="p-colegio" value="${p?p.colegio:''}" placeholder="Nombre de la institución"></div>
+          <div class="form-group"><label>Colegio / Escuela</label><input type="text" id="p-colegio" value="${esc(p?p.colegio:'')}" placeholder="Nombre de la institución"></div>
         </div>
       </div>
 
@@ -219,21 +219,21 @@ App.register('personas', (function () {
           Datos del Hogar
         </div>
         <div class="form-grid">
-          <div class="form-group"><label>Ocupación / Trabajo</label><input type="text" id="p-ocupacion" value="${p?p.ocupacion:''}" placeholder="Ej: Comerciante, Docente…"></div>
+          <div class="form-group"><label>Ocupación / Trabajo</label><input type="text" id="p-ocupacion" value="${esc(p?p.ocupacion:'')}" placeholder="Ej: Comerciante, Docente…"></div>
           <div class="form-group"><label>Ingreso familiar estimado</label>
             <select id="p-ingreso-familiar">
               ${['','Menos de $50','$50 - $100','$100 - $200','$200 - $400','Más de $400','Sin ingreso fijo'].map(v=>`<option value="${v}" ${p&&p.ingresoFamiliar===v?'selected':''}>${v||'— selecciona —'}</option>`).join('')}
             </select>
           </div>
         </div>
-        <div class="form-group"><label>Hijos registrados en el programa</label><input type="number" id="p-num-hijos" value="${p?p.numHijosPrograma:''}" min="0" max="20" placeholder="Número de hijos en el programa"></div>
+        <div class="form-group"><label>Hijos registrados en el programa</label><input type="number" id="p-num-hijos" value="${esc(p?p.numHijosPrograma:'')}" min="0" max="20" placeholder="Número de hijos en el programa"></div>
         <div class="form-group"><label>Situación familiar</label>
           <select id="p-sit-familiar-padre">
             ${['','Familia completa','Madre soltera','Padre soltero','Familia extendida','Familia reconstituida','Otra'].map(s=>`<option value="${s}" ${p&&p.situacionFamiliar===s?'selected':''}>${s||'— selecciona —'}</option>`).join('')}
           </select>
         </div>
         <div class="form-group"><label>Observaciones del hogar</label>
-          <textarea id="p-motivo-padre" rows="2" placeholder="Situación especial, necesidades del hogar…">${p?p.motivoIngreso:''}</textarea>
+          <textarea id="p-motivo-padre" rows="2" placeholder="Situación especial, necesidades del hogar…">${esc(p?p.motivoIngreso:'')}</textarea>
         </div>
       </div>
 
@@ -243,10 +243,10 @@ App.register('personas', (function () {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
           Datos de Misión
         </div>
-        <div class="form-group"><label>Organización / Iglesia de origen</label><input type="text" id="p-organizacion" value="${p?p.organizacion:''}" placeholder="Ej: Iglesia Bautista Central…"></div>
+        <div class="form-group"><label>Organización / Iglesia de origen</label><input type="text" id="p-organizacion" value="${esc(p?p.organizacion:'')}" placeholder="Ej: Iglesia Bautista Central…"></div>
         <div class="form-grid">
-          <div class="form-group"><label>País de origen</label><input type="text" id="p-pais" value="${p?p.paisOrigen:''}" placeholder="Ej: Colombia, España…"></div>
-          <div class="form-group"><label>Rol / Cargo en misión</label><input type="text" id="p-ocupacion-mis" value="${p?p.ocupacion:''}" placeholder="Ej: Líder de misión, Maestro…"></div>
+          <div class="form-group"><label>País de origen</label><input type="text" id="p-pais" value="${esc(p?p.paisOrigen:'')}" placeholder="Ej: Colombia, España…"></div>
+          <div class="form-group"><label>Rol / Cargo en misión</label><input type="text" id="p-ocupacion-mis" value="${esc(p?p.ocupacion:'')}" placeholder="Ej: Líder de misión, Maestro…"></div>
         </div>
         <div class="form-grid">
           <div class="form-group"><label>Tipo de misión</label>
@@ -254,7 +254,7 @@ App.register('personas', (function () {
               ${['','Corto plazo (menos de 3 meses)','Mediano plazo (3-12 meses)','Largo plazo (más de 1 año)','Permanente'].map(v=>`<option value="${v}" ${p&&p.tipoVinculo===v?'selected':''}>${v||'— selecciona —'}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group"><label>Fecha fin de misión</label><input type="date" id="p-fecha-fin" value="${p?p.fechaFin:''}"></div>
+          <div class="form-group"><label>Fecha fin de misión</label><input type="date" id="p-fecha-fin" value="${esc(p?p.fechaFin:'')}"></div>
         </div>
       </div>
 
@@ -264,7 +264,7 @@ App.register('personas', (function () {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0l-1 1-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.8 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>
           Datos de Voluntariado
         </div>
-        <div class="form-group"><label>Organización que representa</label><input type="text" id="p-organizacion" value="${p?p.organizacion:''}" placeholder="Organización, universidad, empresa… (opcional)"></div>
+        <div class="form-group"><label>Organización que representa</label><input type="text" id="p-organizacion" value="${esc(p?p.organizacion:'')}" placeholder="Organización, universidad, empresa… (opcional)"></div>
         <div class="form-grid">
           <div class="form-group"><label>Área de servicio</label>
             <select id="p-area">
@@ -277,9 +277,9 @@ App.register('personas', (function () {
             </select>
           </div>
         </div>
-        <div class="form-group"><label>Fecha fin de voluntariado</label><input type="date" id="p-fecha-fin" value="${p?p.fechaFin:''}"></div>
+        <div class="form-group"><label>Fecha fin de voluntariado</label><input type="date" id="p-fecha-fin" value="${esc(p?p.fechaFin:'')}"></div>
         <div class="form-group"><label>Habilidades / Competencias</label>
-          <textarea id="p-motivo-vol" rows="2" placeholder="Describe tus habilidades o lo que puedes aportar…">${p?p.motivoIngreso:''}</textarea>
+          <textarea id="p-motivo-vol" rows="2" placeholder="Describe tus habilidades o lo que puedes aportar…">${esc(p?p.motivoIngreso:'')}</textarea>
         </div>
       </div>
 
@@ -290,7 +290,7 @@ App.register('personas', (function () {
           Datos Laborales
         </div>
         <div class="form-grid">
-          <div class="form-group"><label>Cargo / Puesto</label><input type="text" id="p-ocupacion-sta" value="${p?p.ocupacion:''}" placeholder="Ej: Coordinador, Psicólogo…"></div>
+          <div class="form-group"><label>Cargo / Puesto</label><input type="text" id="p-ocupacion-sta" value="${esc(p?p.ocupacion:'')}" placeholder="Ej: Coordinador, Psicólogo…"></div>
           <div class="form-group"><label>Área / Departamento</label>
             <select id="p-area">
               ${['','Dirección','Administración','Trabajo social','Psicología','Educación','Salud','Logística','Comunicación','Otra'].map(a=>`<option value="${a}" ${p&&p.areaServicio===a?'selected':''}>${a||'— selecciona —'}</option>`).join('')}
@@ -303,7 +303,7 @@ App.register('personas', (function () {
               ${['','Tiempo completo','Medio tiempo','Por horas','Honorarios','Voluntario remunerado'].map(v=>`<option value="${v}" ${p&&p.tipoVinculo===v?'selected':''}>${v||'— selecciona —'}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group"><label>Fecha fin de contrato</label><input type="date" id="p-fecha-fin" value="${p?p.fechaFin:''}"></div>
+          <div class="form-group"><label>Fecha fin de contrato</label><input type="date" id="p-fecha-fin" value="${esc(p?p.fechaFin:'')}"></div>
         </div>
       </div>
 
@@ -319,10 +319,10 @@ App.register('personas', (function () {
               ${['','A+','A-','B+','B-','AB+','AB-','O+','O-','Desconocido'].map(s=>`<option value="${s}" ${p&&p.grupoSanguineo===s?'selected':''}>${s||'— selecciona —'}</option>`).join('')}
             </select>
           </div>
-          <div class="form-group"><label>Alergias conocidas</label><input type="text" id="p-alergias" value="${p?p.alergias:''}" placeholder="Ej: Polen, penicilina… o Ninguna"></div>
+          <div class="form-group"><label>Alergias conocidas</label><input type="text" id="p-alergias" value="${esc(p?p.alergias:'')}" placeholder="Ej: Polen, penicilina… o Ninguna"></div>
         </div>
         <div class="form-group"><label>Condición médica o discapacidad</label>
-          <textarea id="p-medica" rows="2" placeholder="Condiciones relevantes o 'Ninguna'…">${p?p.condicionMedica:''}</textarea>
+          <textarea id="p-medica" rows="2" placeholder="Condiciones relevantes o 'Ninguna'…">${esc(p?p.condicionMedica:'')}</textarea>
         </div>
       </div>
 
@@ -332,7 +332,7 @@ App.register('personas', (function () {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
           Observaciones generales
         </div>
-        <textarea id="p-obs" rows="3" placeholder="Notas adicionales, seguimiento, situación especial…" style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-family:'Public Sans';font-size:14px;background:var(--bg);color:var(--ink);outline:none;resize:vertical;">${p?p.observaciones:''}</textarea>
+        <textarea id="p-obs" rows="3" placeholder="Notas adicionales, seguimiento, situación especial…" style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-family:'Public Sans';font-size:14px;background:var(--bg);color:var(--ink);outline:none;resize:vertical;">${esc(p?p.observaciones:'')}</textarea>
       </div>
 
       <div class="modal-footer">
@@ -436,7 +436,7 @@ App.register('personas', (function () {
     const tipoLabel = {nino:'Niño/a',padre:'Padre/Madre',misionero:'Misionero',voluntario:'Voluntario',staff:'Staff'}[p.tipo]||p.tipo;
 
     const fila = (label, valor) => valor
-      ? `<div class="ficha-dato"><span class="ficha-dato-label">${label}</span><span class="ficha-dato-val">${valor}</span></div>`
+      ? `<div class="ficha-dato"><span class="ficha-dato-label">${esc(label)}</span><span class="ficha-dato-val">${esc(valor)}</span></div>`
       : '';
     const bloque = (titulo, contenido) => contenido.trim()
       ? `<div class="ficha-bloque"><div class="ficha-bloque-title">${titulo}</div>${contenido}</div>`
@@ -478,8 +478,8 @@ App.register('personas', (function () {
       <div style="display:flex;align-items:center;gap:16px;margin-bottom:22px;padding-bottom:18px;border-bottom:1px solid var(--line);">
         ${avatarHtml}
         <div style="flex:1;">
-          <h2 style="margin:0 0 4px;font-size:20px;">${p.nombre}</h2>
-          <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">${tipoLabel}${p.ocupacion?' · '+p.ocupacion:''}</div>
+          <h2 style="margin:0 0 4px;font-size:20px;">${esc(p.nombre)}</h2>
+          <div style="font-size:13px;color:var(--muted);margin-bottom:6px;">${esc(tipoLabel)}${p.ocupacion?' · '+esc(p.ocupacion):''}</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap;">${UI.badgeTipo(p.tipo)} ${UI.badgeEstado(p.estado)} ${_badgePrioridad(p.prioridad)}</div>
         </div>
       </div>
@@ -516,7 +516,7 @@ App.register('personas', (function () {
       ) : ''}
 
       ${p.observaciones ? bloque('📝 Observaciones',
-        `<p style="margin:0;font-size:13.5px;color:var(--ink);line-height:1.6;">${p.observaciones}</p>`
+        `<p style="margin:0;font-size:13.5px;color:var(--ink);line-height:1.6;">${esc(p.observaciones)}</p>`
       ) : ''}
 
       <div class="modal-footer">
@@ -535,7 +535,7 @@ App.register('personas', (function () {
       UI.modal(`
         <h2>Registrar huella</h2>
         <div style="background:#fff6dc;border-radius:10px;padding:14px;font-size:13.5px;color:#b07900;margin-bottom:16px;">
-          <b>${nombre}</b> aún no está registrado en el SF420.<br><br>
+          <b>${esc(nombre)}</b> aún no está registrado en el SF420.<br><br>
           Ve a <b>Asistencia → Usuarios del dispositivo → Agregar usuario</b> y luego regresa aquí.
         </div>
         <div class="modal-footer">
@@ -550,12 +550,12 @@ App.register('personas', (function () {
 
   function confirmarEliminar(id, nombre) {
     UI.confirm(
-      `¿Eliminar a <b>${nombre}</b>?<br><br>
+      `¿Eliminar a <b>${esc(nombre)}</b>?<br><br>
        <span style="font-size:13px;color:var(--danger);">También se borrará del dispositivo Timmy y de yunatt
        (perderá su cara/huella registrada). Su historial de asistencia se conserva.</span>`,
       async () => {
         const ok = await DB.eliminarPersona(id);
-        UI.toast(ok ? `"${nombre}" eliminado — borrándose del Timmy y yunatt…` : 'Error al eliminar',
+        UI.toast(ok ? `"${esc(nombre)}" eliminado — borrándose del Timmy y yunatt…` : 'Error al eliminar',
                  ok ? 'success' : 'error');
       }
     );

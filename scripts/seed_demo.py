@@ -6,9 +6,27 @@ usuarios_sistema, ni nada del Timmy/yunatt.
 Tablas pobladas: articulos, movimientos_almacen, gastos, fondos_movimientos,
 servicios_alimentacion, presupuesto_mensual, campanas.
 """
-import sys, json, random
-sys.path.insert(0, r"C:\Users\NIEVES\ERP_Lost_Children\bridge")
-from server import get_db
+import os, sys, json, random
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "bridge"))
+from server import get_db, DB_CONFIG
+
+TABLAS_A_BORRAR = ["servicio_insumos", "movimientos_almacen", "gastos", "fondos_movimientos",
+                    "servicios_alimentacion", "articulos", "campanas", "presupuesto_mensual"]
+
+# ── Guarda de seguridad: este script hace TRUNCATE de tablas financieras/
+# inventario reales. No hay separación técnica entre "base de demo" y "base
+# real" (el proyecto corre con una única BD local), así que ejecutarlo por
+# error borra datos reales sin posibilidad de deshacerlo.
+if os.environ.get("ALLOW_DESTRUCTIVE") != "1":
+    print(f"Este script hace TRUNCATE de: {', '.join(TABLAS_A_BORRAR)}")
+    print(f"Base de datos objetivo: {DB_CONFIG['database']}@{DB_CONFIG['host']}")
+    if not sys.stdin.isatty():
+        print("No hay terminal interactiva y ALLOW_DESTRUCTIVE!=1 — abortando.")
+        sys.exit(1)
+    respuesta = input('Escribe CONFIRMAR para continuar (cualquier otra cosa cancela): ').strip()
+    if respuesta != "CONFIRMAR":
+        print("Cancelado — no se modificó nada.")
+        sys.exit(1)
 
 random.seed(42)
 conn = get_db()
@@ -16,8 +34,7 @@ cur = conn.cursor()
 
 # ── Limpiar solo las tablas que vamos a poblar ────────────────────────────────
 cur.execute("SET FOREIGN_KEY_CHECKS = 0")
-for t in ["servicio_insumos", "movimientos_almacen", "gastos", "fondos_movimientos",
-          "servicios_alimentacion", "articulos", "campanas", "presupuesto_mensual"]:
+for t in TABLAS_A_BORRAR:
     cur.execute(f"TRUNCATE TABLE `{t}`")
 cur.execute("SET FOREIGN_KEY_CHECKS = 1")
 

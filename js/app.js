@@ -263,8 +263,11 @@ window.App = (function () {
 
   /* ---------- INIT ---------- */
   function init() {
-    // Recarga datos con el token ya disponible (necesario en primer login)
-    if (window.DB) DB.recargar();
+    // Primera vez que hay sesión válida: arranca la carga de datos, el
+    // WebSocket de asistencia y los refrescos periódicos. Si ya estaba
+    // inicializado (ej. Auth ya lo hizo al restaurar sesión), esto solo
+    // vuelve a pedir los datos.
+    if (window.DB) DB.init();
 
     const ov = document.createElement('div');
     ov.id = 'sidebar-overlay';

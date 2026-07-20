@@ -152,7 +152,7 @@ App.register('gastos', (function () {
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
       <div style="position:relative;flex:1;min-width:200px;">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        <input type="text" placeholder="Buscar gasto…" value="${_search}"
+        <input type="text" placeholder="Buscar gasto…" value="${esc(_search)}"
           style="width:100%;padding:8px 12px 8px 30px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;"
           oninput="GastosModule.setSearch(this.value)">
       </div>
@@ -168,11 +168,11 @@ App.register('gastos', (function () {
       </div>
       ${gastos.map(g => `
         <div class="table-row" style="grid-template-columns:80px 1.1fr 1fr 1.4fr 1.3fr 90px 110px;">
-          <span style="font-size:12.5px;color:var(--muted);">${g.fecha}</span>
-          <div style="background:${g.catBg};color:${g.catFg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${g.categoria}</div>
+          <span style="font-size:12.5px;color:var(--muted);">${esc(g.fecha)}</span>
+          <div style="background:${g.catBg};color:${g.catFg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${esc(g.categoria)}</div>
           <span style="font-size:14px;font-weight:800;">S/ ${g.monto.toLocaleString('es-PE',{minimumFractionDigits:2})}</span>
-          <span style="font-size:13px;font-weight:600;">${g.proveedor}</span>
-          <span style="font-size:12.5px;color:var(--muted);font-style:${g.observacion?'normal':'italic'};">${g.observacion||'—'}</span>
+          <span style="font-size:13px;font-weight:600;">${esc(g.proveedor)}</span>
+          <span style="font-size:12.5px;color:var(--muted);font-style:${g.observacion?'normal':'italic'};">${esc(g.observacion)||'—'}</span>
           <div>
             ${g.fuenteAuto === 'compra_almacen'
               ? `<span style="background:#E0F0FF;color:#015a9e;border-radius:20px;padding:3px 8px;font-size:10.5px;font-weight:700;">Auto·Almacén</span>`
@@ -221,10 +221,10 @@ App.register('gastos', (function () {
         const c = TIPO_INGRESO[m.categoria] || TIPO_INGRESO['Otro ingreso'];
         return `
         <div class="table-row" style="grid-template-columns:80px 1.2fr 1fr 1.5fr 70px;">
-          <span style="font-size:12.5px;color:var(--muted);">${m.fecha}</span>
-          <div style="background:${c.bg};color:${c.fg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;">${m.categoria||'Ingreso'}</div>
+          <span style="font-size:12.5px;color:var(--muted);">${esc(m.fecha)}</span>
+          <div style="background:${c.bg};color:${c.fg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;">${esc(m.categoria)||'Ingreso'}</div>
           <span style="font-size:14px;font-weight:800;color:#1D7A56;">+ S/ ${m.monto.toLocaleString('es-PE',{minimumFractionDigits:2})}</span>
-          <span style="font-size:13px;color:var(--muted);">${m.descripcion||'—'}</span>
+          <span style="font-size:13px;color:var(--muted);">${esc(m.descripcion)||'—'}</span>
           ${(!window.Auth || Auth.canWrite('gastos')) ? `
           <button class="btn btn-sm btn-outline" style="padding:5px 7px;color:var(--danger);border-color:var(--danger)20;" onclick="GastosModule.confirmarEliminarIngreso(${m.id})" title="Eliminar">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -405,13 +405,13 @@ App.register('gastos', (function () {
     const url = g.comprobante ? `${API_URL}${g.comprobante}` : null;
     const esImg = url && /\.(jpg|jpeg|png|gif|webp)$/i.test(url);
     UI.modal(`
-      <h2>Comprobante · ${g.categoria}</h2>
+      <h2>Comprobante · ${esc(g.categoria)}</h2>
       <div style="background:var(--bg);border-radius:12px;padding:16px;margin-bottom:14px;display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-        <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">FECHA</div><div style="font-weight:600;">${g.fecha}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">FECHA</div><div style="font-weight:600;">${esc(g.fecha)}</div></div>
         <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">MONTO</div><div style="font-weight:800;font-size:18px;">S/ ${g.monto.toLocaleString('es-PE',{minimumFractionDigits:2})}</div></div>
-        <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">PROVEEDOR</div><div style="font-weight:600;">${g.proveedor}</div></div>
-        <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">CATEGORÍA</div><div style="font-weight:600;">${g.categoria}</div></div>
-        ${g.observacion ? `<div style="grid-column:span 2;"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">NOTA</div><div>${g.observacion}</div></div>` : ''}
+        <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">PROVEEDOR</div><div style="font-weight:600;">${esc(g.proveedor)}</div></div>
+        <div><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">CATEGORÍA</div><div style="font-weight:600;">${esc(g.categoria)}</div></div>
+        ${g.observacion ? `<div style="grid-column:span 2;"><div style="font-size:11px;color:var(--muted);font-weight:700;margin-bottom:3px;">NOTA</div><div>${esc(g.observacion)}</div></div>` : ''}
       </div>
       ${url
         ? esImg
@@ -476,12 +476,12 @@ App.register('gastos', (function () {
         </div>
         <div class="form-group">
           <label>Proveedor *</label>
-          <input type="text" id="ge-prov" value="${g.proveedor}">
+          <input type="text" id="ge-prov" value="${esc(g.proveedor)}">
         </div>
       </div>
       <div class="form-group">
         <label>Nota / Observación</label>
-        <input type="text" id="ge-obs" value="${g.observacion||''}">
+        <input type="text" id="ge-obs" value="${esc(g.observacion)}">
       </div>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
@@ -520,7 +520,7 @@ App.register('gastos', (function () {
     if (!g) return;
     UI.modal(`
       <h2>Eliminar gasto</h2>
-      <p style="font-size:14px;margin-bottom:18px;">¿Eliminar el gasto de <b>S/ ${g.monto.toFixed(2)}</b> en <b>${g.categoria}</b> · ${g.proveedor}?<br>
+      <p style="font-size:14px;margin-bottom:18px;">¿Eliminar el gasto de <b>S/ ${g.monto.toFixed(2)}</b> en <b>${esc(g.categoria)}</b> · ${esc(g.proveedor)}?<br>
       <span style="color:var(--danger);font-size:13px;">También se eliminará el egreso de fondos asociado.</span></p>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
@@ -541,7 +541,7 @@ App.register('gastos', (function () {
     if (!m) return;
     UI.modal(`
       <h2>Eliminar ingreso</h2>
-      <p style="font-size:14px;margin-bottom:18px;">¿Eliminar el ingreso de <b>S/ ${m.monto.toFixed(2)}</b> — ${m.descripcion||m.categoria}?</p>
+      <p style="font-size:14px;margin-bottom:18px;">¿Eliminar el ingreso de <b>S/ ${m.monto.toFixed(2)}</b> — ${esc(m.descripcion||m.categoria)}?</p>
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>
         <button class="btn btn-primary" style="background:var(--danger);border-color:var(--danger);" onclick="GastosModule._doEliminarIngreso(${id})">Sí, eliminar</button>

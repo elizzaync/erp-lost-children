@@ -255,7 +255,7 @@ App.register('dashboard', (function () {
             var c   = CAT_COLS[i%CAT_COLS.length];
             return '<div>'
               + '<div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;">'
-              + '<span style="font-weight:600;">'+cat+'</span>'
+              + '<span style="font-weight:600;">'+esc(cat)+'</span>'
               + '<span style="font-weight:800;color:'+c+';">S/ '+_s(val)+'</span>'
               + '</div>'
               + _bar(pct, c, 7)
@@ -289,8 +289,8 @@ App.register('dashboard', (function () {
             var pct = Math.round(a.stock/Math.max(a.minimo,1)*100);
             return '<div style="margin-bottom:8px;">'
               + '<div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:3px;">'
-              + '<span style="font-weight:600;">'+a.nombre+'</span>'
-              + '<span style="color:#C24A30;font-weight:700;">'+a.stock+'/'+a.minimo+' '+a.unidad+'</span>'
+              + '<span style="font-weight:600;">'+esc(a.nombre)+'</span>'
+              + '<span style="color:#C24A30;font-weight:700;">'+a.stock+'/'+a.minimo+' '+esc(a.unidad)+'</span>'
               + '</div>'+_bar(pct,'#C24A30',5)+'</div>';
           }).join('')
         + (criticos.length>4 ? '<div style="font-size:11.5px;color:var(--muted);">+'+( criticos.length-4)+' más →</div>' : '')
@@ -324,8 +324,8 @@ App.register('dashboard', (function () {
     + '<div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:7px;">ÚLTIMOS INGRESOS</div>'
     + ((fondos.movimientos||[]).filter(function(m){return m.tipo==='ingreso';}).slice(0,3).map(function(m) {
         return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);">'
-          + '<div><div style="font-size:12px;font-weight:600;">'+(m.descripcion||m.categoria||'Ingreso')+'</div>'
-          + '<div style="font-size:11px;color:var(--muted);">'+m.fecha+'</div></div>'
+          + '<div><div style="font-size:12px;font-weight:600;">'+esc(m.descripcion||m.categoria||'Ingreso')+'</div>'
+          + '<div style="font-size:11px;color:var(--muted);">'+esc(m.fecha)+'</div></div>'
           + '<span style="font-size:13px;font-weight:800;color:#1D7A56;">+S/ '+_s(m.monto)+'</span>'
           + '</div>';
       }).join('') || '<div style="font-size:12.5px;color:var(--faint);">Sin ingresos registrados</div>')
@@ -347,12 +347,12 @@ App.register('dashboard', (function () {
           var col = TIPO_COL[e.personaTipo||'nino']||'#1a7a9e';
           return '<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line);">'
             + '<div style="width:30px;height:30px;border-radius:50%;background:'+col+'18;display:flex;align-items:center;justify-content:center;flex:none;">'
-            + '<span style="font-size:13px;font-weight:800;color:'+col+';">'+(e.nino||'').charAt(0)+'</span></div>'
+            + '<span style="font-size:13px;font-weight:800;color:'+col+';">'+esc((e.nino||'').charAt(0))+'</span></div>'
             + '<div style="flex:1;min-width:0;">'
-            + '<div style="font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+e.nino+'</div>'
-            + '<div style="font-size:11.5px;color:var(--muted);">'+e.articulo+' · x'+e.cantidad+'</div>'
+            + '<div style="font-size:12.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+esc(e.nino)+'</div>'
+            + '<div style="font-size:11.5px;color:var(--muted);">'+esc(e.articulo)+' · x'+e.cantidad+'</div>'
             + '</div>'
-            + '<div style="font-size:11px;color:var(--faint);flex:none;">'+e.fecha+'</div>'
+            + '<div style="font-size:11px;color:var(--faint);flex:none;">'+esc(e.fecha)+'</div>'
             + '</div>';
         }).join('')
       : '<div style="color:var(--faint);font-size:13px);">Sin entregas registradas</div>')
@@ -371,8 +371,8 @@ App.register('dashboard', (function () {
           return '<div style="background:'+bg+';border-radius:10px;padding:10px 12px;display:flex;align-items:flex-start;gap:10px;">'
             + '<div style="width:6px;height:6px;border-radius:50%;background:'+col+';margin-top:5px;flex:none;"></div>'
             + '<div style="flex:1;">'
-            + '<div style="font-size:12.5px;font-weight:700;color:'+col+';">'+a.texto+'</div>'
-            + '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">'+a.sub+'</div>'
+            + '<div style="font-size:12.5px;font-weight:700;color:'+col+';">'+esc(a.texto)+'</div>'
+            + '<div style="font-size:11.5px;color:var(--muted);margin-top:1px;">'+esc(a.sub)+'</div>'
             + '</div>'
             + '<button class="btn-ghost" style="font-size:11px;color:'+col+';padding:2px 0;font-weight:700;flex:none;" onclick="App.navigate(\''+a.link+'\')">Ir →</button>'
             + '</div>';
@@ -391,8 +391,8 @@ App.register('dashboard', (function () {
       ? DB.actividad.slice(0,6).map(function(a,i) {
           return '<div style="display:flex;gap:10px;padding:8px 0;'+(i<5?'border-bottom:1px solid var(--line);':'')+'align-items:flex-start;">'
             + '<div style="width:7px;height:7px;border-radius:50%;background:'+a.color+';margin-top:6px;flex:none;"></div>'
-            + '<div style="flex:1;"><div style="font-size:12.5px;line-height:1.4;">'+a.texto+'</div>'
-            + '<div style="font-size:11px;color:var(--faint);margin-top:2px;">'+a.tiempo+' · '+a.lugar+'</div>'
+            + '<div style="flex:1;"><div style="font-size:12.5px;line-height:1.4;">'+esc(a.texto)+'</div>'
+            + '<div style="font-size:11px;color:var(--faint);margin-top:2px;">'+esc(a.tiempo)+' · '+esc(a.lugar)+'</div>'
             + '</div></div>';
         }).join('')
       : '<div style="color:var(--faint);font-size:13px;">Sin actividad reciente</div>')

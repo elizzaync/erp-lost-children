@@ -3,8 +3,15 @@ Ejecutar una sola vez para poblar el almacén con productos de prueba.
 python seed_almacen.py
 """
 import pymysql
+from config import env
 
-DB = dict(host='localhost', user='root', password='', database='erp_lost_children', charset='utf8mb4')
+DB = dict(
+    host=env("DB_HOST", "localhost"),
+    user=env("DB_USER", "root"),
+    password=env("DB_PASSWORD", ""),
+    database=env("DB_NAME", "erp_lost_children"),
+    charset='utf8mb4',
+)
 
 productos = [
     # (nombre, categoria, unidad, stock, minimo, vence)

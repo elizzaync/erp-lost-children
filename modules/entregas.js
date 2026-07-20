@@ -77,7 +77,7 @@ App.register('entregas', (function () {
       <div style="position:relative;flex:1;min-width:220px;">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--faint);pointer-events:none;"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
         <input type="text" placeholder="Buscar por persona, artículo o campaña…"
-          value="${_busqueda}"
+          value="${esc(_busqueda)}"
           style="width:100%;padding:8px 12px 8px 33px;border:1.5px solid var(--border);border-radius:9px;font-size:13.5px;"
           oninput="EntregasModule.setBusqueda(this.value)">
       </div>
@@ -100,21 +100,21 @@ App.register('entregas', (function () {
           const tc = TIPO_COLOR[e.personaTipo] || TIPO_COLOR.nino;
           return `
           <div class="table-row" style="grid-template-columns:85px 1.6fr 1.2fr .6fr 1fr 1.1fr;">
-            <span style="font-size:12.5px;color:var(--muted);">${e.fecha}</span>
+            <span style="font-size:12.5px;color:var(--muted);">${esc(e.fecha)}</span>
             <div style="display:flex;align-items:center;gap:9px;">
               ${UI.avatar(e.inicial, e.avatarBg, e.avatarFg, true, 32)}
               <div>
-                <div style="font-size:13.5px;font-weight:600;">${e.nino}</div>
-                <div style="background:${tc.bg};color:${tc.fg};border-radius:20px;padding:1px 7px;font-size:10.5px;font-weight:700;display:inline-block;">${TIPO_LABEL[e.personaTipo]||e.personaTipo}</div>
+                <div style="font-size:13.5px;font-weight:600;">${esc(e.nino)}</div>
+                <div style="background:${tc.bg};color:${tc.fg};border-radius:20px;padding:1px 7px;font-size:10.5px;font-weight:700;display:inline-block;">${esc(TIPO_LABEL[e.personaTipo]||e.personaTipo)}</div>
               </div>
             </div>
             <div>
-              <div style="font-size:13.5px;font-weight:600;">${e.articulo}</div>
-              ${e.articuloCategoria ? `<div style="font-size:11px;color:var(--faint);">${e.articuloCategoria}</div>` : ''}
+              <div style="font-size:13.5px;font-weight:600;">${esc(e.articulo)}</div>
+              ${e.articuloCategoria ? `<div style="font-size:11px;color:var(--faint);">${esc(e.articuloCategoria)}</div>` : ''}
             </div>
-            <span style="font-size:14px;font-weight:700;">${e.cantidad} <span style="font-size:11px;font-weight:400;color:var(--faint);">${e.unidad}</span></span>
-            <div style="background:${e.campBg};color:${e.campFg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${e.campana}</div>
-            <span style="font-size:12px;color:var(--muted);font-style:${e.notas?'normal':'italic'};">${e.notas||'—'}</span>
+            <span style="font-size:14px;font-weight:700;">${e.cantidad} <span style="font-size:11px;font-weight:400;color:var(--faint);">${esc(e.unidad)}</span></span>
+            <div style="background:${e.campBg};color:${e.campFg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${esc(e.campana)}</div>
+            <span style="font-size:12px;color:var(--muted);font-style:${e.notas?'normal':'italic'};">${esc(e.notas)||'—'}</span>
           </div>`;
         }).join('')}
         ` : `
@@ -157,7 +157,7 @@ App.register('entregas', (function () {
             DB.entregas.forEach(e => { conteo[e.articulo] = (conteo[e.articulo]||0) + e.cantidad; });
             return Object.entries(conteo).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([art,n]) => `
             <div style="display:flex;align-items:center;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--line);">
-              <span style="font-size:12.5px;color:var(--ink);">${art}</span>
+              <span style="font-size:12.5px;color:var(--ink);">${esc(art)}</span>
               <span style="font-size:12.5px;font-weight:700;color:var(--primary);">${n}</span>
             </div>`).join('') || '<div style="font-size:12.5px;color:var(--faint);">Sin datos</div>';
           })()}
@@ -209,7 +209,7 @@ App.register('entregas', (function () {
               <option value="">— Selecciona —</option>
               ${arts.map(a => {
                 const hayImg = a.imagen;
-                return `<option value="${a.id}" data-stock="${a.stock}" data-unidad="${a.unidad}" data-cat="${a.categoria}">${a.nombre} · ${a.stock} ${a.unidad}</option>`;
+                return `<option value="${a.id}" data-stock="${a.stock}" data-unidad="${esc(a.unidad)}" data-cat="${esc(a.categoria)}">${esc(a.nombre)} · ${a.stock} ${esc(a.unidad)}</option>`;
               }).join('')}
             </select>
           </div>
@@ -255,8 +255,8 @@ App.register('entregas', (function () {
       <div onclick="EntregasModule._selPersona(${p.id})" id="ep-${p.id}"
         style="cursor:pointer;border:2px solid ${sel?'var(--primary)':'var(--border)'};border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center;background:${sel?'var(--primary-soft)':'#fff'};transition:border .15s,background .15s;">
         ${UI.avatar(p.inicial, p.avatarBg, p.avatarFg, true, 38)}
-        <div style="font-size:12.5px;font-weight:700;line-height:1.2;">${p.nombre.split(' ')[0]}<br><span style="font-weight:400;color:var(--muted);">${p.nombre.split(' ').slice(1).join(' ')}</span></div>
-        <div style="background:${tc.bg};color:${tc.fg};border-radius:20px;padding:2px 8px;font-size:10.5px;font-weight:700;">${TIPO_LABEL[p.tipo]||p.tipo}</div>
+        <div style="font-size:12.5px;font-weight:700;line-height:1.2;">${esc(p.nombre.split(' ')[0])}<br><span style="font-weight:400;color:var(--muted);">${esc(p.nombre.split(' ').slice(1).join(' '))}</span></div>
+        <div style="background:${tc.bg};color:${tc.fg};border-radius:20px;padding:2px 8px;font-size:10.5px;font-weight:700;">${esc(TIPO_LABEL[p.tipo]||p.tipo)}</div>
       </div>`;
     }).join('');
   }
@@ -293,8 +293,8 @@ App.register('entregas', (function () {
     info.style.background = ok ? 'var(--bg)' : '#FDE7E1';
     info.style.color      = ok ? 'var(--muted)' : 'var(--danger)';
     info.innerHTML = ok
-      ? `<b>Stock disponible:</b> ${stock} ${unidad} · <b>Categoría:</b> ${cat} · Quedarán ${stock - qty} ${unidad} después de la entrega`
-      : `<b>Stock insuficiente.</b> Solo hay ${stock} ${unidad} disponibles. Reduce la cantidad.`;
+      ? `<b>Stock disponible:</b> ${stock} ${esc(unidad)} · <b>Categoría:</b> ${esc(cat)} · Quedarán ${stock - qty} ${esc(unidad)} después de la entrega`
+      : `<b>Stock insuficiente.</b> Solo hay ${stock} ${esc(unidad)} disponibles. Reduce la cantidad.`;
   }
 
   /* ---------- GUARDAR ---------- */
@@ -333,7 +333,7 @@ App.register('entregas', (function () {
     }
 
     UI.closeModal();
-    UI.toast(`${art.nombre} ×${qty} entregado a ${persona.nombre}`, 'success');
+    UI.toast(`${esc(art.nombre)} ×${qty} entregado a ${esc(persona.nombre)}`, 'success');
     App.refresh();
   }
 
