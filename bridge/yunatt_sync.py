@@ -21,20 +21,13 @@ from urllib3.util.ssl_ import create_urllib3_context
 
 log = logging.getLogger("yunatt")
 
-from config import env
+from config import env, db_config
 
 BASE     = "https://global.yunatt.com"
 EMAIL    = env("YUNATT_EMAIL")
 PASSWORD = env("YUNATT_PASSWORD")
 
-DB_CONFIG = {
-    "host":      env("DB_HOST", "localhost"),
-    "user":      env("DB_USER", "root"),
-    "password":  env("DB_PASSWORD", ""),
-    "database":  env("DB_NAME", "erp_lost_children"),
-    "charset":   "utf8mb4",
-    "use_unicode": True,
-}
+DB_CONFIG = {**db_config(), "use_unicode": True}
 
 _session     = None          # requests.Session autenticada
 _last_sync   = None          # datetime del último sync exitoso

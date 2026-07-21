@@ -113,7 +113,7 @@ App.register('entregas', (function () {
               ${e.articuloCategoria ? `<div style="font-size:11px;color:var(--faint);">${esc(e.articuloCategoria)}</div>` : ''}
             </div>
             <span style="font-size:14px;font-weight:700;">${e.cantidad} <span style="font-size:11px;font-weight:400;color:var(--faint);">${esc(e.unidad)}</span></span>
-            <div style="background:${e.campBg};color:${e.campFg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${esc(e.campana)}</div>
+            <div style="background:${esc(e.campBg)};color:${esc(e.campFg)};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${esc(e.campana)}</div>
             <span style="font-size:12px;color:var(--muted);font-style:${e.notas?'normal':'italic'};">${esc(e.notas)||'—'}</span>
           </div>`;
         }).join('')}

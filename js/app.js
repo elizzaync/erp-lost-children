@@ -306,25 +306,13 @@ window.App = (function () {
             admin: 'linear-gradient(135deg,#fd4c5c,#febd3e)',
             coordinador: 'linear-gradient(135deg,#0176bf,#5dbc35)',
             voluntario:  'linear-gradient(135deg,#5dbc35,#0176bf)',
-            kiosko:      'linear-gradient(135deg,#6B4EEA,#0176bf)',
-            donador:     'linear-gradient(135deg,#febd3e,#fd4c5c)',
           };
           avatarEl.style.background = avatarColors[u.rol] || avatarColors.admin;
         }
       }
 
-      /* Kiosko: pantalla completa sin sidebar ni header */
-      if (Auth.rol && Auth.rol() === 'kiosko') {
-        document.getElementById('sidebar').style.display = 'none';
-        document.querySelector('header').style.display   = 'none';
-        document.getElementById('main').style.marginLeft = '0';
-        document.getElementById('main').style.paddingTop = '0';
-        navigate('marcado');
-        return;
-      }
-
       /* Pantalla de inicio según rol */
-      const _startScreen = { voluntario: 'asistencia', donador: 'gastos' };
+      const _startScreen = { voluntario: 'asistencia' };
       const start = _startScreen[Auth.rol ? Auth.rol() : ''] || 'dashboard';
       navigate(start);
     } else {

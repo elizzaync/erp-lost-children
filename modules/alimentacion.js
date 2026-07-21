@@ -182,7 +182,7 @@ App.register('alimentacion', (function () {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 6.5a3 3 0 0 1 0 5.6M16.5 19a5.5 5.5 0 0 0-2-4.3"/></svg>
           Comensales atendidos
         </div>
-        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px;">
+        <div class="comensales-grid" style="display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:10px;">
           ${[
             ['al-ninos',      'Niños',       presentes],
             ['al-misioneros', 'Misioneros',  misioneros],
@@ -193,7 +193,7 @@ App.register('alimentacion', (function () {
             <div style="text-align:center;">
               <div style="font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:5px;">${label}</div>
               <input type="number" id="${id}" value="${val}" min="0"
-                style="width:100%;text-align:center;padding:8px 4px;border:1.5px solid var(--border);border-radius:9px;font-size:16px;font-weight:800;font-family:'Plus Jakarta Sans';"
+                style="width:100%;text-align:center;padding:8px 4px;border:1.5px solid var(--border);border-radius:9px;font-size:16px;font-weight:800;font-family:'Quicksand';"
                 oninput="AlimentacionModule._actualizarTotal()">
             </div>`).join('')}
         </div>

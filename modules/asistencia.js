@@ -11,6 +11,10 @@ App.register('asistencia', (function () {
     ? 'http://localhost:7793'
     : window.location.origin;
 
+  function _authHeaders(extra) {
+    return {...(extra||{}), 'Authorization': `Bearer ${Auth.getToken()}`};
+  }
+
   /* ── Estado del módulo ────────────────────────────────────────── */
   let _tab       = 'hoy';
   let _filtroTipo = 'todos';      // 'todos' | 'nino' | 'misionero' | 'voluntario' | 'staff'
@@ -82,19 +86,19 @@ App.register('asistencia', (function () {
     <!-- TABS -->
     <div style="display:flex;gap:4px;margin-bottom:18px;border-bottom:2px solid var(--line);padding-bottom:0;">
       <button onclick="AsistenciaModule.setTab('hoy')"
-        style="padding:10px 20px;font-size:14px;font-weight:700;font-family:'Public Sans';
+        style="padding:10px 20px;font-size:14px;font-weight:700;font-family:'Quicksand';
                border:none;cursor:pointer;border-bottom:3px solid ${_tab==='hoy'?'var(--primary)':'transparent'};
                background:transparent;color:${_tab==='hoy'?'var(--primary)':'var(--muted)'};">
         Asistencia de hoy
       </button>
       <button onclick="AsistenciaModule.setTab('timmy')"
-        style="padding:10px 20px;font-size:14px;font-weight:700;font-family:'Public Sans';
+        style="padding:10px 20px;font-size:14px;font-weight:700;font-family:'Quicksand';
                border:none;cursor:pointer;border-bottom:3px solid ${_tab==='timmy'?'var(--primary)':'transparent'};
                background:transparent;color:${_tab==='timmy'?'var(--primary)':'var(--muted)'};">
         Dispositivo Timmy
       </button>
       <button onclick="AsistenciaModule.setTab('marcas')"
-        style="padding:10px 20px;font-size:14px;font-weight:700;font-family:'Public Sans';
+        style="padding:10px 20px;font-size:14px;font-weight:700;font-family:'Quicksand';
                border:none;cursor:pointer;border-bottom:3px solid ${_tab==='marcas'?'var(--primary)':'transparent'};
                background:transparent;color:${_tab==='marcas'?'var(--primary)':'var(--muted)'};">
         Marcas del dispositivo
@@ -158,7 +162,7 @@ App.register('asistencia', (function () {
                      : c ? `${c.presentes}/${c.total}` : '0/0';
         return `<button onclick="AsistenciaModule.setFiltroTipo('${t}')"
           style="display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:10px;
-                 font-size:13px;font-weight:700;cursor:pointer;font-family:'Public Sans';
+                 font-size:13px;font-weight:700;cursor:pointer;font-family:'Quicksand';
                  border:2px solid ${activo ? (t==='todos'?'var(--ink)':cfg.color) : 'var(--border)'};
                  background:${activo ? (t==='todos'?'var(--ink)':cfg.bg) : 'var(--surface)'};
                  color:${activo ? (t==='todos'?'#fff':cfg.color) : 'var(--muted)'};">
@@ -220,7 +224,7 @@ App.register('asistencia', (function () {
   function _renderContador(presentes,total,pct) {
     return `
       <div style="font-size:13px;color:rgba(255,255,255,.6);font-weight:600;">Presentes hoy</div>
-      <div style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:46px;letter-spacing:-1.5px;line-height:1.1;margin:6px 0;">
+      <div style="font-family:'Quicksand';font-weight:800;font-size:46px;letter-spacing:-1.5px;line-height:1.1;margin:6px 0;">
         ${presentes} <span style="font-size:22px;color:rgba(255,255,255,.45);">/ ${total}</span>
       </div>
       <div style="height:8px;background:rgba(255,255,255,.15);border-radius:6px;margin-top:8px;">
@@ -305,14 +309,14 @@ App.register('asistencia', (function () {
         <input type="date" value="${_marcasFecha}" max="${hoy}"
           onchange="AsistenciaModule.setMarcasFecha(this.value)"
           style="padding:7px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;
-                 font-family:'Public Sans';background:var(--surface);color:var(--ink);">
+                 font-family:'Quicksand';background:var(--surface);color:var(--ink);">
       </div>
       ${!esHoy ? `<button class="btn btn-sm btn-outline" onclick="AsistenciaModule.setMarcasFecha('${hoy}')">Hoy</button>` : ''}
       <div style="display:flex;align-items:center;gap:8px;">
         <label style="font-size:13px;font-weight:700;color:var(--muted);">Persona</label>
         <select onchange="AsistenciaModule.setMarcasPersona(this.value)"
           style="padding:7px 12px;border:1.5px solid var(--border);border-radius:9px;font-size:13px;
-                 font-family:'Public Sans';background:var(--surface);color:var(--ink);max-width:220px;">
+                 font-family:'Quicksand';background:var(--surface);color:var(--ink);max-width:220px;">
           <option value="todas" ${_marcasPersona==='todas'?'selected':''}>Todas</option>
           <option value="desconocidos" ${_marcasPersona==='desconocidos'?'selected':''}>Solo sin vincular</option>
           ${(DB.personas||[]).filter(p=>p.estado==='activo'||p.activo).map(p=>
@@ -416,7 +420,7 @@ App.register('asistencia', (function () {
 
     try {
       const r = await fetch(`${BRIDGE}/device/logs?fecha=${_marcasFecha}&limit=500`,
-                            {signal: AbortSignal.timeout(10000)});
+                            {signal: AbortSignal.timeout(10000), headers:_authHeaders()});
       const d = await r.json();
       _marcas = d.registros || [];
     } catch(e) {
@@ -482,7 +486,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/asistencia/asignar-zk`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders({'Content-Type': 'application/json'}),
         body: JSON.stringify({zk_user_id: zkUserId, persona_id: personaId}),
         signal: AbortSignal.timeout(8000),
       });
@@ -563,7 +567,7 @@ App.register('asistencia', (function () {
         <div class="kpi-card" style="padding:14px;">
           <div style="font-size:13px;font-weight:700;margin-bottom:8px;color:var(--danger);">Zona de riesgo</div>
           <button class="btn btn-sm" style="background:#FDE7E1;color:var(--danger);border:none;
-            border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;font-family:'Public Sans';width:100%;"
+            border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;font-family:'Quicksand';width:100%;"
             onclick="AsistenciaModule.abrirResetCompleto()">
             Borrar todos los datos del ERP
           </button>
@@ -755,7 +759,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/yunatt/enrolar`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders({'Content-Type': 'application/json'}),
         body: JSON.stringify({ persona_id: personaId, metodo: 'cara' }),
         signal: AbortSignal.timeout(30000),
       });
@@ -809,7 +813,7 @@ App.register('asistencia', (function () {
   async function _estadoEnroll(sid) {
     try {
       const r = await fetch(`${BRIDGE}/yunatt/enroll-status/${encodeURIComponent(sid)}`,
-                            {signal: AbortSignal.timeout(15000)});
+                            {signal: AbortSignal.timeout(15000), headers:_authHeaders()});
       const d = await r.json();
       return d && d.ok ? d : null;
     } catch(_) { return null; }
@@ -863,7 +867,7 @@ App.register('asistencia', (function () {
   async function _syncFotosTimmy() {
     try {
       const r = await fetch(`${BRIDGE}/yunatt/sync-fotos`, {
-        method: 'POST', signal: AbortSignal.timeout(30000),
+        method: 'POST', signal: AbortSignal.timeout(30000), headers:_authHeaders(),
       });
       const d = await r.json();
       if (d.ok && d.actualizadas && d.actualizadas.length) {
@@ -880,7 +884,7 @@ App.register('asistencia', (function () {
     const el = document.getElementById('timmy-direct-status');
     if (el) el.innerHTML = `<div style="font-size:12.5px;color:var(--muted);">Probando conexión con 192.168.18.145…</div>`;
     try {
-      const r = await fetch(`${BRIDGE}/timmy/ping`, {signal: AbortSignal.timeout(15000)});
+      const r = await fetch(`${BRIDGE}/timmy/ping`, {signal: AbortSignal.timeout(15000), headers:_authHeaders()});
       const d = await r.json();
       _timmyDirectOk = d.ok === true;
       if (el) el.innerHTML = _renderDirectStatus();
@@ -902,7 +906,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/timmy/agregar-todos`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders({'Content-Type': 'application/json'}),
         signal: AbortSignal.timeout(120000),
       });
       const d = await r.json();
@@ -930,7 +934,7 @@ App.register('asistencia', (function () {
     const el = document.getElementById('timmy-users-list');
     if (el) el.innerHTML = _renderUsuariosTimmy();
     try {
-      const r = await fetch(`${BRIDGE}/yunatt/staff`, {signal: AbortSignal.timeout(15000)});
+      const r = await fetch(`${BRIDGE}/yunatt/staff`, {signal: AbortSignal.timeout(15000), headers:_authHeaders()});
       const d = await r.json();
       _usuariosTimmy = d.staff  || [];
       _deviceStaff   = d.device || [];
@@ -957,7 +961,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/yunatt/remoteadduser-sn`, {
         method: 'POST',
-        headers: {'Content-Type': 'application/json'},
+        headers: _authHeaders({'Content-Type': 'application/json'}),
         body: JSON.stringify({ staff_number: staffNumber, nombre, backup }),
         signal: AbortSignal.timeout(12000),
       });
@@ -1038,7 +1042,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/timmy/users`,{
         method:'POST',
-        headers:{'Content-Type':'application/json'},
+        headers:_authHeaders({'Content-Type':'application/json'}),
         body: JSON.stringify({user_id:userid, name:nombre, privilege:priv, uid:parseInt(userid)||1}),
         signal: AbortSignal.timeout(8000),
       });
@@ -1064,7 +1068,7 @@ App.register('asistencia', (function () {
         try {
           const uid = parseInt(userId) || userId;
           const r = await fetch(`${BRIDGE}/timmy/usuarios/${encodeURIComponent(uid)}`,
-            {method:'DELETE',signal:AbortSignal.timeout(6000)});
+            {method:'DELETE',signal:AbortSignal.timeout(6000), headers:_authHeaders()});
           const d = await r.json();
           if (d.ok) {
             UI.toast('Usuario eliminado del Timmy','success');
@@ -1116,7 +1120,7 @@ App.register('asistencia', (function () {
     // 1. Intentar conexión directa WebSocket (timmy_server.py)
     let timmyOk = false;
     try {
-      const r = await fetch(`${BRIDGE}/timmy/status`, {signal:AbortSignal.timeout(3000)});
+      const r = await fetch(`${BRIDGE}/timmy/status`, {signal:AbortSignal.timeout(3000), headers:_authHeaders()});
       const d = await r.json();
       if (d.conectado) {
         _bridge = {...d, checkeado:true, via:'websocket'};
@@ -1127,14 +1131,14 @@ App.register('asistencia', (function () {
     // 2. Si no hay WebSocket, usar estado del sync yunatt.com
     if (!timmyOk) {
       try {
-        const r = await fetch(`${BRIDGE}/yunatt/status`, {signal:AbortSignal.timeout(3000)});
+        const r = await fetch(`${BRIDGE}/yunatt/status`, {signal:AbortSignal.timeout(3000), headers:_authHeaders()});
         const d = await r.json();
         _bridge = {
           checkeado:   true,
           via:         'yunatt',
           conectado:   d.ok === true || d.sesion_activa === true,
           ultimo_log:  d.ultimo_sync || null,
-          marcas_hoy:  d.total || 0,
+          marcas_hoy:  DB.asistencia.filter(a => a.presente).length,
           error:       d.error || null,
           sn:          'ZXQH20002783',
           modelo:      'TM-AI03F',
@@ -1155,11 +1159,12 @@ App.register('asistencia', (function () {
       // 1. Disparar sync con yunatt.com para traer marcas nuevas
       await fetch(`${BRIDGE}/yunatt/sync`, {
         method:'POST',
+        headers: _authHeaders(),
         signal: AbortSignal.timeout(20000),
       }).catch(()=>{});  // No bloquear si falla
 
       // 2. Leer marcas del día desde MySQL
-      const r = await fetch(`${BRIDGE}/attendance`, {signal:AbortSignal.timeout(5000)});
+      const r = await fetch(`${BRIDGE}/attendance`, {signal:AbortSignal.timeout(5000), headers:_authHeaders()});
       const registros = await r.json();
       if (Array.isArray(registros)) {
         _aplicarRegistros(registros);
@@ -1178,7 +1183,7 @@ App.register('asistencia', (function () {
   async function _aplicarRegistros(registros) {
     if (!registros) {
       try {
-        const r = await fetch(`${BRIDGE}/attendance`,{signal:AbortSignal.timeout(3000)});
+        const r = await fetch(`${BRIDGE}/attendance`,{signal:AbortSignal.timeout(3000), headers:_authHeaders()});
         registros = await r.json();
       } catch(_) {return;}
     }
@@ -1286,7 +1291,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/asistencia/asignar-zk`, {
         method: 'POST',
-        headers: {'Content-Type':'application/json'},
+        headers: _authHeaders({'Content-Type':'application/json'}),
         body: JSON.stringify({zk_user_id: timmyUserId, persona_id: personaId}),
         signal: AbortSignal.timeout(8000),
       });
@@ -1363,7 +1368,7 @@ App.register('asistencia', (function () {
     try {
       const r = await fetch(`${BRIDGE}/db/reset`, {
         method: 'POST', signal: AbortSignal.timeout(120000),
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${Auth.getToken()}` },
+        headers: _authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ confirmar: 'BORRAR_TODO', limpiar_timmy: limpiarTimmy, password }),
       });
       const d = await r.json();

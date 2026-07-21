@@ -14,13 +14,7 @@ App.register('reportes', (function () {
     { key:'gastos',       label:'Gastos e Ingresos' },
   ];
 
-  /* Donador solo ve resumen y gastos */
-  const _DONADOR_TABS = ['resumen', 'gastos'];
-
   function _getTabs() {
-    if (window.Auth && Auth.rol && Auth.rol() === 'donador') {
-      return _ALL_TABS.filter(t => _DONADOR_TABS.includes(t.key));
-    }
     return _ALL_TABS;
   }
 
@@ -138,7 +132,7 @@ App.register('reportes', (function () {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
       ${_seccion('Balance financiero', `
-        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
+        <div class="rep-3col" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px;">
           <div style="background:var(--bg);border-radius:10px;padding:14px;">
             <div style="font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;">INGRESOS</div>
             <div style="font-size:20px;font-weight:800;color:#1D7A56;">S/ ${fondos.ingresos.toLocaleString('es-PE',{minimumFractionDigits:2})}</div>
@@ -174,8 +168,8 @@ App.register('reportes', (function () {
           ? `<div style="font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;">REQUIEREN REPOSICIÓN</div>
             ${criticos.slice(0,4).map(function(a) { return `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--line);">
-                <span style="font-size:13px;font-weight:600;">${a.nombre}</span>
-                <span style="font-size:12px;color:#C24A30;font-weight:700;">${a.stock}/${a.minimo} ${a.unidad}</span>
+                <span style="font-size:13px;font-weight:600;">${esc(a.nombre)}</span>
+                <span style="font-size:12px;color:#C24A30;font-weight:700;">${a.stock}/${a.minimo} ${esc(a.unidad)}</span>
               </div>`; }).join('')}
             ${criticos.length > 4 ? `<div style="font-size:12px;color:var(--muted);margin-top:6px;">+${criticos.length-4} más</div>` : ''}`
           : '<div style="color:var(--success);font-weight:700;font-size:14px;">✓ Todo el stock en niveles normales</div>'}
@@ -191,7 +185,7 @@ App.register('reportes', (function () {
               const c   = CAT_COLS[i % CAT_COLS.length];
               return `<div>
                 <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px;">
-                  <span style="font-weight:600;">${cat}</span>
+                  <span style="font-weight:600;">${esc(cat)}</span>
                   <span style="font-weight:700;color:${c};">S/ ${val.toLocaleString('es-PE',{minimumFractionDigits:2})}
                     <span style="color:var(--faint);font-weight:400;">(${pct}%)</span></span>
                 </div>
@@ -262,14 +256,15 @@ App.register('reportes', (function () {
 
     ${_seccion('Detalle de asistencia de hoy', `
       ${asis.length
-        ? `<div style="font-size:12px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:1fr 110px 90px 90px 130px;padding:0 4px 8px;border-bottom:1px solid var(--line);">
+        ? `<div class="rep-scroll">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:1fr 110px 90px 90px 130px;min-width:580px;padding:0 4px 8px;border-bottom:1px solid var(--line);">
             <span>Persona</span><span>Tipo</span><span>Estado</span><span>Hora</span><span>Método</span>
           </div>
           <div style="max-height:380px;overflow-y:auto;">
             ${asis.map(function(a) {
               const col = TIPO_COL[a.tipo] || '#888';
-              return `<div style="display:grid;grid-template-columns:1fr 110px 90px 90px 130px;padding:9px 4px;border-bottom:1px solid var(--line);align-items:center;">
-                <span style="font-size:13px;font-weight:600;">${a.nombre}</span>
+              return `<div style="display:grid;grid-template-columns:1fr 110px 90px 90px 130px;min-width:580px;padding:9px 4px;border-bottom:1px solid var(--line);align-items:center;">
+                <span style="font-size:13px;font-weight:600;">${esc(a.nombre)}</span>
                 ${_badge(TIPO_LABEL[a.tipo]||a.tipo, col+'22', col)}
                 ${a.presente
                   ? '<span style="color:var(--success);font-weight:700;font-size:12.5px;">✓ Presente</span>'
@@ -278,7 +273,7 @@ App.register('reportes', (function () {
                 <span style="font-size:12px;color:var(--muted);">${a.metodo||'—'}</span>
               </div>`;
             }).join('')}
-          </div>`
+          </div></div>`
         : '<div style="color:var(--faint);font-size:13px;">Sin datos de asistencia.</div>'}
     `, 'asistencia')}`;
   }
@@ -317,8 +312,8 @@ App.register('reportes', (function () {
           ? svcs.slice(0,10).map(function(s) { return `
               <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);">
                 <div>
-                  <div style="font-size:13.5px;font-weight:700;">${s.menu || '(sin nombre)'}</div>
-                  <div style="font-size:12px;color:var(--muted);">${s.fecha}${s.insumos ? ' · '+s.insumos : ''}</div>
+                  <div style="font-size:13.5px;font-weight:700;">${esc(s.menu || '(sin nombre)')}</div>
+                  <div style="font-size:12px;color:var(--muted);">${esc(s.fecha)}${s.insumos ? ' · '+esc(s.insumos) : ''}</div>
                 </div>
                 <div style="text-align:right;flex-shrink:0;margin-left:12px;">
                   <div style="font-size:14px;font-weight:800;color:var(--primary);">${s.total} raciones</div>
@@ -335,7 +330,7 @@ App.register('reportes', (function () {
                 const ins = e[0], n = e[1];
                 return `<div>
                   <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px;">
-                    <span style="font-weight:600;">${ins}</span>
+                    <span style="font-weight:600;">${esc(ins)}</span>
                     <span style="color:#1D7A56;font-weight:700;">${n}x</span>
                   </div>
                   ${_bar(Math.round(n/maxIns*100), '#1D7A56', 7)}
@@ -376,8 +371,8 @@ App.register('reportes', (function () {
         ${criticos.map(function(a) {
           const pct = Math.round(a.stock/a.minimo*100);
           return `<div style="background:#fff;border-radius:10px;padding:8px 14px;min-width:160px;">
-            <div style="font-weight:700;font-size:13px;">${a.nombre}</div>
-            <div style="font-size:12px;color:#C24A30;margin-top:2px;">${a.stock} de ${a.minimo} ${a.unidad}</div>
+            <div style="font-weight:700;font-size:13px;">${esc(a.nombre)}</div>
+            <div style="font-size:12px;color:#C24A30;margin-top:2px;">${a.stock} de ${a.minimo} ${esc(a.unidad)}</div>
             ${_bar(pct, '#C24A30', 5)}
           </div>`;
         }).join('')}
@@ -398,20 +393,21 @@ App.register('reportes', (function () {
               <span style="font-size:12px;color:var(--muted);">${lista.length} artículo${lista.length>1?'s':''}</span>
             </div>
           </div>
-          <div style="font-size:11px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:1fr 80px 70px 100px;padding:0 0 5px;border-bottom:1px solid var(--line);">
+          <div class="rep-scroll"><div>
+          <div style="font-size:11px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:1fr 80px 70px 100px;min-width:420px;padding:0 0 5px;border-bottom:1px solid var(--line);">
             <span>Artículo</span><span>Stock</span><span>Mínimo</span><span>Nivel</span>
           </div>
           ${lista.map(function(a) {
             const pct = Math.min(100, Math.round(a.stock/Math.max(a.minimo,1)*100));
             const c   = a.stock < a.minimo ? '#C24A30' : a.stock < a.minimo*1.5 ? '#9A6B0A' : col;
-            return `<div style="display:grid;grid-template-columns:1fr 80px 70px 100px;padding:7px 0;border-bottom:1px solid var(--line);align-items:center;">
-              <span style="font-size:13px;font-weight:600;">${a.nombre}</span>
-              <span style="font-size:13px;font-weight:700;color:${c};">${a.stock} ${a.unidad}</span>
-              <span style="font-size:12px;color:var(--muted);">${a.minimo} ${a.unidad}</span>
+            return `<div style="display:grid;grid-template-columns:1fr 80px 70px 100px;min-width:420px;padding:7px 0;border-bottom:1px solid var(--line);align-items:center;">
+              <span style="font-size:13px;font-weight:600;">${esc(a.nombre)}</span>
+              <span style="font-size:13px;font-weight:700;color:${c};">${a.stock} ${esc(a.unidad)}</span>
+              <span style="font-size:12px;color:var(--muted);">${a.minimo} ${esc(a.unidad)}</span>
               <div style="padding-right:8px;">${_bar(pct, c, 7)}</div>
             </div>`;
           }).join('')}
-        </div>`;
+        </div></div></div>`;
       }).join('')}
     `, 'almacen')}`;
   }
@@ -448,7 +444,7 @@ App.register('reportes', (function () {
                 const c = TIPO_COLS[i%TIPO_COLS.length];
                 return `<div>
                   <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-                    <span style="font-weight:600;">${art}</span>
+                    <span style="font-weight:600;">${esc(art)}</span>
                     <span style="font-weight:700;color:${c};">${n} uds</span>
                   </div>
                   ${_bar(Math.round(n/maxArt*100), c, 8)}
@@ -463,7 +459,7 @@ App.register('reportes', (function () {
               ${Object.entries(porTipo).map(function(entry,i) {
                 const t = entry[0], n = entry[1];
                 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-radius:10px;">
-                  <span style="font-size:13.5px;font-weight:700;">${TIPO_LABEL[t]||t}</span>
+                  <span style="font-size:13.5px;font-weight:700;">${esc(TIPO_LABEL[t]||t)}</span>
                   <div style="text-align:right;">
                     <div style="font-size:20px;font-weight:800;color:${TIPO_COLS[i%TIPO_COLS.length]};">${n}</div>
                     <div style="font-size:11px;color:var(--muted);">entregas</div>
@@ -477,19 +473,20 @@ App.register('reportes', (function () {
 
     ${_seccion('Historial completo de entregas', `
       ${ent.length
-        ? `<div style="font-size:12px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:80px 1fr 1fr 60px 1fr;padding:0 4px 8px;border-bottom:1px solid var(--line);">
+        ? `<div class="rep-scroll">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:80px 1fr 1fr 60px 1fr;min-width:520px;padding:0 4px 8px;border-bottom:1px solid var(--line);">
             <span>Fecha</span><span>Beneficiario</span><span>Artículo</span><span>Cant.</span><span>Campaña</span>
           </div>
           <div style="max-height:360px;overflow-y:auto;">
             ${ent.map(function(e) { return `
-              <div style="display:grid;grid-template-columns:80px 1fr 1fr 60px 1fr;padding:8px 4px;border-bottom:1px solid var(--line);align-items:center;">
-                <span style="font-size:12px;color:var(--muted);">${e.fecha}</span>
-                <span style="font-size:13px;font-weight:600;">${e.nino}</span>
-                <span style="font-size:13px;">${e.articulo}</span>
+              <div style="display:grid;grid-template-columns:80px 1fr 1fr 60px 1fr;min-width:520px;padding:8px 4px;border-bottom:1px solid var(--line);align-items:center;">
+                <span style="font-size:12px;color:var(--muted);">${esc(e.fecha)}</span>
+                <span style="font-size:13px;font-weight:600;">${esc(e.nino)}</span>
+                <span style="font-size:13px;">${esc(e.articulo)}</span>
                 <span style="font-size:13px;font-weight:700;">${e.cantidad}</span>
-                <span style="font-size:12px;color:var(--muted);">${e.campana||'General'}</span>
+                <span style="font-size:12px;color:var(--muted);">${esc(e.campana||'General')}</span>
               </div>`; }).join('')}
-          </div>`
+          </div></div>`
         : '<div style="font-size:13px;color:var(--faint);">Sin entregas registradas.</div>'}
     `, 'entregas')}`;
   }
@@ -531,7 +528,7 @@ App.register('reportes', (function () {
                 const pct = fondos.egresos ? Math.round(val/fondos.egresos*100) : 0;
                 return `<div>
                   <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px;">
-                    <span style="font-weight:600;">${cat}</span>
+                    <span style="font-weight:600;">${esc(cat)}</span>
                     <span style="font-weight:700;color:${c};">S/ ${val.toLocaleString('es-PE',{minimumFractionDigits:2})}
                       <span style="color:var(--faint);font-weight:400;">(${pct}%)</span>
                     </span>
@@ -550,7 +547,7 @@ App.register('reportes', (function () {
                 const tipo = entry[0], val = entry[1];
                 const c    = TICOL[tipo] || '#888';
                 return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg);border-radius:10px;">
-                  <span style="font-size:13px;font-weight:700;">${tipo}</span>
+                  <span style="font-size:13px;font-weight:700;">${esc(tipo)}</span>
                   <span style="font-size:16px;font-weight:800;color:${c};">S/ ${val.toLocaleString('es-PE',{minimumFractionDigits:2})}</span>
                 </div>`;
               }).join('')}
@@ -566,21 +563,22 @@ App.register('reportes', (function () {
         <span style="background:#E8F7F1;color:#1D7A56;border-radius:20px;padding:3px 10px;font-weight:700;">Con comprobante: ${conComp}</span>
       </div>
       ${gastos.length
-        ? `<div style="font-size:12px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:80px 1fr 1fr 100px 120px;padding:0 4px 8px;border-bottom:1px solid var(--line);">
+        ? `<div class="rep-scroll">
+          <div style="font-size:12px;font-weight:700;color:var(--muted);display:grid;grid-template-columns:80px 1fr 1fr 100px 120px;min-width:580px;padding:0 4px 8px;border-bottom:1px solid var(--line);">
             <span>Fecha</span><span>Categoría</span><span>Proveedor</span><span>Monto</span><span>Origen</span>
           </div>
           <div style="max-height:360px;overflow-y:auto;">
             ${gastos.map(function(g) { return `
-              <div style="display:grid;grid-template-columns:80px 1fr 1fr 100px 120px;padding:8px 4px;border-bottom:1px solid var(--line);align-items:center;">
-                <span style="font-size:12px;color:var(--muted);">${g.fecha}</span>
-                <div style="background:${g.catBg||'#eee'};color:${g.catFg||'#555'};border-radius:20px;padding:3px 9px;font-size:11.5px;font-weight:700;display:inline-flex;">${g.categoria}</div>
-                <span style="font-size:13px;font-weight:600;">${g.proveedor}</span>
+              <div style="display:grid;grid-template-columns:80px 1fr 1fr 100px 120px;min-width:580px;padding:8px 4px;border-bottom:1px solid var(--line);align-items:center;">
+                <span style="font-size:12px;color:var(--muted);">${esc(g.fecha)}</span>
+                <div style="background:${esc(g.catBg||'#eee')};color:${esc(g.catFg||'#555')};border-radius:20px;padding:3px 9px;font-size:11.5px;font-weight:700;display:inline-flex;">${esc(g.categoria)}</div>
+                <span style="font-size:13px;font-weight:600;">${esc(g.proveedor)}</span>
                 <span style="font-size:13px;font-weight:800;">S/ ${g.monto.toLocaleString('es-PE',{minimumFractionDigits:2})}</span>
                 ${g.fuenteAuto==='compra_almacen'
                   ? '<span style="font-size:11px;background:#E0F0FF;color:#015a9e;border-radius:20px;padding:3px 8px;font-weight:700;">Auto·Almacén</span>'
                   : `<span style="font-size:11px;background:var(--line);color:var(--muted);border-radius:20px;padding:3px 8px;font-weight:700;">${g.comprobante?'✓ Con comp.':'Manual'}</span>`}
               </div>`; }).join('')}
-          </div>`
+          </div></div>`
         : '<div style="font-size:13px;color:var(--faint);">Sin gastos registrados.</div>'}
     `, 'gastos')}`;
   }

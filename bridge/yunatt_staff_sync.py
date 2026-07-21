@@ -27,7 +27,7 @@ from urllib3.util.ssl_ import create_urllib3_context
 
 log = logging.getLogger("yunatt-staff")
 
-from config import env
+from config import env, db_config
 
 BASE        = "https://global.yunatt.com"
 DEPT_ID     = 38015          # departamento "Elizabeth" en yunatt.com
@@ -36,14 +36,7 @@ DEVICE_ID   = 22952          # attenceMachineId del TM-AI03F
 EMAIL       = env("YUNATT_EMAIL")
 PASSWORD    = env("YUNATT_PASSWORD")
 
-DB_CONFIG = {
-    "host":      env("DB_HOST", "localhost"),
-    "user":      env("DB_USER", "root"),
-    "password":  env("DB_PASSWORD", ""),
-    "database":  env("DB_NAME", "erp_lost_children"),
-    "charset":   "utf8mb4",
-    "use_unicode": True,
-}
+DB_CONFIG = {**db_config(), "use_unicode": True}
 
 _session     = None
 _sync_lock   = threading.Lock()

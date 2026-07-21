@@ -299,14 +299,14 @@ CREATE INDEX idx_fondos_fecha ON fondos_movimientos(fecha);
 -- NOTA: esta versión reemplaza a una anterior desactualizada que tenía
 -- `email UNIQUE` y roles ('responsable','operador','visor') que server.py
 -- nunca usa — el login real filtra por `username` y los roles válidos son
--- admin/coordinador/voluntario/kiosko/donador (ver _ROLES_VALIDOS y
+-- admin/coordinador/voluntario (ver _ROLES_VALIDOS y
 -- _init_usuarios() en bridge/server.py, que es la fuente de verdad real).
 CREATE TABLE usuarios_sistema (
     id             INT AUTO_INCREMENT PRIMARY KEY,
     nombre         VARCHAR(100) NOT NULL,
     username       VARCHAR(50)  NOT NULL UNIQUE,
     password_hash  VARCHAR(255) NOT NULL,
-    rol            ENUM('admin','coordinador','voluntario','kiosko','donador') DEFAULT 'voluntario',
+    rol            ENUM('admin','coordinador','voluntario') DEFAULT 'voluntario',
     activo         BOOLEAN DEFAULT TRUE,
     created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

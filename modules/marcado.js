@@ -42,7 +42,7 @@ App.register('marcado', (function () {
 
       <!-- STATUS -->
       <div id="kiosk-status" style="text-align:center;min-height:52px;">
-        <div style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;">Esperando…</div>
+        <div style="font-family:'Quicksand';font-weight:800;font-size:18px;">Esperando…</div>
         <div style="font-size:13px;color:var(--muted);margin-top:4px;">Sistema listo para reconocer</div>
       </div>
 
@@ -79,15 +79,15 @@ App.register('marcado', (function () {
     const ausentes  = DB.asistencia.filter(a=>!a.presente).length;
     return `
       <div class="kpi-card" style="text-align:center;padding:14px;">
-        <div style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:22px;color:var(--primary);">${facial}</div>
+        <div style="font-family:'Quicksand';font-weight:800;font-size:22px;color:var(--primary);">${facial}</div>
         <div style="font-size:12px;color:var(--muted);">Por facial</div>
       </div>
       <div class="kpi-card" style="text-align:center;padding:14px;">
-        <div style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:22px;color:var(--success);">${presentes}</div>
+        <div style="font-family:'Quicksand';font-weight:800;font-size:22px;color:var(--success);">${presentes}</div>
         <div style="font-size:12px;color:var(--muted);">Presentes</div>
       </div>
       <div class="kpi-card" style="text-align:center;padding:14px;">
-        <div style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:22px;color:var(--danger);">${ausentes}</div>
+        <div style="font-family:'Quicksand';font-weight:800;font-size:22px;color:var(--danger);">${ausentes}</div>
         <div style="font-size:12px;color:var(--muted);">Ausentes</div>
       </div>`;
   }
@@ -98,8 +98,8 @@ App.register('marcado', (function () {
     return marcados.map(a=>`
       <div style="display:flex;align-items:center;gap:12px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;">
         ${UI.avatar(a.inicial, a.avatarBg, a.avatarFg, true, 34)}
-        <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${a.nombre}</div><div style="font-size:12px;color:var(--faint);">${a.metodo}</div></div>
-        <span style="font-size:13px;font-weight:700;color:var(--success);">${a.hora}</span>
+        <div style="flex:1;"><div style="font-weight:600;font-size:14px;">${esc(a.nombre)}</div><div style="font-size:12px;color:var(--faint);">${esc(a.metodo)}</div></div>
+        <span style="font-size:13px;font-weight:700;color:var(--success);">${esc(a.hora)}</span>
       </div>`).join('');
   }
 
@@ -136,7 +136,7 @@ App.register('marcado', (function () {
     setTimeout(()=>{
       const a = DB.marcarFacial(target.personaId||target.id);
       if (a) {
-        _setStatus(`¡Reconocido! → ${a.nombre}`, 'Asistencia registrada · ' + a.hora, 'success');
+        _setStatus(`¡Reconocido! → ${esc(a.nombre)}`, 'Asistencia registrada · ' + esc(a.hora), 'success');
       } else {
         _setStatus('No reconocido', 'Intenta de nuevo o usa el modo manual', 'warn');
       }
@@ -153,7 +153,7 @@ App.register('marcado', (function () {
     if (!el) return;
     const colors = {success:'var(--success)', warn:'var(--warn)', error:'var(--danger)', '':'var(--ink)'};
     el.innerHTML = `
-      <div style="font-family:'Plus Jakarta Sans';font-weight:800;font-size:18px;color:${colors[tipo]||'var(--ink)'};">${titulo}</div>
+      <div style="font-family:'Quicksand';font-weight:800;font-size:18px;color:${colors[tipo]||'var(--ink)'};">${titulo}</div>
       <div style="font-size:13px;color:var(--muted);margin-top:4px;">${sub}</div>`;
   }
 
@@ -165,7 +165,7 @@ App.register('marcado', (function () {
       <h2>Marcado manual</h2>
       <div class="form-group"><label>Selecciona la persona *</label>
         <select id="manual-persona">
-          ${ausentes.map(a=>`<option value="${a.id}">${a.nombre}</option>`).join('')}
+          ${ausentes.map(a=>`<option value="${a.id}">${esc(a.nombre)}</option>`).join('')}
         </select>
       </div>
       <div class="form-group"><label>Motivo</label>

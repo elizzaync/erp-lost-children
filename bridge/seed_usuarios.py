@@ -13,15 +13,9 @@ import pymysql
 import hashlib
 import secrets
 
-from config import env
+from config import db_config
 
-DB = dict(
-    host=env("DB_HOST", "localhost"),
-    user=env("DB_USER", "root"),
-    password=env("DB_PASSWORD", ""),
-    database=env("DB_NAME", "erp_lost_children"),
-    charset='utf8mb4',
-)
+DB = db_config()
 
 
 def _hash_password(password):
@@ -40,14 +34,14 @@ cur  = conn.cursor()
 
 print("── Migrando tabla usuarios_sistema ──")
 
-# 1. Actualizar ENUM para incluir los 5 roles
+# 1. Actualizar ENUM para incluir los 3 roles
 try:
     cur.execute("""
         ALTER TABLE usuarios_sistema
-        MODIFY rol ENUM('admin','coordinador','voluntario','kiosko','donador') DEFAULT 'voluntario'
+        MODIFY rol ENUM('admin','coordinador','voluntario') DEFAULT 'voluntario'
     """)
     conn.commit()
-    print("  ✓ Columna 'rol' actualizada con los 5 roles")
+    print("  ✓ Columna 'rol' actualizada con los 3 roles")
 except Exception as e:
     print(f"  ! ENUM ya actualizado o error: {e}")
     conn.rollback()
@@ -57,8 +51,6 @@ USUARIOS = [
     ('Administrador',    'admin',       'admin'),
     ('Coordinadora',     'coord',       'coordinador'),
     ('Voluntario Demo',  'voluntario',  'voluntario'),
-    ('Kiosko Entrada',   'kiosko',      'kiosko'),
-    ('Donador Demo',     'donador',     'donador'),
 ]
 
 print("\n── Usuarios ──")

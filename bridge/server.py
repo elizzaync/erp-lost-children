@@ -16,14 +16,21 @@ Endpoints principales:
 import threading
 import time
 import json
+import re
 import logging
+import logging.handlers
 import hashlib
 import secrets
+import queue
+import mimetypes
 from datetime import date, datetime
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
-from config import env
+from config import env, db_config
+
+mimetypes.add_type("font/woff2", ".woff2")
+mimetypes.add_type("font/woff", ".woff")
 
 try:
     import yunatt_sync
@@ -64,27 +71,73 @@ except ImportError:
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("erp-bridge")
 
+# ─── AUDITORÍA ────────────────────────────────────────────────────────────────
+# Log dedicado (rotativo) de eventos sensibles: logins, cambios de usuarios,
+# borrados y acciones destructivas. Separado del log operativo para que sea
+# fácil de revisar/exportar sin ruido de peticiones normales.
+_LOGS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(_LOGS_DIR, exist_ok=True)
+audit_log = logging.getLogger("erp-audit")
+audit_log.setLevel(logging.INFO)
+audit_log.propagate = False
+if not audit_log.handlers:
+    _audit_handler = logging.handlers.RotatingFileHandler(
+        os.path.join(_LOGS_DIR, "audit.log"), maxBytes=5 * 1024 * 1024, backupCount=5, encoding="utf-8")
+    _audit_handler.setFormatter(logging.Formatter("%(asctime)s %(message)s"))
+    audit_log.addHandler(_audit_handler)
+
+
+def _audit(evento, usuario=None, detalle=""):
+    ip = request.remote_addr or "?"
+    audit_log.info(f"evento={evento} usuario={usuario or '-'} ip={ip} {detalle}".strip())
+
+
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:7793", "http://127.0.0.1:7793",
-                   "http://localhost", "http://127.0.0.1", "null"])
+                   "http://localhost", "http://127.0.0.1"])
 sock = Sock(app) if WS_AVAILABLE else None
 
 ERP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-DB_CONFIG = {
-    "host":      env("DB_HOST", "localhost"),
-    "user":      env("DB_USER", "root"),
-    "password":  env("DB_PASSWORD", ""),
-    "database":  env("DB_NAME", "erp_lost_children"),
-    "charset":   "utf8mb4",
-    "use_unicode": True,
-}
+
+# ─── SECURITY HEADERS ─────────────────────────────────────────────────────────
+# CSP permite 'unsafe-inline' porque la UI usa handlers onclick="..." inline
+# en todos los módulos (reescribirlos a event-delegation es un cambio aparte,
+# no de seguridad de red) — pero bloquea CUALQUIER script/estilo/frame de
+# origen externo, que es el vector de XSS/clickjacking real a mitigar aquí.
+@app.after_request
+def _security_headers(resp):
+    resp.headers["X-Content-Type-Options"] = "nosniff"
+    resp.headers["X-Frame-Options"] = "DENY"
+    resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    resp.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()"
+    resp.headers["Content-Security-Policy"] = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https:; "
+        "connect-src 'self' ws: wss:; "
+        "frame-ancestors 'none'; "
+        "object-src 'none'; base-uri 'self'"
+    )
+    return resp
+
+DB_CONFIG = {**db_config(), "use_unicode": True}
 
 # ─── AUTH ─────────────────────────────────────────────────────────────────────
-SESSION_TTL     = 8 * 3600
-_sessions       = {}
-_login_attempts = {}
-_ROLES_VALIDOS  = ('admin', 'coordinador', 'voluntario', 'kiosko', 'donador')
+# Sesión deslizante: cada uso válido extiende la expiración (SESSION_IDLE_TTL),
+# pero nunca más allá de SESSION_MAX_TTL desde el login — así un token robado
+# que se siga usando no vive indefinidamente.
+SESSION_IDLE_TTL = 2 * 3600    # inactividad máxima
+SESSION_MAX_TTL  = 12 * 3600   # vida absoluta desde el login
+_sessions        = {}
+_login_attempts  = {}
+_failed_logins   = {}          # username -> [timestamps de fallos]
+_ROLES_VALIDOS   = ('admin', 'coordinador', 'voluntario')
+
+LOGIN_LOCKOUT_THRESHOLD = 5
+LOGIN_LOCKOUT_WINDOW    = 15 * 60
+LOGIN_LOCKOUT_DURATION  = 15 * 60
 
 
 def _get_session():
@@ -98,15 +151,61 @@ def _get_session():
     s = _sessions.get(token)
     if not s:
         return None
-    if s.get("expires_at", 0) < time.time():
+    now = time.time()
+    if now > s.get("expires_at", 0) or now - s.get("created_at", now) > SESSION_MAX_TTL:
         _sessions.pop(token, None)
         return None
+    s["expires_at"] = now + SESSION_IDLE_TTL   # renovación deslizante
     return s
+
+
+def _crear_sesion(user):
+    token = secrets.token_hex(32)
+    now = time.time()
+    _sessions[token] = {
+        "user_id":    user["id"],
+        "nombre":     user["nombre"],
+        "rol":        user["rol"],
+        "username":   user["username"],
+        "created_at": now,
+        "expires_at": now + SESSION_IDLE_TTL,
+    }
+    return token
+
+
+def _invalidar_sesiones(user_id, excepto_token=None):
+    """Revoca todas las sesiones de un usuario (p.ej. tras cambiar password o eliminarlo)."""
+    for tok in [t for t, s in _sessions.items() if s.get("user_id") == user_id and t != excepto_token]:
+        _sessions.pop(tok, None)
+
+
+def _cuenta_bloqueada(username):
+    fails = [t for t in _failed_logins.get(username, []) if time.time() - t < LOGIN_LOCKOUT_WINDOW]
+    _failed_logins[username] = fails
+    return len(fails) >= LOGIN_LOCKOUT_THRESHOLD
+
+
+def _registrar_login_fallido(username):
+    _failed_logins.setdefault(username, []).append(time.time())
+
+
+def _password_debil(password):
+    return len(password) < 8
 
 
 def _require_admin():
     s = _get_session()
     return s if (s and s.get("rol") == "admin") else None
+
+
+# El rol 'voluntario' solo puede marcar asistencia (ver js/auth.js _PERMISOS:
+# write=['asistencia']) — antes esa restricción existía solo en el frontend
+# (canWrite()), así que un token de voluntario reenviado directo a la API
+# (curl/Postman) podía crear/editar/borrar personas, gastos, artículos, etc.
+# _require_staff() replica esa misma regla del lado del servidor.
+def _require_staff():
+    s = _get_session()
+    return s if (s and s.get("rol") in ("admin", "coordinador")) else None
 
 
 def _hash_password(password):
@@ -214,30 +313,31 @@ def serve_static(filename):
 def auth_login():
     ip = request.remote_addr or "unknown"
     if not _check_rate_limit(ip):
+        _audit("login_rate_limit", detalle="ip_bloqueada")
         return jsonify({"ok": False, "error": "Demasiados intentos. Espera un minuto."}), 429
     body     = request.get_json(silent=True) or {}
     username = body.get("username", "").strip().lower()
     password = body.get("password", "")
     if not username or not password:
         return jsonify({"ok": False, "error": "Usuario y contraseña requeridos"}), 400
+    if _cuenta_bloqueada(username):
+        _audit("login_cuenta_bloqueada", usuario=username)
+        return jsonify({"ok": False, "error": "Cuenta bloqueada temporalmente por intentos fallidos. Espera 15 minutos."}), 429
     try:
         rows = query("""
-            SELECT id, nombre, rol, password_hash FROM usuarios_sistema
+            SELECT id, nombre, rol, username, password_hash FROM usuarios_sistema
             WHERE username=%s AND activo=TRUE
         """, (username,))
     except Exception:
         return jsonify({"ok": False, "error": "Error interno"}), 500
     if not rows or not _verify_password(password, rows[0]["password_hash"]):
+        _registrar_login_fallido(username)
+        _audit("login_fallido", usuario=username)
         return jsonify({"ok": False, "error": "Usuario o contraseña incorrectos"}), 401
-    user  = rows[0]
-    token = secrets.token_hex(32)
-    _sessions[token] = {
-        "user_id":    user["id"],
-        "nombre":     user["nombre"],
-        "rol":        user["rol"],
-        "username":   username,
-        "expires_at": time.time() + SESSION_TTL,
-    }
+    user = rows[0]
+    _failed_logins.pop(username, None)
+    token = _crear_sesion(user)
+    _audit("login_exitoso", usuario=username)
     log.info(f"Login: {username}")
     return jsonify({"ok": True, "token": token, "nombre": user["nombre"], "rol": user["rol"]})
 
@@ -245,7 +345,9 @@ def auth_login():
 @app.post("/auth/logout")
 def auth_logout():
     token = request.headers.get("Authorization", "").replace("Bearer ", "").strip()
-    _sessions.pop(token, None)
+    s = _sessions.pop(token, None)
+    if s:
+        _audit("logout", usuario=s.get("username"))
     return jsonify({"ok": True})
 
 
@@ -281,11 +383,14 @@ def crear_usuario_sistema():
         return jsonify({"ok": False, "error": "Nombre, usuario y contraseña son requeridos"}), 400
     if rol not in _ROLES_VALIDOS:
         return jsonify({"ok": False, "error": f"Rol inválido. Válidos: {_ROLES_VALIDOS}"}), 400
+    if _password_debil(password):
+        return jsonify({"ok": False, "error": "La contraseña debe tener al menos 8 caracteres"}), 400
     ph = _hash_password(password)
     try:
         query("INSERT INTO usuarios_sistema (nombre, username, password_hash, rol) VALUES (%s,%s,%s,%s)",
               (nombre, username, ph, rol), fetch=False)
         row = query("SELECT id FROM usuarios_sistema WHERE username=%s", (username,))
+        _audit("usuario_creado", usuario=username, detalle=f"rol={rol}")
         return jsonify({"ok": True, "id": row[0]["id"] if row else None})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -302,16 +407,24 @@ def actualizar_usuario_sistema(id_):
     password = body.get("password", "").strip()
     if rol and rol not in _ROLES_VALIDOS:
         return jsonify({"ok": False, "error": "Rol inválido"}), 400
+    if password and _password_debil(password):
+        return jsonify({"ok": False, "error": "La contraseña debe tener al menos 8 caracteres"}), 400
     try:
         if password:
             ph = _hash_password(password)
             query("UPDATE usuarios_sistema SET password_hash=%s WHERE id=%s", (ph, id_), fetch=False)
+            # Un cambio de contraseña revoca cualquier sesión robada/abierta con la anterior.
+            _invalidar_sesiones(id_)
+            _audit("password_cambiado", detalle=f"target_user_id={id_}")
         if nombre:
             query("UPDATE usuarios_sistema SET nombre=%s WHERE id=%s", (nombre, id_), fetch=False)
         if rol:
             query("UPDATE usuarios_sistema SET rol=%s WHERE id=%s", (rol, id_), fetch=False)
         if activo is not None:
             query("UPDATE usuarios_sistema SET activo=%s WHERE id=%s", (bool(activo), id_), fetch=False)
+            if not activo:
+                _invalidar_sesiones(id_)
+                _audit("usuario_desactivado", detalle=f"target_user_id={id_}")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -327,6 +440,8 @@ def eliminar_usuario_sistema(id_):
         return jsonify({"ok": False, "error": "No puedes eliminar tu propia cuenta"}), 400
     try:
         query("DELETE FROM usuarios_sistema WHERE id=%s", (id_,), fetch=False)
+        _invalidar_sesiones(id_)
+        _audit("usuario_eliminado", usuario=s.get("username") if s else None, detalle=f"target_user_id={id_}")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -344,6 +459,8 @@ def get_personas():
 
 @app.post("/personas")
 def crear_persona():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         id_ = query("""
@@ -385,6 +502,7 @@ def crear_persona():
             pass
         # yunatt: NO auto-sincronizar aquí — el usuario elige el método
         # desde el tab Timmy (Enrolar) para que el dispositivo active el registro correcto.
+        _broadcast("cambio", recurso="personas")
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -392,6 +510,8 @@ def crear_persona():
 
 @app.put("/personas/<int:id_>")
 def actualizar_persona(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         query("""
@@ -427,6 +547,7 @@ def actualizar_persona(id_):
             body.get("ingreso_familiar", ""), body.get("num_hijos_programa", 0),
             id_
         ), fetch=False)
+        _broadcast("cambio", recurso="personas")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -434,8 +555,13 @@ def actualizar_persona(id_):
 
 @app.delete("/personas/<int:id_>")
 def eliminar_persona(id_):
+    s = _require_staff()
+    if not s:
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     try:
         query("UPDATE personas SET estado='inactivo' WHERE id=%s", (id_,), fetch=False)
+        _audit("persona_eliminada", usuario=s.get("username") if s else None, detalle=f"persona_id={id_}")
+        _broadcast("cambio", recurso="personas")
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
 
@@ -463,6 +589,8 @@ def eliminar_persona(id_):
 
 @app.post("/personas/<int:id_>/foto")
 def actualizar_foto_persona(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     import base64 as _b64
     body = request.get_json(silent=True) or {}
     foto_b64 = body.get("foto_b64", "")
@@ -576,43 +704,84 @@ def get_asistencia_hoy():
         return jsonify({"error": str(e)}), 500
 
 
-# ─── WEBSOCKET: ASISTENCIA EN TIEMPO REAL ─────────────────────────────────────
+# ─── WEBSOCKET: TIEMPO REAL PARA TODO EL SISTEMA ──────────────────────────────
+# Bus de broadcast centralizado: cada endpoint que muta datos (personas,
+# articulos, gastos, entregas, alimentacion, fondos, asistencia) llama a
+# _broadcast(...) justo tras el commit, y TODOS los clientes conectados lo
+# reciben al instante — sin polling, sin recargar la página. La única
+# excepción es la detección de marcas que llegan del Timmy vía yunatt (eso
+# ocurre en un hilo de fondo, no en una petición HTTP), para lo cual
+# _asistencia_watcher() sigue revisando MySQL cada 2 s pero UNA sola vez para
+# todos los clientes (antes cada conexión hacía su propio polling — con 3
+# admins conectados eran 3x las consultas).
+_ws_clients      = set()
+_ws_clients_lock = threading.Lock()
+
+
+def _ws_register():
+    q = queue.Queue()
+    with _ws_clients_lock:
+        _ws_clients.add(q)
+    return q
+
+
+def _ws_unregister(q):
+    with _ws_clients_lock:
+        _ws_clients.discard(q)
+
+
+def _broadcast(evento, **data):
+    msg = json.dumps({"evento": evento, **data})
+    with _ws_clients_lock:
+        clientes = list(_ws_clients)
+    for q in clientes:
+        try:
+            q.put_nowait(msg)
+        except Exception:
+            pass
+
+
 if WS_AVAILABLE:
     @sock.route("/ws/asistencia")
     def ws_asistencia(ws):
-        """
-        Push en tiempo real. Envía {"evento":"asistencia"} cada vez que cambia
-        la asistencia de hoy o llegan marcas nuevas del Timmy (detecta cambios
-        cada 2 s en MySQL). El cliente recarga su lista al recibirlo.
-        """
-        def _snapshot():
-            try:
-                a = query("""
-                    SELECT COUNT(*) AS total,
-                           COALESCE(SUM(presente),0) AS presentes,
-                           COALESCE(MAX(CONCAT(persona_id,'-',IFNULL(hora,''))),'') AS ult
-                    FROM asistencia WHERE fecha = CURRENT_DATE
-                """)[0]
-                z = query("SELECT COALESCE(MAX(id),0) AS mx FROM zkteco_logs")[0]
-                return f"{a['total']}|{a['presentes']}|{a['ult']}|{z['mx']}"
-            except Exception:
-                return None
+        q = _ws_register()
+        try:
+            ws.send(json.dumps({"evento": "conectado"}))
+            while True:
+                try:
+                    msg = q.get(timeout=25)
+                    ws.send(msg)
+                except queue.Empty:
+                    ws.send(json.dumps({"evento": "ping"}))  # keep-alive
+        except Exception:
+            pass
+        finally:
+            _ws_unregister(q)
 
-        last = _snapshot()
-        ws.send(json.dumps({"evento": "conectado"}))
-        idle = 0
-        while True:
-            time.sleep(2)
-            cur = _snapshot()
-            if cur is not None and cur != last:
-                last = cur
-                ws.send(json.dumps({"evento": "asistencia"}))
-                idle = 0
-            else:
-                idle += 2
-                if idle >= 30:          # keep-alive para que el proxy/navegador no corte
-                    ws.send(json.dumps({"evento": "ping"}))
-                    idle = 0
+
+def _asistencia_watcher():
+    """Único hilo de fondo que detecta marcas nuevas del Timmy (llegan vía
+    yunatt_sync en otro hilo, no hay petición HTTP a la que engancharse)."""
+    def _snapshot():
+        try:
+            a = query("""
+                SELECT COUNT(*) AS total,
+                       COALESCE(SUM(presente),0) AS presentes,
+                       COALESCE(MAX(CONCAT(persona_id,'-',IFNULL(hora,''))),'') AS ult
+                FROM asistencia WHERE fecha = CURRENT_DATE
+            """)[0]
+            z = query("SELECT COALESCE(MAX(id),0) AS mx FROM zkteco_logs")[0]
+            return f"{a['total']}|{a['presentes']}|{a['ult']}|{z['mx']}"
+        except Exception:
+            return None
+
+    last = _snapshot()
+    while True:
+        time.sleep(2)
+        cur = _snapshot()
+        if cur is not None and cur != last:
+            last = cur
+            _broadcast("asistencia")
 
 
 @app.post("/asistencia/asignar-zk")
@@ -648,6 +817,7 @@ def asignar_zk():
             WHERE zk_user_id = %s AND DATE(timestamp) = CURRENT_DATE
         """, (zk_user_id,), fetch=False)
 
+        _broadcast("asistencia")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -657,8 +827,13 @@ def asignar_zk():
 def actualizar_asistencia(id_):
     body    = request.get_json(silent=True) or {}
     present = bool(body.get("presente", False))
-    metodo  = body.get("metodo", "Manual")
-    hora    = body.get("hora", datetime.now().strftime("%H:%M:%S"))
+    # metodo/hora se muestran sin escapar en el kiosko de marcado (pantalla
+    # normalmente desatendida) — acotar longitud y formato acá reduce el
+    # riesgo de XSS almacenado además del escape que ya hace el frontend.
+    metodo  = str(body.get("metodo", "Manual"))[:50]
+    hora    = body.get("hora", "")
+    if not re.match(r'^\d{2}:\d{2}(:\d{2})?$', str(hora)):
+        hora = datetime.now().strftime("%H:%M:%S")
     try:
         if present:
             query("""
@@ -670,6 +845,7 @@ def actualizar_asistencia(id_):
                 UPDATE asistencia SET presente=FALSE, metodo='—', hora=NULL
                 WHERE id=%s AND fecha=CURRENT_DATE
             """, (id_,), fetch=False)
+        _broadcast("asistencia")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -692,6 +868,8 @@ def get_articulos():
 
 @app.post("/articulos")
 def crear_articulo():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         id_ = query("""
@@ -704,6 +882,7 @@ def crear_articulo():
               body.get("precio", 0), body.get("descripcion", ""),
               body.get("proveedor", ""), body.get("codigo", ""),
               body.get("ubicacion", "")), fetch=False)
+        _broadcast("cambio", recurso="articulos")
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -711,6 +890,8 @@ def crear_articulo():
 
 @app.put("/articulos/<int:id_>")
 def actualizar_articulo(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         query("""
@@ -725,6 +906,7 @@ def actualizar_articulo(id_):
               body.get("proveedor", ""), body.get("codigo", ""),
               body.get("ubicacion", ""),
               id_), fetch=False)
+        _broadcast("cambio", recurso="articulos")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -732,8 +914,11 @@ def actualizar_articulo(id_):
 
 @app.delete("/articulos/<int:id_>")
 def eliminar_articulo(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     try:
         query("UPDATE articulos SET activo=FALSE WHERE id=%s", (id_,), fetch=False)
+        _broadcast("cambio", recurso="articulos")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -741,6 +926,8 @@ def eliminar_articulo(id_):
 
 @app.post("/articulos/<int:id_>/imagen")
 def subir_imagen_articulo(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     import uuid
     from werkzeug.utils import secure_filename
     if 'imagen' not in request.files:
@@ -765,6 +952,8 @@ def subir_imagen_articulo(id_):
 
 @app.post("/articulos/<int:id_>/movimiento")
 def movimiento_articulo(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body              = request.get_json(silent=True) or {}
     tipo              = body.get("tipo", "entrada")
     cantidad          = float(body.get("cantidad", 0))
@@ -821,6 +1010,10 @@ def movimiento_articulo(id_):
         rows = query("SELECT stock, precio FROM articulos WHERE id=%s", (id_,))
         nuevo_stock  = float(rows[0]["stock"]) if rows else 0
         nuevo_precio = float(rows[0]["precio"] or 0) if rows else 0
+        _broadcast("cambio", recurso="articulos")
+        if tipo == "entrada" and origen == "compra" and costo_total > 0:
+            _broadcast("cambio", recurso="gastos")
+            _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True, "stock": nuevo_stock, "precio": nuevo_precio,
                         "precio_unitario": precio_unitario})
     except Exception as e:
@@ -843,6 +1036,8 @@ def get_gastos():
 
 @app.post("/gastos")
 def crear_gasto():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         id_ = query("""
@@ -861,6 +1056,8 @@ def crear_gasto():
                   body.get("fecha", date.today().isoformat())), fetch=False)
         except Exception:
             pass
+        _broadcast("cambio", recurso="gastos")
+        _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -868,6 +1065,8 @@ def crear_gasto():
 
 @app.put("/gastos/<int:id_>")
 def actualizar_gasto(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         query("""
@@ -885,6 +1084,8 @@ def actualizar_gasto(id_):
                   body.get("categoria", "Gasto"), body.get("fecha"), id_), fetch=False)
         except Exception:
             pass
+        _broadcast("cambio", recurso="gastos")
+        _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -892,9 +1093,13 @@ def actualizar_gasto(id_):
 
 @app.delete("/gastos/<int:id_>")
 def eliminar_gasto(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     try:
         query("DELETE FROM fondos_movimientos WHERE fuente='gasto' AND referencia_id=%s", (id_,), fetch=False)
         query("DELETE FROM gastos WHERE id=%s", (id_,), fetch=False)
+        _broadcast("cambio", recurso="gastos")
+        _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -902,6 +1107,8 @@ def eliminar_gasto(id_):
 
 @app.post("/gastos/<int:id_>/comprobante")
 def subir_comprobante(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     import uuid
     from werkzeug.utils import secure_filename
     f = request.files.get('comprobante')
@@ -944,6 +1151,8 @@ def get_entregas():
 
 @app.post("/entregas")
 def crear_entrega():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         articulo_id = body.get("articulo_id")
@@ -981,6 +1190,8 @@ def crear_entrega():
             VALUES (%s, 'salida', %s, 'Entrega a beneficiario', CURRENT_DATE)
         """, (articulo_id, cantidad), fetch=False)
 
+        _broadcast("cambio", recurso="entregas")
+        _broadcast("cambio", recurso="articulos")
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1003,6 +1214,8 @@ def get_alimentacion():
 
 @app.post("/alimentacion")
 def crear_servicio():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     import json as _json
     body = request.get_json(silent=True) or {}
     try:
@@ -1040,6 +1253,10 @@ def crear_servicio():
             except Exception:
                 pass
 
+        _broadcast("cambio", recurso="alimentacion")
+        _broadcast("cambio", recurso="articulos")
+        if costo > 0:
+            _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1191,6 +1408,8 @@ def get_fondos_balance():
 
 @app.post("/fondos/ingreso")
 def registrar_fondo_ingreso():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body = request.get_json(silent=True) or {}
     try:
         monto = float(body.get("monto", 0))
@@ -1203,6 +1422,7 @@ def registrar_fondo_ingreso():
               body.get("categoria", "Donación"),
               body.get("fuente", "donacion"),
               body.get("fecha", date.today().isoformat())), fetch=False)
+        _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True, "id": id_})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1210,6 +1430,8 @@ def registrar_fondo_ingreso():
 
 @app.delete("/fondos/<int:id_>")
 def eliminar_fondo_movimiento(id_):
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     try:
         rows = query("SELECT fuente FROM fondos_movimientos WHERE id=%s", (id_,))
         if not rows:
@@ -1217,6 +1439,7 @@ def eliminar_fondo_movimiento(id_):
         if rows[0]["fuente"] in ("gasto", "alimentacion"):
             return jsonify({"ok": False, "error": "No se puede eliminar un egreso automático"}), 400
         query("DELETE FROM fondos_movimientos WHERE id=%s", (id_,), fetch=False)
+        _broadcast("cambio", recurso="fondos")
         return jsonify({"ok": True})
     except Exception as e:
         return jsonify({"ok": False, "error": str(e)}), 500
@@ -1254,6 +1477,8 @@ def yunatt_status():
 
 @app.post("/yunatt/sync")
 def yunatt_sync_now():
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not YUNATT_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_sync no disponible"}), 503
     result = yunatt_sync.sync()
@@ -1282,12 +1507,17 @@ def yunatt_limpiar_timmy():
     del staff de yunatt.com. Protege a los superAdmin de yunatt.
     Body JSON: {"confirmar": "LIMPIAR_TIMMY"}
     """
+    s = _require_admin()
+    if not s:
+        return jsonify({"ok": False, "error": "Solo administradores"}), 403
     if not YUNATT_STAFF_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_staff_sync no disponible"}), 503
     body = request.get_json(silent=True) or {}
     if body.get("confirmar") != "LIMPIAR_TIMMY":
         return jsonify({"ok": False, "error": "Se requiere confirmar: 'LIMPIAR_TIMMY'"}), 400
     result = yunatt_staff_sync.limpiar_todo()
+    _audit("timmy_limpiado", usuario=s.get("username"))
+    _broadcast("cambio", recurso="personas")
     return jsonify(result)
 
 
@@ -1311,6 +1541,8 @@ def yunatt_sync_fotos():
     en yunatt = /TimmyFile/...) y las guarda como foto de perfil de la persona
     del ERP (personas.foto_url). Idempotente: no re-descarga si ya está al día.
     """
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not YUNATT_STAFF_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_staff_sync no disponible"}), 503
 
@@ -1365,6 +1597,8 @@ def yunatt_sync_staff_all():
     Sincroniza TODAS las personas activas del ERP → yunatt.com.
     Body JSON opcional: {"tipo": "nino"|"misionero"|"voluntario"|"staff"}
     """
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not YUNATT_STAFF_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_staff_sync no disponible"}), 503
     body      = request.get_json(silent=True) or {}
@@ -1376,6 +1610,8 @@ def yunatt_sync_staff_all():
 @app.post("/yunatt/sync-staff/<int:persona_id>")
 def yunatt_sync_staff_one(persona_id):
     """Sincroniza (o verifica) una sola persona hacia yunatt.com."""
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not YUNATT_STAFF_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_staff_sync no disponible"}), 503
     rows = query("SELECT id, nombre FROM personas WHERE id=%s", (persona_id,))
@@ -1389,6 +1625,8 @@ def yunatt_sync_staff_one(persona_id):
 @app.post("/yunatt/habilitar-staff")
 def yunatt_habilitar_staff():
     """Habilita en yunatt.com todos los staff que tengan staffStatus != 1."""
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not YUNATT_STAFF_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_staff_sync no disponible"}), 503
     result = yunatt_staff_sync.habilitar_todos()
@@ -1398,6 +1636,8 @@ def yunatt_habilitar_staff():
 @app.post("/yunatt/remoteadduser-sn")
 def yunatt_remoteadduser_sn():
     """Envía remoteadduser usando staffNumber directamente (no necesita persona_id del ERP)."""
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body    = request.get_json(silent=True) or {}
     sn      = body.get("staff_number")
     nombre  = body.get("nombre", str(sn))
@@ -1416,6 +1656,8 @@ def yunatt_remoteadduser_sn():
 @app.post("/yunatt/remoteadduser")
 def yunatt_remoteadduser():
     """Envía comando remoteadduser al Timmy para que muestre pantalla de registro."""
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     body    = request.get_json(silent=True) or {}
     pid     = body.get("persona_id")
     rows    = query("SELECT id, nombre FROM personas WHERE id=%s AND estado='activo'", (pid,))
@@ -1450,6 +1692,8 @@ def yunatt_enrolar():
     Si se incluye foto_b64, se sube junto con el staff/add para que yunatt
     la empuje al Timmy como BIOPHOTO y el dispositivo genere la plantilla facial.
     """
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     import base64 as _b64
     if not YUNATT_STAFF_AVAILABLE:
         return jsonify({"ok": False, "error": "yunatt_staff_sync no disponible"}), 503
@@ -1577,13 +1821,15 @@ def timmy_listar_usuarios():
 def timmy_agregar_usuario():
     """
     Agrega un usuario del ERP directamente al Timmy via ZKTeco SDK.
-    Body: {"persona_id": int, "pin": "0000"}
+    Body: {"persona_id": int, "pin": "<6 dígitos aleatorios si no se especifica>"}
     """
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not TIMMY_DIRECT_AVAILABLE:
         return jsonify({"ok": False, "error": "timmy_direct no disponible"}), 503
     body = request.get_json(silent=True) or {}
     pid  = body.get("persona_id")
-    pin  = str(body.get("pin", "0000"))
+    pin  = str(body.get("pin") or str(secrets.randbelow(1000000)).zfill(6))
     if not pid:
         return jsonify({"ok": False, "error": "persona_id requerido"}), 400
     rows = query("SELECT id, nombre FROM personas WHERE id=%s AND estado='activo'", (pid,))
@@ -1600,13 +1846,16 @@ def timmy_agregar_todos():
     Agrega TODAS las personas activas del ERP al Timmy directamente.
     Útil para poblar el dispositivo desde cero.
     """
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not TIMMY_DIRECT_AVAILABLE:
         return jsonify({"ok": False, "error": "timmy_direct no disponible"}), 503
     personas = query("SELECT id, nombre FROM personas WHERE estado='activo' ORDER BY id")
     creados  = []
     errores  = []
     for p in personas:
-        result = timmy_direct.agregar_usuario(p["id"], p["nombre"], pin="0000")
+        pin    = str(secrets.randbelow(1000000)).zfill(6)
+        result = timmy_direct.agregar_usuario(p["id"], p["nombre"], pin=pin)
         if result.get("ok"):
             creados.append({"id": p["id"], "nombre": p["nombre"], "accion": result.get("accion")})
         else:
@@ -1623,6 +1872,8 @@ def timmy_agregar_todos():
 @app.delete("/timmy/usuarios/<int:uid>")
 def timmy_eliminar_usuario(uid):
     """Elimina un usuario del Timmy por su uid (= persona.id)."""
+    if not _require_staff():
+        return jsonify({"ok": False, "error": "No autorizado"}), 403
     if not TIMMY_DIRECT_AVAILABLE:
         return jsonify({"ok": False, "error": "timmy_direct no disponible"}), 503
     result = timmy_direct.eliminar_usuario(uid)
@@ -1706,6 +1957,10 @@ def db_reset():
         except Exception as e:
             timmy_result = {"ok": False, "error": str(e)}
 
+    _audit("db_reset", usuario=s.get("username"), detalle=f"limpiar_timmy={limpiar_timmy}")
+    for recurso in ("personas", "articulos", "gastos", "entregas", "alimentacion", "fondos", "asistencia"):
+        _broadcast("cambio", recurso=recurso)
+
     return jsonify({
         "ok": True,
         "mensaje": "Base de datos limpiada correctamente."
@@ -1725,13 +1980,13 @@ def _init_usuarios():
                 nombre        VARCHAR(100) NOT NULL,
                 username      VARCHAR(50)  NOT NULL UNIQUE,
                 password_hash VARCHAR(255) NOT NULL,
-                rol           ENUM('admin','coordinador','voluntario','kiosko','donador') DEFAULT 'voluntario',
+                rol           ENUM('admin','coordinador','voluntario') DEFAULT 'voluntario',
                 activo        BOOLEAN DEFAULT TRUE,
                 created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """, fetch=False)
         for alter in [
-            "ALTER TABLE usuarios_sistema MODIFY rol ENUM('admin','coordinador','voluntario','kiosko','donador') DEFAULT 'voluntario'",
+            "ALTER TABLE usuarios_sistema MODIFY rol ENUM('admin','coordinador','voluntario') DEFAULT 'voluntario'",
             "ALTER TABLE usuarios_sistema MODIFY password_hash VARCHAR(255) NOT NULL",
         ]:
             try:
@@ -1748,8 +2003,6 @@ def _init_usuarios():
                 ('Administrador',   'admin',      'admin'),
                 ('Coordinadora',    'coord',      'coordinador'),
                 ('Voluntario Demo', 'voluntario', 'voluntario'),
-                ('Kiosko Entrada',  'kiosko',     'kiosko'),
-                ('Donador Demo',    'donador',    'donador'),
             ]
             log.info("Primer arranque: creando usuarios de sistema con contraseña aleatoria —")
             for nombre, username, rol in demos:
@@ -1931,5 +2184,9 @@ if __name__ == "__main__":
         log.info("yunatt: auto-sync iniciado en background (cada 20 s)")
     else:
         log.warning("yunatt: pip install requests para sync automático")
+
+    if WS_AVAILABLE and MYSQL_AVAILABLE:
+        threading.Thread(target=_asistencia_watcher, daemon=True).start()
+        log.info("websocket: tiempo real activo en /ws/asistencia")
 
     app.run(host="0.0.0.0", port=7793, debug=False)

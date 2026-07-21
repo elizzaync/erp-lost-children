@@ -5,15 +5,9 @@ python seed_demo.py
 import pymysql
 from datetime import date, timedelta
 import random, json
-from config import env
+from config import db_config
 
-DB = dict(
-    host=env("DB_HOST", "localhost"),
-    user=env("DB_USER", "root"),
-    password=env("DB_PASSWORD", ""),
-    database=env("DB_NAME", "erp_lost_children"),
-    charset='utf8mb4',
-)
+DB = db_config()
 hoy = date.today()
 
 def dia(offset=0):

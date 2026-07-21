@@ -66,7 +66,7 @@ window.UI = (function () {
       document.body.appendChild(el);
     }
     const t = document.createElement('div');
-    t.style.cssText = `background:${c.bg};color:${c.color};padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;font-family:'Public Sans';box-shadow:0 4px 20px rgba(0,0,0,.12);display:flex;align-items:center;gap:10px;animation:fadeIn .2s ease;max-width:340px;`;
+    t.style.cssText = `background:${c.bg};color:${c.color};padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;font-family:'Quicksand';box-shadow:0 4px 20px rgba(0,0,0,.12);display:flex;align-items:center;gap:10px;animation:fadeIn .2s ease;max-width:340px;`;
     t.innerHTML = `<span style="font-size:16px;">${c.icon}</span>${msg}`;
     el.appendChild(t);
     clearTimeout(_toastTimer);
@@ -123,7 +123,7 @@ window.UI = (function () {
     size = size || 38;
     const cls = square ? 'avatar-sq' : 'avatar';
     const rad = square ? `border-radius:${Math.round(size*.29)}px;` : 'border-radius:50%;';
-    return `<div class="${cls}" style="width:${size}px;height:${size}px;${rad}background:${bg};color:${fg};font-size:${Math.round(size*.37)}px;">${inicial}</div>`;
+    return `<div class="${cls}" style="width:${size}px;height:${size}px;${rad}background:${esc(bg)};color:${esc(fg)};font-size:${Math.round(size*.37)}px;">${esc(inicial)}</div>`;
   }
 
   /* ---------- AVATAR CON FOTO (clic = zoom) ----------
@@ -134,9 +134,15 @@ window.UI = (function () {
     const rad = Math.round(size * .29);
     const u = esc(fotoUrl);
     const n = esc(nombre || '');
+    // Doble contexto: dentro de onerror/onclick el valor se interpreta como
+    // JS (hay que escapar comillas simples y backslash para no romper el
+    // string), pero ese atributo a su vez está delimitado por comillas
+    // dobles en el HTML (hay que escapar esas también) — un solo esc() no
+    // cubre ambas capas.
+    const jsAttr = (s) => esc(String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/'/g, "\\'"));
     return `<img src="${u}" alt="${n}"
-      onclick="event.stopPropagation();UI.fotoZoom('${u.replace(/'/g,"\\'")}','${n.replace(/'/g,"\\'")}')"
-      onerror="this.outerHTML=UI.avatar('${esc(inicial||'?')}','${bg||'var(--line)'}','${fg||'var(--muted)'}',true,${size})"
+      onclick="event.stopPropagation();UI.fotoZoom('${jsAttr(fotoUrl)}','${jsAttr(nombre||'')}')"
+      onerror="this.outerHTML=UI.avatar('${jsAttr(inicial||'?')}','${jsAttr(bg||'var(--line)')}','${jsAttr(fg||'var(--muted)')}',true,${size})"
       style="width:${size}px;height:${size}px;border-radius:${rad}px;object-fit:cover;flex:none;
              cursor:zoom-in;border:1.5px solid var(--line);" title="Clic para ampliar">`;
   }
@@ -153,7 +159,7 @@ window.UI = (function () {
     div.innerHTML = `
       <img src="${esc(url)}" alt="" style="max-width:88vw;max-height:78vh;border-radius:14px;
            box-shadow:0 18px 60px rgba(0,0,0,.55);object-fit:contain;background:#111;">
-      ${nombre ? `<div style="color:#fff;font-size:16px;font-weight:700;font-family:'Public Sans';">${esc(nombre)}</div>` : ''}
+      ${nombre ? `<div style="color:#fff;font-size:16px;font-weight:700;font-family:'Quicksand';">${esc(nombre)}</div>` : ''}
       <div style="color:rgba(255,255,255,.55);font-size:12px;">Clic en cualquier lugar o ESC para cerrar</div>`;
     const cerrar = () => { div.remove(); document.removeEventListener('keydown', onKey); };
     const onKey  = (e) => { if (e.key === 'Escape') cerrar(); };
@@ -204,8 +210,8 @@ window.UI = (function () {
           <div class="alert-strip" style="background:${tipoColor[a.tipo]||tipoColor.primary};">
             ${icons[a.tipo]||icons.primary}
             <div style="flex:1;">
-              <div style="font-size:13.5px;font-weight:600;">${a.texto}</div>
-              <div style="font-size:12px;color:var(--muted);">${a.sub}</div>
+              <div style="font-size:13.5px;font-weight:600;">${esc(a.texto)}</div>
+              <div style="font-size:12px;color:var(--muted);">${esc(a.sub)}</div>
             </div>
             <button class="btn-ghost" style="color:${tipoFg[a.tipo]||'var(--primary)'};" onclick="UI.closeModal();App.navigate('${a.link}')">Ver →</button>
           </div>`).join('') : UI.emptyState('No hay alertas activas')}

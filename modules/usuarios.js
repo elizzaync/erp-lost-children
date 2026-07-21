@@ -8,16 +8,12 @@ App.register('usuarios', (function () {
     { value: 'admin',       label: 'Administrador' },
     { value: 'coordinador', label: 'Coordinador/a' },
     { value: 'voluntario',  label: 'Voluntario/a' },
-    { value: 'kiosko',      label: 'Kiosko' },
-    { value: 'donador',     label: 'Donador/a' },
   ];
 
   const ROL_COLORS = {
     admin:       { bg: '#FDDEE0', fg: '#c2001a' },
     coordinador: { bg: '#D9EEF9', fg: '#0176bf' },
     voluntario:  { bg: '#DFF5E6', fg: '#1D7A56' },
-    kiosko:      { bg: '#EDE7FD', fg: '#6B4EEA' },
-    donador:     { bg: '#FDF2D5', fg: '#9A6B0A' },
   };
 
   const API = window.location.protocol === 'file:'
@@ -121,8 +117,6 @@ App.register('usuarios', (function () {
           admin:       'Acceso total al sistema',
           coordinador: 'Todo excepto gestión de usuarios',
           voluntario:  'Asistencia (marcar) y almacén (ver)',
-          kiosko:      'Solo pantalla de marcado facial',
-          donador:     'Vista de transparencia financiera',
         }[r.value];
         return `<div style="background:${c.bg};border-radius:12px;padding:10px 16px;min-width:180px;">
           <div style="font-size:12px;font-weight:800;color:${c.fg};margin-bottom:3px;">${r.label}</div>
@@ -135,12 +129,12 @@ App.register('usuarios', (function () {
   function _formHtml(u) {
     return `
       <div class="form-group"><label>Nombre completo</label>
-        <input type="text" id="u-nombre" value="${u?u.nombre:''}" placeholder="Ej: María García">
+        <input type="text" id="u-nombre" value="${esc(u?u.nombre:'')}" placeholder="Ej: María García">
       </div>
       ${!u ? `<div class="form-group"><label>Nombre de usuario</label>
         <input type="text" id="u-username" value="" placeholder="Ej: mgarcia (sin espacios)" autocomplete="off">
       </div>` : `<div style="background:var(--bg);border-radius:9px;padding:10px 14px;font-size:13px;margin-bottom:14px;">
-        Usuario: <b style="font-family:monospace;">${u.username}</b>
+        Usuario: <b style="font-family:monospace;">${esc(u.username)}</b>
       </div>`}
       <div class="form-group"><label>Contraseña ${u ? '(dejar vacío para no cambiar)' : ''}</label>
         <input type="password" id="u-pass" value="" placeholder="${u ? 'Nueva contraseña…' : 'Contraseña de acceso'}" autocomplete="new-password">
@@ -175,7 +169,7 @@ App.register('usuarios', (function () {
     const u = _usuarios.find(x => x.id === id);
     if (!u) return;
     UI.modal(`
-      <h2>Editar · ${u.nombre}</h2>
+      <h2>Editar · ${esc(u.nombre)}</h2>
       ${_formHtml(u)}
       <div class="modal-footer">
         <button class="btn btn-outline" onclick="UI.closeModal()">Cancelar</button>

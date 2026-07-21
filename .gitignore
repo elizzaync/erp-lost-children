@@ -27,3 +27,9 @@ bridge/.env
 # Sistema
 Thumbs.db
 Desktop.ini
+
+# Volcados de reconocimiento de yunatt.com (generados por explore_yunatt.py) —
+# no son parte de la app, no deben versionarse
+bridge/addUI.html
+bridge/staffUI.js
+bridge/staff_index.html

@@ -31,3 +31,20 @@ def _cargar():
 def env(clave, default=""):
     """Devuelve la variable: entorno del sistema > bridge/.env > default."""
     return os.environ.get(clave) or _cargar().get(clave) or default
+
+
+def db_config():
+    """
+    Credenciales de MySQL centralizadas — antes cada script (seed_*.py,
+    update_precios.py, yunatt_sync.py, yunatt_staff_sync.py) las copiaba y
+    pegaba por su cuenta; si algún día se le pone contraseña a MySQL había
+    que acordarse de tocar 6 archivos en vez de uno. Compatible con
+    pymysql y mysql.connector (ambos aceptan estas mismas claves).
+    """
+    return {
+        "host":     env("DB_HOST", "localhost"),
+        "user":     env("DB_USER", "root"),
+        "password": env("DB_PASSWORD", ""),
+        "database": env("DB_NAME", "erp_lost_children"),
+        "charset":  "utf8mb4",
+    }

@@ -332,7 +332,7 @@ App.register('personas', (function () {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.1 2.1 0 0 1 3 3L12 15l-4 1 1-4Z"/></svg>
           Observaciones generales
         </div>
-        <textarea id="p-obs" rows="3" placeholder="Notas adicionales, seguimiento, situación especial…" style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-family:'Public Sans';font-size:14px;background:var(--bg);color:var(--ink);outline:none;resize:vertical;">${esc(p?p.observaciones:'')}</textarea>
+        <textarea id="p-obs" rows="3" placeholder="Notas adicionales, seguimiento, situación especial…" style="width:100%;border:1px solid var(--border);border-radius:9px;padding:10px 13px;font-family:'Quicksand';font-size:14px;background:var(--bg);color:var(--ink);outline:none;resize:vertical;">${esc(p?p.observaciones:'')}</textarea>
       </div>
 
       <div class="modal-footer">

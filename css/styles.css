@@ -1,6 +1,13 @@
 /* ============================================================
    ERP Lost Children — Global Styles
    ============================================================ */
+@font-face{
+  font-family:'Quicksand';
+  font-style:normal;
+  font-weight:300 700;
+  font-display:swap;
+  src:url('/static/fonts/Quicksand-Variable.woff2') format('woff2');
+}
 *{box-sizing:border-box;}
 html,body{margin:0;padding:0;height:100%;}
 :root{
@@ -21,7 +28,7 @@ html,body{margin:0;padding:0;height:100%;}
 @keyframes lc-spin{to{transform:rotate(360deg);}}
 
 body{
-  font-family:'Public Sans',system-ui,sans-serif;
+  font-family:'Quicksand',system-ui,sans-serif;
   color:var(--ink);background:var(--bg);
   display:flex;height:100vh;overflow:hidden;
 }
@@ -35,7 +42,7 @@ body{
 }
 .logo-area{display:flex;align-items:center;gap:11px;padding:4px 8px 22px;}
 .logo-icon{width:40px;height:40px;border-radius:12px;background:var(--ong-red);display:flex;align-items:center;justify-content:center;flex:none;box-shadow:0 4px 12px rgba(0,0,0,.25);}
-.logo-title{font-family:'Plus Jakarta Sans';font-weight:800;font-size:16px;letter-spacing:-.2px;line-height:1;}
+.logo-title{font-family:'Quicksand';font-weight:800;font-size:16px;letter-spacing:-.2px;line-height:1;}
 .logo-sub{font-size:11px;color:rgba(255,255,255,.5);font-weight:600;letter-spacing:.4px;margin-top:4px;}
 .nav-section{font-size:10.5px;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,.38);padding:6px 12px;}
 .nav-section.mt{padding-top:18px;}
@@ -43,7 +50,7 @@ nav{display:flex;flex-direction:column;gap:2px;}
 .nav-btn{
   display:flex;align-items:center;gap:12px;padding:10px 12px;
   border:none;border-radius:10px;cursor:pointer;
-  font-family:'Public Sans';font-size:14px;font-weight:600;
+  font-family:'Quicksand';font-size:14px;font-weight:600;
   text-align:left;background:transparent;color:rgba(255,255,255,.75);
   transition:background .15s,color .15s;width:100%;
 }
@@ -70,7 +77,7 @@ header{
   border-radius:10px;padding:9px 13px;
   width:340px;max-width:38vw;
 }
-.search-box input{border:none;outline:none;background:transparent;font-family:'Public Sans';font-size:13.5px;width:100%;color:var(--ink);}
+.search-box input{border:none;outline:none;background:transparent;font-family:'Quicksand';font-size:13.5px;width:100%;color:var(--ink);}
 .jornada-badge{
   display:flex;align-items:center;gap:7px;
   background:var(--primary-soft);color:var(--primary-d);
@@ -86,7 +93,7 @@ header{
 
 /* ---- PAGE HEADER ---- */
 .page-header{display:flex;align-items:flex-end;gap:16px;margin-bottom:22px;flex-wrap:wrap;}
-.page-header h1{font-family:'Plus Jakarta Sans';font-weight:800;font-size:27px;letter-spacing:-.6px;margin:0;}
+.page-header h1{font-family:'Quicksand';font-weight:800;font-size:27px;letter-spacing:-.6px;margin:0;}
 .page-header p{margin:6px 0 0;color:var(--muted);font-size:14px;}
 
 /* ---- CARDS ---- */
@@ -98,7 +105,7 @@ header{
 .kpi-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px;}
 .kpi-card .label{font-size:13px;color:var(--muted);font-weight:600;}
 .kpi-card .icon-wrap{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;}
-.kpi-card .value{font-family:'Plus Jakarta Sans';font-weight:800;font-size:32px;margin-top:10px;letter-spacing:-1px;}
+.kpi-card .value{font-family:'Quicksand';font-weight:800;font-size:32px;margin-top:10px;letter-spacing:-1px;}
 .kpi-card .sub{font-size:12.5px;font-weight:600;margin-top:2px;}
 .grad-card{background:linear-gradient(140deg,var(--ong-blue),var(--primary-d));color:#fff;border-radius:16px;padding:22px;}
 
@@ -107,7 +114,7 @@ header{
   display:inline-flex;align-items:center;gap:8px;
   border:none;border-radius:10px;padding:11px 16px;
   font-size:13.5px;font-weight:700;cursor:pointer;
-  font-family:'Public Sans';transition:opacity .15s;
+  font-family:'Quicksand';transition:opacity .15s;
 }
 .btn:hover{opacity:.88;}
 .btn-primary{background:var(--primary);color:#fff;}
@@ -115,7 +122,7 @@ header{
 .btn-danger-outline{background:#FDE7E1;color:var(--danger);border:none;}
 .btn-success{background:#E8F7F1;color:#1D7A56;border:none;}
 .btn-sm{padding:7px 13px;font-size:13px;border-radius:9px;}
-.btn-ghost{background:transparent;border:none;font-family:'Public Sans';font-size:13px;font-weight:700;cursor:pointer;}
+.btn-ghost{background:transparent;border:none;font-family:'Quicksand';font-size:13px;font-weight:700;cursor:pointer;}
 
 /* ---- BADGES ---- */
 .badge{font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;display:inline-block;white-space:nowrap;}
@@ -143,7 +150,7 @@ header{
 .form-group label{display:block;font-size:13px;font-weight:600;color:var(--muted);margin-bottom:6px;}
 .form-group input,.form-group select,.form-group textarea{
   width:100%;border:1px solid var(--border);border-radius:9px;
-  padding:10px 13px;font-family:'Public Sans';font-size:14px;
+  padding:10px 13px;font-family:'Quicksand';font-size:14px;
   background:var(--bg);color:var(--ink);outline:none;
 }
 .form-group input:focus,.form-group select:focus,.form-group textarea:focus{border-color:var(--primary);}
@@ -160,7 +167,7 @@ header{
   width:500px;max-width:96vw;max-height:90vh;overflow-y:auto;
   box-shadow:0 20px 60px rgba(0,0,0,.18);
 }
-.modal h2{font-family:'Plus Jakarta Sans';font-weight:800;font-size:20px;margin:0 0 20px;}
+.modal h2{font-family:'Quicksand';font-weight:800;font-size:20px;margin:0 0 20px;}
 .modal-footer{display:flex;gap:10px;justify-content:flex-end;margin-top:22px;}
 
 /* ---- MISC ---- */
@@ -168,7 +175,7 @@ header{
 .progress-fill{height:100%;border-radius:6px;transition:width .3s;}
 .alert-strip{display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;}
 .filter-row{display:flex;gap:10px;margin-bottom:16px;align-items:center;flex-wrap:wrap;}
-.filter-chip{padding:8px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Public Sans';}
+.filter-chip{padding:8px 14px;border-radius:9px;font-size:13px;font-weight:700;cursor:pointer;border:none;font-family:'Quicksand';}
 .filter-chip.active{background:var(--ink);color:#fff;}
 .filter-chip:not(.active){background:var(--surface);border:1px solid var(--border);color:var(--muted);}
 .filter-chip:not(.active):hover{border-color:var(--muted);}
@@ -214,7 +221,7 @@ header{
 .nav-group-hdr {
   display:flex;align-items:center;gap:10px;
   padding:9px 12px;border:none;border-radius:10px;
-  cursor:pointer;font-family:'Public Sans';font-size:13px;font-weight:700;
+  cursor:pointer;font-family:'Quicksand';font-size:13px;font-weight:700;
   text-align:left;background:transparent;color:rgba(255,255,255,.6);
   transition:background .15s,color .15s;width:100%;margin-top:4px;
 }
@@ -311,6 +318,23 @@ header{
   /* Dashboard grids → apilados */
   .dash-r5{grid-template-columns:repeat(2,1fr);}
   .dash-r2l,.dash-r3{grid-template-columns:1fr;}
+
+  /* Reportes: secciones de 2 columnas (estilos inline con ratio) → apiladas */
+  [style*="grid-template-columns:1fr 1fr"],
+  [style*="grid-template-columns:1.2fr 1fr"],
+  [style*="grid-template-columns:1.3fr 1fr"],
+  [style*="grid-template-columns:1.5fr 1fr"]{
+    grid-template-columns:1fr !important;
+  }
+
+  /* Reportes: tablas de detalle con columnas fijas → scroll horizontal */
+  .rep-scroll{overflow-x:auto;-webkit-overflow-scrolling:touch;}
+
+  /* Comensales (registro de alimentación): 5 columnas → 2 en móvil */
+  .comensales-grid{grid-template-columns:repeat(2,1fr) !important;}
+
+  /* Kiosk de marcado: 3 contadores → 1 columna en móvil */
+  #kiosk-contadores{grid-template-columns:1fr !important;max-width:280px !important;}
 }
 
 /* ---- Pantallas muy pequeñas (≤ 480px) ---- */
@@ -329,4 +353,10 @@ header{
 
   /* Bar chart ocupa todo el ancho */
   .bar-chart{gap:8px;}
+
+  /* Reportes: Ingresos/Egresos/Balance → apilados en pantallas muy chicas */
+  .rep-3col{grid-template-columns:1fr !important;}
+
+  /* Comensales: 2 columnas → 1 en pantallas muy chicas */
+  .comensales-grid{grid-template-columns:1fr !important;}
 }

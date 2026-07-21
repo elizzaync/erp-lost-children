@@ -304,9 +304,21 @@ window.DB = (function () {
     }
   }
 
-  /* ---------- WEBSOCKET: asistencia en tiempo real ---------- */
+  /* ---------- WEBSOCKET: todo el sistema en tiempo real ---------- */
+  // Un solo socket para toda la app: /ws/asistencia sigue siendo el nombre de
+  // la ruta (histórico) pero ahora empuja eventos de CUALQUIER módulo
+  // (personas, articulos, gastos, entregas, alimentacion, fondos) al
+  // instante — nada de polling ni de recargar la página manualmente.
   let _ws = null;
   let _wsRetry = 2000;
+  let _cargarTodoDebounce = null;
+
+  function _cargarTodoDebounced() {
+    // Varios cambios seguidos (p.ej. un reset o una carga masiva) colapsan
+    // en un solo refresh en vez de disparar N peticiones simultáneas.
+    clearTimeout(_cargarTodoDebounce);
+    _cargarTodoDebounce = setTimeout(cargarTodo, 250);
+  }
 
   function _conectarWS() {
     try {
@@ -319,6 +331,7 @@ window.DB = (function () {
         try {
           const d = JSON.parse(ev.data);
           if (d.evento === 'asistencia') refrescarAsistencia();
+          else if (d.evento === 'cambio') _cargarTodoDebounced();
         } catch(_) {}
       };
       _ws.onclose = () => {

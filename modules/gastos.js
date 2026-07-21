@@ -169,7 +169,7 @@ App.register('gastos', (function () {
       ${gastos.map(g => `
         <div class="table-row" style="grid-template-columns:80px 1.1fr 1fr 1.4fr 1.3fr 90px 110px;">
           <span style="font-size:12.5px;color:var(--muted);">${esc(g.fecha)}</span>
-          <div style="background:${g.catBg};color:${g.catFg};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${esc(g.categoria)}</div>
+          <div style="background:${esc(g.catBg)};color:${esc(g.catFg)};border-radius:20px;padding:4px 10px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;">${esc(g.categoria)}</div>
           <span style="font-size:14px;font-weight:800;">S/ ${g.monto.toLocaleString('es-PE',{minimumFractionDigits:2})}</span>
           <span style="font-size:13px;font-weight:600;">${esc(g.proveedor)}</span>
           <span style="font-size:12.5px;color:var(--muted);font-style:${g.observacion?'normal':'italic'};">${esc(g.observacion)||'—'}</span>

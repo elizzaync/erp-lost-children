@@ -97,7 +97,7 @@ window.Auth = (function () {
   _style.textContent = `
     #login-screen {
       position:fixed;inset:0;z-index:9999;
-      display:flex;font-family:'Public Sans',system-ui,sans-serif;
+      display:flex;font-family:'Quicksand',system-ui,sans-serif;
       background:#0176bf;
     }
     .lc-bg-left {
@@ -123,7 +123,7 @@ window.Auth = (function () {
       display:flex;align-items:center;justify-content:center;
       box-shadow:0 8px 32px rgba(0,0,0,.2);
     }
-    .lc-brand-name { font-family:'Plus Jakarta Sans';font-weight:800;font-size:28px;letter-spacing:-.4px;margin-bottom:6px; }
+    .lc-brand-name { font-family:'Quicksand';font-weight:800;font-size:28px;letter-spacing:-.4px;margin-bottom:6px; }
     .lc-brand-sub  { font-size:14px;opacity:.65;font-weight:500;margin-bottom:24px; }
     .lc-dots { display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:22px; }
     .lc-dots span { width:12px;height:12px;border-radius:50%;display:block; }
@@ -139,7 +139,7 @@ window.Auth = (function () {
     }
     .lc-color-bar { display:flex;height:5px; }
     .lc-color-bar span { flex:1; }
-    .lc-heading    { font-family:'Plus Jakarta Sans';font-weight:800;font-size:23px;color:#1A2332;margin:0 0 6px; }
+    .lc-heading    { font-family:'Quicksand';font-weight:800;font-size:23px;color:#1A2332;margin:0 0 6px; }
     .lc-subheading { font-size:13.5px;color:#5A6478;margin:0 0 24px; }
     .lc-field { margin-bottom:15px; }
     .lc-field label { display:block;font-size:12.5px;font-weight:700;color:#5A6478;margin-bottom:7px;letter-spacing:.2px;text-transform:uppercase; }
@@ -151,7 +151,7 @@ window.Auth = (function () {
     .lc-input-wrap:focus-within { border-color:#0176bf;background:#fff;box-shadow:0 0 0 3px rgba(1,118,191,.1); }
     .lc-input-wrap input {
       flex:1;border:none;outline:none;background:transparent;
-      font-family:'Public Sans';font-size:14px;color:#1A2332;
+      font-family:'Quicksand';font-size:14px;color:#1A2332;
     }
     .lc-input-wrap input::placeholder { color:#8E97A8; }
     .lc-error-box {
@@ -163,7 +163,7 @@ window.Auth = (function () {
     .lc-submit {
       width:100%;padding:14px;border:none;border-radius:11px;
       background:linear-gradient(135deg,#0176bf,#015a9e);color:#fff;
-      font-family:'Plus Jakarta Sans';font-size:15px;font-weight:700;
+      font-family:'Quicksand';font-size:15px;font-weight:700;
       cursor:pointer;margin-top:6px;display:flex;align-items:center;justify-content:center;gap:8px;
       transition:opacity .15s,transform .1s;box-shadow:0 4px 12px rgba(1,118,191,.35);
     }
@@ -296,8 +296,6 @@ window.Auth = (function () {
     admin:       { screens: ['dashboard','personas','asistencia','almacen','alimentacion','entregas','gastos','reportes','marcado','usuarios'], write: '*' },
     coordinador: { screens: ['dashboard','personas','asistencia','almacen','alimentacion','entregas','gastos','reportes','marcado'], write: '*' },
     voluntario:  { screens: ['asistencia','almacen'], write: ['asistencia'] },
-    kiosko:      { screens: ['marcado'], write: ['marcado'] },
-    donador:     { screens: ['dashboard','gastos','reportes','alimentacion','entregas'], write: [] },
   };
 
   function rol() { return getUser().rol || 'voluntario'; }
@@ -318,8 +316,6 @@ window.Auth = (function () {
     admin:       'Administrador',
     coordinador: 'Coordinador/a',
     voluntario:  'Voluntario/a',
-    kiosko:      'Kiosko',
-    donador:     'Donador/a',
   };
 
   function rolLabel() { return _ROL_LABELS[rol()] || rol(); }
