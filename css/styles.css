@@ -125,7 +125,13 @@ header{
 .btn-ghost{background:transparent;border:none;font-family:'Quicksand';font-size:13px;font-weight:700;cursor:pointer;}
 
 /* ---- BADGES ---- */
-.badge{font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;display:inline-block;white-space:nowrap;}
+/* justify-self:start evita que el badge se estire para llenar toda la
+   columna cuando es hijo directo de un .table-row (display:grid) — sin
+   esto, CSS Grid estira por defecto (justify-items:stretch) cada <span>
+   hijo al ancho completo de su columna, así que el color de fondo del
+   badge se veía "alargado" en vez de ajustado al texto (ej. "Staff" en
+   Personas). No afecta el uso de .badge dentro de contenedores flex. */
+.badge{font-size:12px;font-weight:700;padding:4px 11px;border-radius:20px;display:inline-block;white-space:nowrap;justify-self:start;}
 .badge-primary{background:var(--primary-soft);color:var(--primary-d);}
 .badge-success{background:#edfde0;color:#3d8a20;}
 .badge-warn{background:#fff6dc;color:#b07900;}

@@ -311,6 +311,7 @@ window.DB = (function () {
   // instante — nada de polling ni de recargar la página manualmente.
   let _ws = null;
   let _wsRetry = 2000;
+  let _wsConectado = false;
   let _cargarTodoDebounce = null;
 
   function _cargarTodoDebounced() {
@@ -326,7 +327,7 @@ window.DB = (function () {
       const wsUrl = API.replace(/^http/, 'ws') + '/ws/asistencia'
                   + (token ? ('?token=' + encodeURIComponent(token)) : '');
       _ws = new WebSocket(wsUrl);
-      _ws.onopen = () => { _wsRetry = 2000; };
+      _ws.onopen = () => { _wsRetry = 2000; _wsConectado = true; };
       _ws.onmessage = (ev) => {
         try {
           const d = JSON.parse(ev.data);
@@ -336,6 +337,7 @@ window.DB = (function () {
       };
       _ws.onclose = () => {
         _ws = null;
+        _wsConectado = false;
         setTimeout(_conectarWS, _wsRetry);
         _wsRetry = Math.min(_wsRetry * 2, 30000);  // backoff hasta 30s
       };
@@ -817,10 +819,14 @@ window.DB = (function () {
     return cargarTodo().then(() => {
       // WebSocket: push instantáneo cuando hay marcas/cambios de asistencia
       _conectarWS();
-      // Respaldo por si el WebSocket se cae: refresco cada 30s
-      setInterval(refrescarAsistencia, 30000);
-      // Refresca todos los datos cada 2 minutos para mantener dashboard actualizado
-      setInterval(cargarTodo, 120000);
+      // Respaldo SOLO si el WebSocket está caído — antes estos dos timers
+      // corrían siempre, sin importar si el socket funcionaba, así que con
+      // el WS ya conectado la app igual repintaba asistencia cada 30s y
+      // TODA la pantalla cada 2 min (daba la sensación de que la página se
+      // recargaba sola). Ahora son un respaldo de verdad: si _wsConectado
+      // es true, no hacen nada — el push del socket ya se encargó.
+      setInterval(() => { if (!_wsConectado) refrescarAsistencia(); }, 30000);
+      setInterval(() => { if (!_wsConectado) cargarTodo(); }, 120000);
     });
   }
 

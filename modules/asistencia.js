@@ -251,7 +251,7 @@ App.register('asistencia', (function () {
               ${esc(a.nombre)}
               <span style="background:#FDF2D5;color:#9A6B0A;font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;">Sin asignar</span>
             </div>
-            <div style="font-size:12px;color:var(--faint);">Timmy-ID: ${esc(a.zkUserId)} · ${esc(a.metodo)} · ${esc(a.hora)} · Marcó en el dispositivo pero sin persona en el ERP</div>
+            <div style="font-size:12px;color:var(--faint);">ID ${esc(a.zkUserId)} · ${esc(a.metodo)} · ${esc(a.hora)} · Marcó en el dispositivo pero sin persona en el ERP</div>
           </div>
           ${UI.badge('Marcó', 'badge-warn')}
           <button class="btn btn-sm btn-primary"
@@ -270,7 +270,7 @@ App.register('asistencia', (function () {
             ${esc(a.nombre)}
             <span style="background:${cfg.bg};color:${cfg.color};font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:20px;white-space:nowrap;">${esc(_TIPO_LABEL[a.tipo]||a.tipo)}</span>
           </div>
-          <div style="font-size:12px;color:var(--faint);">${a.presente ? esc(a.metodo)+' · '+esc(a.hora) : 'Sin registrar'}</div>
+          <div style="font-size:12px;color:var(--faint);">ID ${esc(a.personaId)} · ${a.presente ? esc(a.metodo)+' · '+esc(a.hora) : 'Sin registrar'}</div>
         </div>
         ${UI.badge(a.presente?'Presente':'Ausente', a.presente?'badge-success':'badge-muted')}
         ${a.presente ? '' : `<button class="btn btn-sm btn-primary"
