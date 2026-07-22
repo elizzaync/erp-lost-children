@@ -8,8 +8,8 @@
 # que gunicorn sirva HTTP plano y Coolify haga el TLS por delante.
 set -e
 
-CERT="bridge/ssl/cert.pem"
-KEY="bridge/ssl/key.pem"
+CERT="$(pwd)/bridge/ssl/cert.pem"
+KEY="$(pwd)/bridge/ssl/key.pem"
 
 ARGS="--chdir bridge -k gevent -w 1 -b 0.0.0.0:7793 --timeout 120 --access-logfile - --error-logfile -"
 
