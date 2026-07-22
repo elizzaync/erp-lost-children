@@ -80,11 +80,16 @@ def _login():
         s.headers["Referer"] = r0.url
         r = s.post(url, data={"email": EMAIL, "password": PASSWORD},
                    allow_redirects=True, timeout=20)
-        if "JSESSIONID" in s.cookies:
+        # JSESSIONID se entrega siempre, incluso con credenciales
+        # incorrectas — no sirve para confirmar login exitoso. Confirmar que
+        # la respuesta ya no sea la página de login (clase "login-layout").
+        if "JSESSIONID" in s.cookies and "login-layout" not in r.text:
             _session = s
             log.info("yunatt-staff: login OK")
             return True
-        log.error("yunatt-staff: login fallido")
+        m = re.search(r'id="error-msg"[^>]*>([^<]*)<', r.text)
+        motivo = m.group(1).strip() if m and m.group(1).strip() else "página de login devuelta tras el POST"
+        log.error(f"yunatt-staff: login fallido — {motivo}")
         return False
     except Exception as e:
         log.error(f"yunatt-staff: login error: {e}")

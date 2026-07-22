@@ -130,12 +130,18 @@ def _login():
         )
         log.info(f"yunatt: POST login → status={r.status_code}  url={r.url}  cookies={dict(s.cookies)}")
 
-        if "JSESSIONID" in s.cookies:
+        # yunatt.com siempre entrega JSESSIONID (incluso con credenciales
+        # incorrectas), así que esa cookie NO indica login exitoso — hay que
+        # revisar si la respuesta sigue siendo la página de login (clase
+        # "login-layout" en el <body>) o trae el mensaje de error del form.
+        if "JSESSIONID" in s.cookies and "login-layout" not in r.text:
             _session = s
             log.info("yunatt: login OK ✓")
             return True
 
-        log.error(f"yunatt: login fallido — no hay JSESSIONID tras POST a {login_url}")
+        m = re.search(r'id="error-msg"[^>]*>([^<]*)<', r.text)
+        motivo = m.group(1).strip() if m and m.group(1).strip() else "página de login devuelta tras el POST"
+        log.error(f"yunatt: login fallido — {motivo}")
         return False
     except Exception as e:
         log.error(f"yunatt: login error: {e}")
