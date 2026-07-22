@@ -678,7 +678,7 @@ def actualizar_foto_persona(id_):
 def get_asistencia_hoy():
     try:
         try:
-            query("ALTER TABLE asistencia ADD COLUMN IF NOT EXISTS zk_user_id VARCHAR(20)", fetch=False)
+            query("ALTER TABLE asistencia ADD COLUMN zk_user_id VARCHAR(20)", fetch=False)
         except Exception:
             pass
 
@@ -2104,56 +2104,56 @@ def _init_fondos():
 
 def _migrar_esquema():
     for sql in [
-        "ALTER TABLE asistencia ADD COLUMN IF NOT EXISTS zk_user_id VARCHAR(20)",
+        "ALTER TABLE asistencia ADD COLUMN zk_user_id VARCHAR(20)",
         "ALTER TABLE personas MODIFY tipo ENUM('nino','misionero','voluntario','staff','padre') NOT NULL",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS dni VARCHAR(30) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS fecha_nacimiento DATE",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS nacionalidad VARCHAR(80) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS telefono VARCHAR(30) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS email VARCHAR(120) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS direccion TEXT",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS barrio VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS parentesco_tutor VARCHAR(60) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS telefono_tutor VARCHAR(30) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS situacion_familiar VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS grupo_sanguineo VARCHAR(10) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS alergias TEXT",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS condicion_medica TEXT",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS escolaridad VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS colegio VARCHAR(150) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS procedencia VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS motivo_ingreso TEXT",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS prioridad ENUM('alta','media','baja') DEFAULT 'media'",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS observaciones TEXT",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS ocupacion VARCHAR(150) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS organizacion VARCHAR(200) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS pais_origen VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS area_servicio VARCHAR(150) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS tipo_vinculo VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS fecha_fin DATE",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS ingreso_familiar VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS num_hijos_programa TINYINT DEFAULT 0",
-        "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS precio DECIMAL(10,2) DEFAULT 0.00",
-        "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS descripcion TEXT",
-        "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS proveedor VARCHAR(200) DEFAULT ''",
-        "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS codigo VARCHAR(50) DEFAULT ''",
-        "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS imagen VARCHAR(255) DEFAULT ''",
-        "ALTER TABLE articulos ADD COLUMN IF NOT EXISTS ubicacion VARCHAR(100) DEFAULT ''",
-        "ALTER TABLE entregas ADD COLUMN IF NOT EXISTS notas TEXT",
+        "ALTER TABLE personas ADD COLUMN dni VARCHAR(30) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN fecha_nacimiento DATE",
+        "ALTER TABLE personas ADD COLUMN nacionalidad VARCHAR(80) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN telefono VARCHAR(30) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN email VARCHAR(120) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN direccion TEXT",
+        "ALTER TABLE personas ADD COLUMN barrio VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN parentesco_tutor VARCHAR(60) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN telefono_tutor VARCHAR(30) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN situacion_familiar VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN grupo_sanguineo VARCHAR(10) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN alergias TEXT",
+        "ALTER TABLE personas ADD COLUMN condicion_medica TEXT",
+        "ALTER TABLE personas ADD COLUMN escolaridad VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN colegio VARCHAR(150) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN procedencia VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN motivo_ingreso TEXT",
+        "ALTER TABLE personas ADD COLUMN prioridad ENUM('alta','media','baja') DEFAULT 'media'",
+        "ALTER TABLE personas ADD COLUMN observaciones TEXT",
+        "ALTER TABLE personas ADD COLUMN ocupacion VARCHAR(150) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN organizacion VARCHAR(200) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN pais_origen VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN area_servicio VARCHAR(150) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN tipo_vinculo VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN fecha_fin DATE",
+        "ALTER TABLE personas ADD COLUMN ingreso_familiar VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE personas ADD COLUMN num_hijos_programa TINYINT DEFAULT 0",
+        "ALTER TABLE articulos ADD COLUMN precio DECIMAL(10,2) DEFAULT 0.00",
+        "ALTER TABLE articulos ADD COLUMN descripcion TEXT",
+        "ALTER TABLE articulos ADD COLUMN proveedor VARCHAR(200) DEFAULT ''",
+        "ALTER TABLE articulos ADD COLUMN codigo VARCHAR(50) DEFAULT ''",
+        "ALTER TABLE articulos ADD COLUMN imagen VARCHAR(255) DEFAULT ''",
+        "ALTER TABLE articulos ADD COLUMN ubicacion VARCHAR(100) DEFAULT ''",
+        "ALTER TABLE entregas ADD COLUMN notas TEXT",
         # Faltaba en esta lista: sin esto, POST /entregas y el registro de
         # servicios de alimentación fallaban con "Unknown column 'fecha'"
         # en cualquier base que no viniera ya con esta columna.
-        "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS fecha DATE DEFAULT (CURRENT_DATE)",
-        "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS origen ENUM('compra','donacion') DEFAULT 'compra'",
-        "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS costo_total DECIMAL(10,2) DEFAULT 0.00",
-        "ALTER TABLE movimientos_almacen ADD COLUMN IF NOT EXISTS proveedor_donante VARCHAR(200) DEFAULT ''",
-        "ALTER TABLE gastos ADD COLUMN IF NOT EXISTS fuente_auto VARCHAR(50) DEFAULT ''",
-        "ALTER TABLE servicios_alimentacion ADD COLUMN IF NOT EXISTS voluntarios SMALLINT DEFAULT 0",
-        "ALTER TABLE servicios_alimentacion ADD COLUMN IF NOT EXISTS padres SMALLINT DEFAULT 0",
-        "ALTER TABLE servicios_alimentacion ADD COLUMN IF NOT EXISTS staff SMALLINT DEFAULT 0",
-        "ALTER TABLE servicios_alimentacion ADD COLUMN IF NOT EXISTS costo_por_plato DECIMAL(10,2) DEFAULT 0.00",
-        "ALTER TABLE servicios_alimentacion ADD COLUMN IF NOT EXISTS consumo_json TEXT",
-        "ALTER TABLE personas ADD COLUMN IF NOT EXISTS foto_url VARCHAR(255) DEFAULT ''",
+        "ALTER TABLE movimientos_almacen ADD COLUMN fecha DATE DEFAULT (CURRENT_DATE)",
+        "ALTER TABLE movimientos_almacen ADD COLUMN origen ENUM('compra','donacion') DEFAULT 'compra'",
+        "ALTER TABLE movimientos_almacen ADD COLUMN costo_total DECIMAL(10,2) DEFAULT 0.00",
+        "ALTER TABLE movimientos_almacen ADD COLUMN proveedor_donante VARCHAR(200) DEFAULT ''",
+        "ALTER TABLE gastos ADD COLUMN fuente_auto VARCHAR(50) DEFAULT ''",
+        "ALTER TABLE servicios_alimentacion ADD COLUMN voluntarios SMALLINT DEFAULT 0",
+        "ALTER TABLE servicios_alimentacion ADD COLUMN padres SMALLINT DEFAULT 0",
+        "ALTER TABLE servicios_alimentacion ADD COLUMN staff SMALLINT DEFAULT 0",
+        "ALTER TABLE servicios_alimentacion ADD COLUMN costo_por_plato DECIMAL(10,2) DEFAULT 0.00",
+        "ALTER TABLE servicios_alimentacion ADD COLUMN consumo_json TEXT",
+        "ALTER TABLE personas ADD COLUMN foto_url VARCHAR(255) DEFAULT ''",
     ]:
         try:
             query(sql, fetch=False)
@@ -2169,7 +2169,7 @@ def _init_asistencia_hoy():
     Esto garantiza que el sync de yunatt siempre encuentra filas que actualizar.
     """
     try:
-        query("ALTER TABLE asistencia ADD COLUMN IF NOT EXISTS zk_user_id VARCHAR(20)", fetch=False)
+        query("ALTER TABLE asistencia ADD COLUMN zk_user_id VARCHAR(20)", fetch=False)
     except Exception:
         pass
 
