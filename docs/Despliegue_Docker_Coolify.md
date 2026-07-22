@@ -1,18 +1,22 @@
 # Despliegue en Contabo con Docker + Coolify (acceso por IP pública)
 
-Servidor: Contabo `80.190.76.84` (hostname `vmi3444095`), con Coolify ya
-instalado y sirviendo otros proyectos por dominio (`app.esystemtic.com`,
-`api.esystemtic.com` vía Cloudflare + Let's Encrypt automático).
+Servidor Contabo con Coolify ya instalado, usado también para otros
+proyectos por dominio (vía Cloudflare + Let's Encrypt automático).
 
 Este despliegue es **distinto**: se decidió acceder por la IP pública
-directa (`https://80.190.76.84:8443/`), sin dominio, así que **no** se usa
-el enrutamiento por dominio de Traefik/Coolify para este servicio — el
-propio contenedor `app` termina TLS con un certificado autofirmado.
+directa del servidor, sin dominio, así que **no** se usa el enrutamiento
+por dominio de Traefik/Coolify para este servicio — el propio contenedor
+`app` termina TLS con un certificado autofirmado.
+
+A lo largo de esta guía, `PUBLIC_IP` y `PUBLIC_PORT` son las variables de
+entorno reales que defines en el `.env` del servidor (Paso 2) — no van
+escritas literalmente en ningún archivo del repo (que es público) para no
+fijar la IP real de tu infraestructura en el código versionado.
 
 ## Arquitectura
 
 ```
-Internet ──443/8443── [contenedor app: gunicorn+gevent, TLS propio] ──red interna── [contenedor db: MySQL 8]
+Internet ──PUBLIC_PORT── [contenedor app: gunicorn+gevent, TLS propio] ──red interna── [contenedor db: MySQL 8]
 ```
 
 - `app`: Flask (bridge/server.py) servido por gunicorn (worker gevent, **1
@@ -26,15 +30,15 @@ Internet ──443/8443── [contenedor app: gunicorn+gevent, TLS propio] ─�
 
 ## Paso 1 — Generar el certificado autofirmado (en el propio servidor)
 
-Por SSH en el Contabo:
+Por SSH en el Contabo (reemplazar `PUBLIC_IP` por la IP real del servidor):
 
 ```bash
 mkdir -p ~/erp-lost-children/bridge/ssl
 cd ~/erp-lost-children/bridge/ssl
 openssl req -x509 -nodes -newkey rsa:2048 \
   -keyout key.pem -out cert.pem -days 3650 \
-  -subj "/CN=80.190.76.84" \
-  -addext "subjectAltName=IP:80.190.76.84"
+  -subj "/CN=PUBLIC_IP" \
+  -addext "subjectAltName=IP:PUBLIC_IP"
 ```
 
 Esto genera un certificado válido por 10 años para esa IP. El navegador
@@ -51,13 +55,19 @@ Crear `~/erp-lost-children/.env` (NO se versiona, vive solo en el
 servidor) con:
 
 ```bash
+PUBLIC_IP=<IP pública real del servidor>
+PUBLIC_PORT=8443
 DB_USER=erp_user
 DB_PASSWORD=<contraseña fuerte, generarla nueva>
 DB_NAME=erp_lost_children
 MYSQL_ROOT_PASSWORD=<otra contraseña fuerte, distinta>
-YUNATT_EMAIL=elinieves2004@gmail.com
-YUNATT_PASSWORD=<la contraseña real de yunatt.com>
+YUNATT_EMAIL=<la misma cuenta de yunatt.com ya en uso — ver bridge/.env de la PC de la ONG>
+YUNATT_PASSWORD=<la contraseña real de yunatt.com — ver bridge/.env de la PC de la ONG>
 ```
+
+`PUBLIC_IP`/`PUBLIC_PORT` son los que usa `docker-compose.yml` para armar
+`CORS_ORIGINS` y el mapeo de puertos — sin esto el frontend no podrá
+llamar a la API por CORS.
 
 Si se despliega vía el panel de Coolify (recomendado en vez de `.env`
 suelto): estas mismas variables se cargan en **Coolify → tu recurso → 
@@ -72,8 +82,9 @@ Environment Variables**, marcadas como secretas. Coolify las inyecta al
 2. Cargar las variables de entorno del Paso 2 en el panel.
 3. **Importante**: como no hay dominio, en la configuración de red del
    recurso desactivar el enrutamiento automático por dominio de Coolify y
-   dejar el mapeo de puertos tal como está en `docker-compose.yml`
-   (`8443:7793`) para que quede expuesto directo en la IP del servidor.
+   dejar el mapeo de puertos definido por `PUBLIC_PORT` (default 8443 en
+   `docker-compose.yml`) para que quede expuesto directo en la IP del
+   servidor.
 4. Deploy.
 
 **Opción B — `docker compose` directo por SSH** (si el flujo de Coolify sin
@@ -85,8 +96,8 @@ docker compose up -d --build
 
 ## Paso 4 — Abrir el puerto en el firewall
 
-El 8443 casi seguro no está abierto por defecto (Coolify normalmente solo
-abre 22/80/443). Por SSH:
+`PUBLIC_PORT` (8443 por defecto) casi seguro no está abierto por defecto
+(Coolify normalmente solo abre 22/80/443). Por SSH:
 ```bash
 sudo ufw allow 8443/tcp
 sudo ufw status
@@ -125,7 +136,7 @@ siempre (o el usuario `admin2` que se creó en esta misma sesión).
 ## Verificar que quedó bien
 
 ```bash
-curl -k https://80.190.76.84:8443/health
+curl -k https://PUBLIC_IP:8443/health
 # {"ok": true, "mysql": true}
 ```
 

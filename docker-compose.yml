@@ -18,9 +18,8 @@ services:
         condition: service_healthy
     ports:
       # Puerto elegido para no chocar con el 80/443 que ya usa Coolify/Traefik
-      # para tus otros dominios (app.esystemtic.com, etc). Acceso final:
-      # https://80.190.76.84:8443/
-      - "8443:7793"
+      # para tus otros dominios. Acceso final: https://${PUBLIC_IP}:${PUBLIC_PORT}/
+      - "${PUBLIC_PORT:-8443}:7793"
     environment:
       DB_HOST: db
       DB_USER: ${DB_USER:-erp_user}
@@ -29,8 +28,11 @@ services:
       YUNATT_EMAIL: ${YUNATT_EMAIL}
       YUNATT_PASSWORD: ${YUNATT_PASSWORD}
       # IP pública del servidor — necesaria para que el navegador no bloquee
-      # las llamadas fetch() del frontend por CORS.
-      CORS_ORIGINS: "https://80.190.76.84:8443"
+      # las llamadas fetch() del frontend por CORS. Definir PUBLIC_IP (y
+      # PUBLIC_PORT si no es 8443) en el .env del servidor / variables de
+      # Coolify — no va escrita acá para no fijar infraestructura real en
+      # un repo público.
+      CORS_ORIGINS: "https://${PUBLIC_IP}:${PUBLIC_PORT:-8443}"
     volumes:
       # Certificado autofirmado (cert.pem + key.pem) generado en el propio
       # servidor — ver docs/Despliegue_Docker_Coolify.md. Si esta carpeta
