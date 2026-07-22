@@ -1,0 +1,5 @@
+# Fuerza LF en scripts que corren dentro de contenedores Linux — evita que
+# un checkout en Windows con autocrlf convierta el shebang a CRLF y rompa
+# "exec ./docker-entrypoint.sh" dentro del contenedor.
+*.sh text eol=lf
+Dockerfile text eol=lf

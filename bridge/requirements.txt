@@ -5,3 +5,9 @@ flask-sock==0.7.0
 pymysql==1.2.0
 mysql-connector-python==9.7.0
 requests==2.34.2
+
+# Servidor de producción (Docker/Coolify) — el servidor de desarrollo de
+# Flask (app.run) no está pensado para producción. gevent es el worker de
+# gunicorn compatible con WebSockets (requerido por /ws/asistencia).
+gunicorn==22.0.0
+gevent==24.2.1

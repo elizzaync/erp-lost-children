@@ -1,0 +1,73 @@
+# Despliegue en Contabo vía Coolify — acceso directo por IP pública (sin
+# dominio), por eso NO se usa el enrutamiento por dominio de Traefik/Coolify:
+# el contenedor "app" expone su propio puerto con TLS terminado por gunicorn
+# (certificado autofirmado en bridge/ssl/, ver docs/Despliegue_Docker_Coolify.md).
+#
+# Ningún secreto va escrito acá — todas las variables ${...} se configuran
+# en el panel de Coolify (o en un .env local NO versionado junto a este
+# archivo si se corre con `docker compose` directo por SSH).
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      # Puerto elegido para no chocar con el 80/443 que ya usa Coolify/Traefik
+      # para tus otros dominios (app.esystemtic.com, etc). Acceso final:
+      # https://80.190.76.84:8443/
+      - "8443:7793"
+    environment:
+      DB_HOST: db
+      DB_USER: ${DB_USER:-erp_user}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_NAME: ${DB_NAME:-erp_lost_children}
+      YUNATT_EMAIL: ${YUNATT_EMAIL}
+      YUNATT_PASSWORD: ${YUNATT_PASSWORD}
+      # IP pública del servidor — necesaria para que el navegador no bloquee
+      # las llamadas fetch() del frontend por CORS.
+      CORS_ORIGINS: "https://80.190.76.84:8443"
+    volumes:
+      # Certificado autofirmado (cert.pem + key.pem) generado en el propio
+      # servidor — ver docs/Despliegue_Docker_Coolify.md. Si esta carpeta
+      # está vacía, el contenedor arranca en HTTP plano (ver docker-entrypoint.sh).
+      - ./bridge/ssl:/app/bridge/ssl:ro
+      # Datos que NO deben perderse en cada rebuild/redeploy de la imagen.
+      - erp_fotos:/app/bridge/static/fotos
+      - erp_comprobantes:/app/bridge/static/comprobantes
+      - erp_articulos:/app/bridge/static/articulos
+      - erp_logs:/app/bridge/logs
+
+  db:
+    image: mysql:8.0
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DB_NAME:-erp_lost_children}
+      MYSQL_USER: ${DB_USER:-erp_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - erp_db_data:/var/lib/mysql
+      # Solo se ejecuta la PRIMERA vez que el volumen de datos está vacío —
+      # crea el esquema completo. Para migrar datos ya existentes de la PC
+      # local, restaurar un mysqldump aparte (ver guía de despliegue) en vez
+      # de depender de este archivo.
+      - ./erp_lost_children_mysql.sql:/docker-entrypoint-initdb.d/00-schema.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # NO se expone puerto al host: solo la app (en la misma red de compose)
+    # puede hablarle a MySQL. No debe ser alcanzable desde internet.
+
+volumes:
+  erp_db_data:
+  erp_fotos:
+  erp_comprobantes:
+  erp_articulos:
+  erp_logs:

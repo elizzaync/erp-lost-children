@@ -703,12 +703,12 @@ App.register('reportes', (function () {
     if (datos.resumen.length) {
       resumenHtml = '<table class="resumen"><tr>'
         + datos.resumen.map(function(r) {
-            return '<td><div class="res-val">'+r[1]+'</div><div class="res-lbl">'+r[0]+'</div></td>';
+            return '<td><div class="res-val">'+esc(r[1])+'</div><div class="res-lbl">'+esc(r[0])+'</div></td>';
           }).join('')
         + '</tr></table>';
     }
 
-    var theadCells = datos.cols.map(function(c){ return '<th>'+c+'</th>'; }).join('');
+    var theadCells = datos.cols.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('');
     var tbodyRows  = datos.filas.map(function(fila, ri) {
       var cls = '';
       // Para almacén marca críticos
@@ -717,7 +717,7 @@ App.register('reportes', (function () {
       if (key==='gastos' && fila[5]==='Auto-almacén') cls = ' class="auto"';
       var cells = fila.map(function(v,ci) {
         var align = (typeof v === 'number' || /^S\/ [\d.]/.test(String(v)) || /^\d+$/.test(String(v))) ? ' style="text-align:right;"' : '';
-        return '<td'+align+'>'+v+'</td>';
+        return '<td'+align+'>'+esc(v)+'</td>';
       }).join('');
       return '<tr'+cls+'>'+cells+'</tr>';
     }).join('');
@@ -773,18 +773,21 @@ App.register('reportes', (function () {
 
     /* Tarjetas de resumen */
     var resCards = datos.resumen.map(function(r) {
-      return '<div class="card"><div class="card-val">'+r[1]+'</div><div class="card-lbl">'+r[0]+'</div></div>';
+      return '<div class="card"><div class="card-val">'+esc(r[1])+'</div><div class="card-lbl">'+esc(r[0])+'</div></div>';
     }).join('');
 
-    /* Tabla */
-    var theadCells = datos.cols.map(function(c){ return '<th>'+c+'</th>'; }).join('');
+    /* Tabla — esc() en cada celda: este HTML se inyecta en una ventana nueva
+       vía document.write() (mismo origen que la app), así que cualquier campo
+       de texto libre (proveedor, observación, nombre de artículo/persona)
+       que llegara con HTML/JS se ejecutaría sin este escape. */
+    var theadCells = datos.cols.map(function(c){ return '<th>'+esc(c)+'</th>'; }).join('');
     var tbodyRows  = datos.filas.map(function(fila) {
       var cls = '';
       if (key==='almacen' && fila[fila.length-1]==='⚠ Crítico') cls = ' class="crit"';
       if (key==='gastos'  && fila[5]==='Auto-almacén')           cls = ' class="auto"';
       var cells = fila.map(function(v) {
         var isNum = /^[\d., ]+$/.test(String(v)) || /^S\/ /.test(String(v));
-        return '<td'+(isNum?' style="text-align:right;"':'')+'>'+v+'</td>';
+        return '<td'+(isNum?' style="text-align:right;"':'')+'>'+esc(v)+'</td>';
       }).join('');
       return '<tr'+cls+'>'+cells+'</tr>';
     }).join('');

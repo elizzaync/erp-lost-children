@@ -27,6 +27,7 @@ from datetime import date, datetime
 import os
 from flask import Flask, jsonify, request, send_from_directory
 from flask_cors import CORS
+from werkzeug.exceptions import NotFound
 from config import env, db_config
 
 mimetypes.add_type("font/woff2", ".woff2")
@@ -55,6 +56,7 @@ except ImportError:
 
 try:
     import mysql.connector
+    import mysql.connector.pooling
     MYSQL_AVAILABLE = True
 except ImportError:
     MYSQL_AVAILABLE = False
@@ -93,11 +95,26 @@ def _audit(evento, usuario=None, detalle=""):
 
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:7793", "http://127.0.0.1:7793",
-                   "http://localhost", "http://127.0.0.1"])
+app.config["MAX_CONTENT_LENGTH"] = 10 * 1024 * 1024  # 10 MB — evita agotar disco con subidas grandes
+
+# CORS_ORIGINS (bridge/.env) permite agregar orígenes de producción (p.ej. la
+# IP pública del servidor) sin tocar código — antes la lista era fija y solo
+# cubría localhost/127.0.0.1, lo que habría bloqueado el acceso desde
+# cualquier despliegue fuera de la LAN de desarrollo.
+_cors_default = ["http://localhost:7793", "http://127.0.0.1:7793",
+                  "http://localhost", "http://127.0.0.1",
+                  "https://localhost:7793", "https://127.0.0.1:7793",
+                  "https://localhost", "https://127.0.0.1"]
+_cors_extra = [o.strip() for o in env("CORS_ORIGINS", "").split(",") if o.strip()]
+CORS(app, origins=_cors_default + _cors_extra)
 sock = Sock(app) if WS_AVAILABLE else None
 
 ERP_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+@app.errorhandler(413)
+def _archivo_muy_grande(e):
+    return jsonify({"ok": False, "error": "Archivo demasiado grande (máximo 10 MB)"}), 413
 
 
 # ─── SECURITY HEADERS ─────────────────────────────────────────────────────────
@@ -190,7 +207,15 @@ def _registrar_login_fallido(username):
 
 
 def _password_debil(password):
-    return len(password) < 8
+    # Longitud mínima + variedad de caracteres (al menos una letra y un
+    # número) — evita contraseñas triviales tipo "aaaaaaaa" sin exigir
+    # símbolos/mayúsculas, que para un equipo pequeño solo generaría
+    # contraseñas anotadas en un post-it.
+    if len(password) < 8:
+        return True
+    tiene_letra = any(c.isalpha() for c in password)
+    tiene_numero = any(c.isdigit() for c in password)
+    return not (tiene_letra and tiene_numero)
 
 
 def _require_admin():
@@ -242,7 +267,7 @@ def _check_rate_limit(ip, window=60, max_attempts=10):
 # negocio (JSON) y deben exigir sesión — antes esta función hacía lo contrario
 # (dejaba pasar todo lo que NO tuviera extensión), lo que dejaba casi toda la
 # API pública sin darse cuenta.
-_PUBLIC_EXACT = ("/", "/visualizacion", "/visualizacion.html",
+_PUBLIC_EXACT = ("/", "/health", "/visualizacion", "/visualizacion.html",
                   "/auth/login", "/auth/logout", "/auth/me")
 _PUBLIC_EXTENSIONS = ('.html', '.js', '.css', '.png', '.jpg', '.jpeg',
                        '.ico', '.svg', '.woff', '.woff2', '.ttf', '.webp', '.gif')
@@ -264,10 +289,26 @@ def _require_auth_global():
 
 
 # ─── MYSQL ────────────────────────────────────────────────────────────────────
+# Pool de conexiones en vez de abrir/cerrar una conexión TCP nueva en cada
+# query() — antes GET /data (5 consultas) hacía 5 handshakes a MySQL por
+# petición. get_connection() reutiliza una conexión del pool y conn.close()
+# (llamado en query()) la devuelve al pool en vez de cerrarla de verdad, así
+# que no hace falta tocar el resto del código.
+_DB_POOL = None
+
+
+def _get_pool():
+    global _DB_POOL
+    if _DB_POOL is None:
+        _DB_POOL = mysql.connector.pooling.MySQLConnectionPool(
+            pool_name="erp_pool", pool_size=8, pool_reset_session=True, **DB_CONFIG)
+    return _DB_POOL
+
+
 def get_db():
     if not MYSQL_AVAILABLE:
         raise RuntimeError("mysql-connector-python no instalado")
-    return mysql.connector.connect(**DB_CONFIG)
+    return _get_pool().get_connection()
 
 
 def query(sql, params=None, fetch=True):
@@ -288,6 +329,12 @@ def query(sql, params=None, fetch=True):
             conn.close()
 
 
+# ─── HEALTHCHECK (Docker/Coolify) ──────────────────────────────────────────────
+@app.get("/health")
+def health():
+    return jsonify({"ok": True, "mysql": MYSQL_AVAILABLE})
+
+
 # ─── ARCHIVOS ESTÁTICOS ───────────────────────────────────────────────────────
 @app.get("/")
 def serve_index():
@@ -302,10 +349,17 @@ def serve_viz():
 
 @app.get("/<path:filename>")
 def serve_static(filename):
-    filepath = os.path.join(ERP_DIR, filename)
-    if os.path.isfile(filepath):
+    # send_from_directory() valida internamente la ruta (safe_join) y evita
+    # path traversal — antes se precalculaba también os.path.join(ERP_DIR,
+    # filename) sin sanitizar solo para el chequeo isfile(); esa ruta sin
+    # sanitizar no se usaba para servir el archivo, pero invitaba a que un
+    # refactor futuro la reutilizara para abrir el archivo directamente y
+    # perdiera esa protección. Dejamos que send_from_directory sea la única
+    # fuente de verdad.
+    try:
         return send_from_directory(ERP_DIR, filename)
-    return jsonify({"error": "Not found"}), 404
+    except NotFound:
+        return jsonify({"error": "Not found"}), 404
 
 
 # ─── AUTH ENDPOINTS ───────────────────────────────────────────────────────────
@@ -322,7 +376,10 @@ def auth_login():
         return jsonify({"ok": False, "error": "Usuario y contraseña requeridos"}), 400
     if _cuenta_bloqueada(username):
         _audit("login_cuenta_bloqueada", usuario=username)
-        return jsonify({"ok": False, "error": "Cuenta bloqueada temporalmente por intentos fallidos. Espera 15 minutos."}), 429
+        # Mensaje genérico (no menciona "cuenta bloqueada"): distinguirlo de
+        # "usuario o contraseña incorrectos" permitía a alguien que agotara
+        # 5 intentos inferir si ese username existe en el sistema.
+        return jsonify({"ok": False, "error": "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo."}), 429
     try:
         rows = query("""
             SELECT id, nombre, rol, username, password_hash FROM usuarios_sistema
@@ -972,9 +1029,16 @@ def movimiento_articulo(id_):
             if float(rows[0]["stock"]) < cantidad:
                 return jsonify({"ok": False, "error": f"Stock insuficiente. Disponible: {rows[0]['stock']}"}), 400
 
-        op = "+" if tipo == "entrada" else "-"
-        query(f"UPDATE articulos SET stock = stock {op} %s WHERE id=%s",
-              (cantidad, id_), fetch=False)
+        # Dos sentencias explícitas y 100% parametrizadas en vez de interpolar
+        # el operador +/- con f-string junto a un placeholder %s: aunque hoy
+        # 'tipo' solo puede producir "+" o "-" (por el if/else), mezclar
+        # f-string con SQL parametrizado es un patrón frágil que invita a
+        # reintroducir inyección si alguien generaliza esta función más
+        # adelante sin notarlo.
+        if tipo == "entrada":
+            query("UPDATE articulos SET stock = stock + %s WHERE id=%s", (cantidad, id_), fetch=False)
+        else:
+            query("UPDATE articulos SET stock = stock - %s WHERE id=%s", (cantidad, id_), fetch=False)
 
         precio_unitario = None
         if tipo == "entrada" and origen == "compra" and costo_total > 0:
@@ -2167,8 +2231,25 @@ def _yunatt_auto_loop(interval_seconds=300):
         time.sleep(interval_seconds)
 
 
-# ─── MAIN ─────────────────────────────────────────────────────────────────────
-if __name__ == "__main__":
+# ─── BOOTSTRAP ────────────────────────────────────────────────────────────────
+# Inicialización de esquema + hilos de fondo. Antes vivía solo dentro de
+# `if __name__ == "__main__":`, así que SOLO se ejecutaba con
+# `python bridge/server.py`. Bajo un servidor WSGI de producción (gunicorn),
+# el proceso importa el módulo `server` y usa el objeto `app` directamente —
+# nunca ejecuta ese bloque — así que la base de datos nunca se inicializaba
+# y el sync de yunatt/el watcher de asistencia nunca arrancaban. Se movió a
+# una función de módulo, llamada incondicionalmente al importar, para que
+# funcione igual con `python bridge/server.py` (dev en Windows) y con
+# gunicorn (producción en Docker).
+_bootstrap_hecho = False
+
+
+def _bootstrap():
+    global _bootstrap_hecho
+    if _bootstrap_hecho:
+        return
+    _bootstrap_hecho = True
+
     log.info("=" * 50)
     log.info("  ERP Lost Children  — puerto 7793")
     log.info("  Asistencia: yunatt.com (sync cada 5 min)")
@@ -2189,4 +2270,43 @@ if __name__ == "__main__":
         threading.Thread(target=_asistencia_watcher, daemon=True).start()
         log.info("websocket: tiempo real activo en /ws/asistencia")
 
-    app.run(host="0.0.0.0", port=7793, debug=False)
+
+_bootstrap()
+
+
+# ─── MAIN (solo para `python bridge/server.py` — dev en Windows) ─────────────
+# gunicorn (producción/Docker) NO ejecuta este bloque: importa `app`
+# directamente y maneja bind/TLS con sus propios flags (--certfile/--keyfile),
+# ver Dockerfile/docker-compose.yml.
+if __name__ == "__main__":
+    # ─── TLS opcional ──────────────────────────────────────────────────────
+    # El bridge servía en HTTP plano incluso siendo dueño de datos sensibles
+    # de menores (DNI, salud, dirección) y del token de sesión — cualquiera
+    # en la misma red podía capturarlos por sniffing. Se activa TLS solo si
+    # hay certificado disponible en bridge/ssl/ (self-signed, CN=IP de la
+    # LAN) y ENABLE_TLS no está puesto en "false" en bridge/.env — así no se
+    # rompe el acceso de nadie sin que el equipo lo decida explícitamente.
+    # Si el certificado no coincide con el hostname/IP que se use para
+    # entrar (p.ej. cambió la IP por DHCP), el navegador mostrará una
+    # advertencia adicional de "nombre no coincide" — regenerar el cert con
+    # la IP/dominio correcto en ese caso.
+    _ssl_dir      = os.path.join(os.path.dirname(os.path.abspath(__file__)), "ssl")
+    _cert_path    = os.path.join(_ssl_dir, "cert.pem")
+    _key_path     = os.path.join(_ssl_dir, "key.pem")
+    _enable_tls   = env("ENABLE_TLS", "auto").strip().lower()
+    _cert_existe  = os.path.isfile(_cert_path) and os.path.isfile(_key_path)
+
+    ssl_context = None
+    if _enable_tls == "true" or (_enable_tls == "auto" and _cert_existe):
+        if _cert_existe:
+            ssl_context = (_cert_path, _key_path)
+            log.info(f"TLS: activado (bridge/ssl/cert.pem) — servir en https://<ip-o-host>:7793")
+        else:
+            log.warning("ENABLE_TLS=true pero no se encontró bridge/ssl/cert.pem o key.pem — sirviendo en HTTP")
+    else:
+        log.warning(
+            "TLS: DESACTIVADO — el tráfico (login, token de sesión, datos de menores) viaja sin cifrar "
+            "en la red. Pon ENABLE_TLS=true en bridge/.env con un certificado en bridge/ssl/ para activarlo."
+        )
+
+    app.run(host="0.0.0.0", port=7793, debug=False, ssl_context=ssl_context)

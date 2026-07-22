@@ -1,0 +1,32 @@
+.git
+.gitignore
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+bridge/.venv/
+
+# Logs
+*.log
+*.log.err
+
+# Secretos y datos sensibles — NUNCA deben hornearse en la imagen. En
+# producción se montan como volúmenes o se inyectan como variables de
+# entorno desde el panel de Coolify.
+bridge/.env
+bridge/ssl/
+bridge/static/fotos/
+bridge/static/comprobantes/
+bridge/static/articulos/
+static/fotos/
+
+# Documentación / auditoría (no forma parte de la app en runtime)
+docs/*.docx
+docs/~$*
+
+# Windows
+Thumbs.db
+Desktop.ini
+iniciar_bridge.bat
