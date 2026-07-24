@@ -15,6 +15,10 @@ import { UsuariosComponent } from '@modules/usuarios/usuarios.component';
 import { ReportesComponent } from '@modules/reportes/reportes.component';
 import { MarcadoComponent } from '@modules/marcado/marcado.component';
 import { AlimentacionComponent } from '@modules/alimentacion/alimentacion.component';
+import { EntregasComponent } from '@modules/entregas/entregas.component';
+import { AlmacenComponent } from '@modules/almacen/almacen.component';
+import { PersonasComponent } from '@modules/personas/personas.component';
+import { GastosComponent } from '@modules/gastos/gastos.component';
 
 export interface ModuleContext {
   api: ApiClient;
@@ -60,6 +64,29 @@ export const MODULOS: ModuleDescriptor[] = [
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v7a2.5 2.5 0 0 0 5 0V3M7.5 10v11M17 3c-1.7 0-3 2.2-3 5s1.3 4 3 4m0 0v9"/></svg>',
     factory: (ctx) => new AlimentacionComponent(ctx.store, ctx.api),
   },
-  // Próximos (Fase 2): entregas, personas,
-  // asistencia, almacen, gastos, dashboard.
+  {
+    name: 'entregas',
+    label: 'Entregas',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 12v8H4v-8M2.5 7h19v5h-19zM12 22V7M12 7S11 3 8.5 3 6 6 8 7m4 0s1-4 3.5-4S18 6 16 7"/></svg>',
+    factory: (ctx) => new EntregasComponent(ctx.store),
+  },
+  {
+    name: 'personas',
+    label: 'Personas',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20a8 8 0 0 1 16 0"/></svg>',
+    factory: (ctx) => new PersonasComponent(ctx.store),
+  },
+  {
+    name: 'almacen',
+    label: 'Almacén',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-4 0v2M8 7V5a2 2 0 0 0-4 0v2"/></svg>',
+    factory: (ctx) => new AlmacenComponent(ctx.store, ctx.api),
+  },
+  {
+    name: 'gastos',
+    label: 'Gastos y Fondos',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>',
+    factory: (ctx) => new GastosComponent(ctx.store, ctx.api),
+  },
+  // Próximos (Fase 2): asistencia, dashboard.
 ];
