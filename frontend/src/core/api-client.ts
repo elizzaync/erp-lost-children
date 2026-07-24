@@ -78,4 +78,28 @@ export class ApiClient {
   delete<T>(path: string): Promise<T | null> {
     return this.request<T>(path, { method: 'DELETE' });
   }
+
+  /**
+   * Subida de archivos (multipart/form-data) — imagen de artículo,
+   * comprobante de gasto, etc. NO usa request()/headers() porque esos fijan
+   * Content-Type: application/json; con FormData el navegador debe poner su
+   * propio Content-Type con boundary. El legacy (modules/gastos.js,
+   * modules/almacen.js) hacía este fetch SIN Authorization — funcionaba solo
+   * si el navegador ya traía sesión por otro medio, pero contra este backend
+   * (Bearer token, sin cookies) los endpoints de subida exigen
+   * _require_staff() y devuelven 401 sin el header. Se corrige acá.
+   */
+  async postForm<T>(path: string, form: FormData): Promise<T | null> {
+    try {
+      const token = this.getToken();
+      const res = await fetch(this.baseUrl + path, {
+        method: 'POST',
+        headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        body: form,
+      });
+      return (await res.json()) as T;
+    } catch {
+      return null;
+    }
+  }
 }
