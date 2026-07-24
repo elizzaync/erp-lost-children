@@ -22,4 +22,11 @@ export class AsistenciaRepository {
   actualizarMarca(id: number, payload: MarcaPayload): Promise<MutationResult | null> {
     return this.api.put<MutationResult>(`/asistencia/${id}`, payload);
   }
+
+  /** Vincula un ID del dispositivo (zk_user_id) a una persona del ERP y la
+   *  marca presente — usado tanto al "enlazar" una marca en la pestaña
+   *  Marcas como al "asignar persona" a una fila sin vincular en Hoy. */
+  asignarZk(zkUserId: string, personaId: number): Promise<MutationResult | null> {
+    return this.api.post<MutationResult>('/asistencia/asignar-zk', { zk_user_id: zkUserId, persona_id: personaId });
+  }
 }
