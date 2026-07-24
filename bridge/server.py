@@ -223,11 +223,12 @@ def _require_admin():
     return s if (s and s.get("rol") == "admin") else None
 
 
-# El rol 'voluntario' solo puede marcar asistencia (ver js/auth.js _PERMISOS:
-# write=['asistencia']) — antes esa restricción existía solo en el frontend
-# (canWrite()), así que un token de voluntario reenviado directo a la API
-# (curl/Postman) podía crear/editar/borrar personas, gastos, artículos, etc.
-# _require_staff() replica esa misma regla del lado del servidor.
+# El rol 'voluntario' solo puede marcar asistencia (ver
+# frontend/src/shell/auth.ts PERMISOS: write=['asistencia']) — antes esa
+# restricción existía solo en el frontend (canWrite()), así que un token de
+# voluntario reenviado directo a la API (curl/Postman) podía crear/editar/
+# borrar personas, gastos, artículos, etc. _require_staff() replica esa
+# misma regla del lado del servidor.
 def _require_staff():
     s = _get_session()
     return s if (s and s.get("rol") in ("admin", "coordinador")) else None
@@ -270,7 +271,8 @@ def _check_rate_limit(ip, window=60, max_attempts=10):
 _PUBLIC_EXACT = ("/", "/health", "/visualizacion", "/visualizacion.html",
                   "/auth/login", "/auth/logout", "/auth/me")
 _PUBLIC_EXTENSIONS = ('.html', '.js', '.css', '.png', '.jpg', '.jpeg',
-                       '.ico', '.svg', '.woff', '.woff2', '.ttf', '.webp', '.gif')
+                       '.ico', '.svg', '.woff', '.woff2', '.ttf', '.webp', '.gif',
+                       '.map')  # sourcemaps del build de Vite (frontend/dist)
 
 
 @app.before_request
@@ -336,9 +338,25 @@ def health():
 
 
 # ─── ARCHIVOS ESTÁTICOS ───────────────────────────────────────────────────────
+# Fase 3 de la migración de frontend: el frontend legacy (index.html + js/ +
+# modules/ en la raíz) se retiró del repo. La SPA ahora es el build de
+# TypeScript + Vite (frontend/dist/, generado por `npm run build` — en
+# producción lo hace el stage de Node del Dockerfile). visualizacion.html
+# sigue siendo una página standalone aparte (panel de control de acceso, sin
+# JS compartido con la SPA) y sigue sirviéndose desde ERP_DIR sin cambios.
+FRONTEND_DIST_DIR = os.path.join(ERP_DIR, "frontend", "dist")
+
+if not os.path.isdir(FRONTEND_DIST_DIR):
+    log.warning(
+        f"frontend/dist no existe ({FRONTEND_DIST_DIR}) — GET / devolverá 404. "
+        "Corre `cd frontend && npm run build` una vez, o usa `npm run dev` "
+        "(puerto 4300) para desarrollo con recarga en caliente."
+    )
+
+
 @app.get("/")
 def serve_index():
-    return send_from_directory(ERP_DIR, "index.html")
+    return send_from_directory(FRONTEND_DIST_DIR, "index.html")
 
 
 @app.get("/visualizacion")
@@ -350,14 +368,9 @@ def serve_viz():
 @app.get("/<path:filename>")
 def serve_static(filename):
     # send_from_directory() valida internamente la ruta (safe_join) y evita
-    # path traversal — antes se precalculaba también os.path.join(ERP_DIR,
-    # filename) sin sanitizar solo para el chequeo isfile(); esa ruta sin
-    # sanitizar no se usaba para servir el archivo, pero invitaba a que un
-    # refactor futuro la reutilizara para abrir el archivo directamente y
-    # perdiera esa protección. Dejamos que send_from_directory sea la única
-    # fuente de verdad.
+    # path traversal — no se precalcula ninguna ruta sin sanitizar antes.
     try:
-        return send_from_directory(ERP_DIR, filename)
+        return send_from_directory(FRONTEND_DIST_DIR, filename)
     except NotFound:
         return jsonify({"error": "Not found"}), 404
 

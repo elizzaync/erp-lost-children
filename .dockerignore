@@ -30,3 +30,9 @@ docs/~$*
 Thumbs.db
 Desktop.ini
 iniciar_bridge.bat
+
+# Frontend (Vite) — se instala/compila DENTRO del build stage de Node, nunca
+# copiando lo que haya en el host (node_modules del host puede tener binarios
+# nativos de otra plataforma; dist/ del host puede estar desactualizado).
+frontend/node_modules/
+frontend/dist/
