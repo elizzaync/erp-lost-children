@@ -4,6 +4,8 @@ import type { ServicioAlimentacion, ServicioAlimentacionRaw } from './alimentaci
 import { toServicioAlimentacion } from './alimentacion.mapper';
 
 interface MutationResult { ok?: boolean; id?: number; error?: string }
+interface ConsumoItem { articuloId: number; cantidad: number }
+interface ConsumoResult { ok?: boolean; consumo?: ConsumoItem[]; error?: string }
 
 export class AlimentacionRepository {
   constructor(private readonly api: ApiClient) {}
@@ -15,5 +17,12 @@ export class AlimentacionRepository {
 
   create(payload: Record<string, unknown>): Promise<MutationResult | null> {
     return this.api.post<MutationResult>('/alimentacion', payload);
+  }
+
+  /** Consumo de insumos de un servicio ya registrado — usado para pre-llenar
+   *  el formulario cuando se "copia" un servicio anterior como plantilla. */
+  async consumo(id: number): Promise<ConsumoItem[] | null> {
+    const res = await this.api.get<ConsumoResult>(`/alimentacion/${id}/consumo`);
+    return res && res.ok && Array.isArray(res.consumo) ? res.consumo : null;
   }
 }

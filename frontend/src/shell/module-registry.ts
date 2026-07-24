@@ -14,6 +14,7 @@ import type { AppStore } from '@store/app-store';
 import { UsuariosComponent } from '@modules/usuarios/usuarios.component';
 import { ReportesComponent } from '@modules/reportes/reportes.component';
 import { MarcadoComponent } from '@modules/marcado/marcado.component';
+import { AlimentacionComponent } from '@modules/alimentacion/alimentacion.component';
 
 export interface ModuleContext {
   api: ApiClient;
@@ -53,6 +54,12 @@ export const MODULOS: ModuleDescriptor[] = [
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="11" r="3"/><path d="M5 19a7 7 0 0 1 14 0"/></svg>',
     factory: (ctx) => new MarcadoComponent(ctx.store),
   },
-  // Próximos (Fase 2): alimentacion, entregas, personas,
+  {
+    name: 'alimentacion',
+    label: 'Alimentación',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3v7a2.5 2.5 0 0 0 5 0V3M7.5 10v11M17 3c-1.7 0-3 2.2-3 5s1.3 4 3 4m0 0v9"/></svg>',
+    factory: (ctx) => new AlimentacionComponent(ctx.store, ctx.api),
+  },
+  // Próximos (Fase 2): entregas, personas,
   // asistencia, almacen, gastos, dashboard.
 ];
