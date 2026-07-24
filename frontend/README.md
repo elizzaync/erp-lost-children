@@ -1,8 +1,9 @@
 # Frontend ERP Lost Children — TypeScript + Vite
 
-Reescritura incremental del frontend a una arquitectura por capas. **Convive con
-el frontend legacy** (`js/` + `modules/` en la raíz): producción sigue usando el
-legacy hasta la Fase 3. Este proyecto se prueba aparte con el dev server de Vite.
+Reescritura completa del frontend a una arquitectura por capas. Es el único
+frontend del proyecto — el legacy en JavaScript vanilla (`js/` + `modules/` +
+`index.html` de la raíz) se retiró del repo al completar la Fase 3.
+`bridge/server.py` sirve el build de este proyecto (`frontend/dist/`).
 
 ## Requisitos
 - Node 20+ y npm.
@@ -24,18 +25,22 @@ npm run dev        # dev server en http://localhost:4300 (HMR)
 - **Fase 0** ✅ tooling (Vite + TS + Vitest) y capa `core/`.
 - **Fase 1** ✅ capa de datos: `domain/` (tipos, mappers, repositorios) +
   `store/app-store.ts` (Facade con la misma API pública que el `window.DB` legacy).
-- **Fase 2** 🚧 migración de módulos a `Component`. **Migrado: Usuarios (piloto).**
-  Pendientes: reportes, marcado, alimentación, entregas, personas, asistencia,
-  almacén, gastos, dashboard.
-- **Fase 3** ⏳ retirar el shell legacy y servir este build desde Flask.
+- **Fase 2** ✅ los 10 módulos migrados a `Component`: usuarios, reportes,
+  marcado, alimentación, entregas, almacén, personas, gastos, asistencia,
+  dashboard.
+- **Fase 3** ✅ shell legacy retirado (`js/`, `modules/*.js`, `index.html` de
+  la raíz borrados del repo). `bridge/server.py` sirve `frontend/dist/`
+  (compilado en un stage de Node en el `Dockerfile` para producción).
 
-## Cómo probar el piloto (Usuarios)
+## Cómo correrlo
 1. Levanta el backend (Flask :7793 + MySQL).
 2. `cd frontend && npm install && npm run dev`.
-3. Abre http://localhost:4300, inicia sesión con una cuenta **admin** (Usuarios
-   solo es visible para admin).
-4. Deberías ver "Gestión de Usuarios" en la barra lateral: listar, crear, editar
-   y eliminar usuarios contra el backend real.
+3. Abre http://localhost:4300 — proxya la API/WS al backend real de :7793,
+   con recarga en caliente para editar componentes.
+
+Para probar exactamente lo que corre en producción (el build servido por
+Flask, sin el dev server de Vite de por medio): `npm run build` y abre
+`http://localhost:7793` directo — ver el paso 3-4 del `README.md` raíz.
 
 ## Arquitectura (carpetas)
 - `src/core/` — infraestructura sin lógica de negocio: `EventBus`, `ApiClient`,
