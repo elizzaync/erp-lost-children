@@ -4,6 +4,7 @@ import type { Gasto, GastoRaw } from './gastos.types';
 import { toGasto } from './gastos.mapper';
 
 interface MutationResult { ok?: boolean; id?: number; error?: string }
+interface ComprobanteResult { ok?: boolean; url?: string; error?: string }
 
 export class GastosRepository {
   constructor(private readonly api: ApiClient) {}
@@ -23,5 +24,14 @@ export class GastosRepository {
 
   remove(id: number): Promise<MutationResult | null> {
     return this.api.delete<MutationResult>(`/gastos/${id}`);
+  }
+
+  /** Sube el comprobante de un gasto (POST /gastos/<id>/comprobante, multipart).
+   *  El legacy hacía este fetch sin Authorization (401 contra este backend);
+   *  api.postForm() ya agrega el header correcto. */
+  subirComprobante(id: number, file: File): Promise<ComprobanteResult | null> {
+    const fd = new FormData();
+    fd.append('comprobante', file);
+    return this.api.postForm<ComprobanteResult>(`/gastos/${id}/comprobante`, fd);
   }
 }
