@@ -29,6 +29,7 @@ import { AlmacenComponent } from '@modules/almacen/almacen.component';
 import { PersonasComponent } from '@modules/personas/personas.component';
 import { GastosComponent } from '@modules/gastos/gastos.component';
 import { AsistenciaComponent } from '@modules/asistencia/asistencia.component';
+import { DashboardComponent } from '@modules/dashboard/dashboard.component';
 
 export type SidebarGroup = 'beneficiarios' | 'recursos' | 'finanzas';
 
@@ -72,6 +73,13 @@ export const GRUPOS_SIDEBAR: Record<SidebarGroup, { label: string; icon: string 
 };
 
 export const MODULOS: ModuleDescriptor[] = [
+  {
+    name: 'dashboard',
+    label: 'Dashboard',
+    icon: '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>',
+    factory: (ctx) => new DashboardComponent(ctx.store, ctx.navigate),
+    sidebarStyle: 'top',
+  },
   {
     name: 'personas',
     label: 'Personas',
