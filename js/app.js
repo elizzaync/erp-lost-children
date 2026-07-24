@@ -97,7 +97,22 @@ window.App = (function () {
 
   function currentScreen() { return _current; }
   function isActive(screen) { return _current === screen; }
-  function refresh() { if (_current) navigate(_current); }
+
+  /* refresh() se llama una vez por cada evento DB emitido (asistencia, gastos,
+     fondos, etc.), y una sola recarga (cargarTodo) emite varios eventos
+     seguidos de forma síncrona -- sin este colapso, cada uno disparaba un
+     navigate() completo (destruye y reconstruye todo el DOM de la pantalla),
+     causando el parpadeo visible de varias tarjetas en cadena. rAF colapsa
+     todas las llamadas de la misma ráfaga en un solo navigate(). */
+  let _refreshScheduled = false;
+  function refresh() {
+    if (!_current || _refreshScheduled) return;
+    _refreshScheduled = true;
+    requestAnimationFrame(() => {
+      _refreshScheduled = false;
+      if (_current) navigate(_current);
+    });
+  }
 
   /* ---------- SVG helpers ---------- */
   const _chevron = `<svg id="chv-GRPID" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-left:auto;transition:transform .2s;flex:none;opacity:.6"><polyline points="6 9 12 15 18 9"/></svg>`;
