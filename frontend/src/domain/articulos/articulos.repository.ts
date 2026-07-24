@@ -4,6 +4,7 @@ import type { Articulo, ArticuloRaw } from './articulos.types';
 import { toArticulo, toArticuloPayload } from './articulos.mapper';
 
 interface MutationResult { ok?: boolean; id?: number; error?: string }
+interface ImagenResult { ok?: boolean; url?: string; error?: string }
 
 export interface MovimientoPayload {
   tipo: 'entrada' | 'salida';
@@ -36,5 +37,12 @@ export class ArticulosRepository {
 
   movimiento(id: number, payload: MovimientoPayload): Promise<MutationResult | null> {
     return this.api.post<MutationResult>(`/articulos/${id}/movimiento`, payload);
+  }
+
+  /** Sube la imagen de un artículo (POST /articulos/<id>/imagen, multipart). */
+  subirImagen(id: number, file: File): Promise<ImagenResult | null> {
+    const fd = new FormData();
+    fd.append('imagen', file);
+    return this.api.postForm<ImagenResult>(`/articulos/${id}/imagen`, fd);
   }
 }
