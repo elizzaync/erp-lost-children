@@ -725,7 +725,7 @@ export class AlmacenComponent extends Component {
 
     const res = await this.store.salidaAlmacen(id, qty, motivo);
     if ('error' in res) {
-      toast(res.error, 'error');
+      toast(esc(res.error), 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Registrar salida'; }
       return;
     }

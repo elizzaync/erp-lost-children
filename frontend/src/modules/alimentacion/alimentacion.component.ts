@@ -433,7 +433,7 @@ export class AlimentacionComponent extends Component {
     const res = await this.store.registrarServicio(servicio, consumoValido);
 
     if ('error' in res) {
-      toast(res.error, 'error');
+      toast(esc(res.error), 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Registrar y descontar del almacén'; }
       return;
     }

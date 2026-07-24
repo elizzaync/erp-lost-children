@@ -214,7 +214,7 @@ export class UsuariosComponent extends Component {
       const res = id != null
         ? await this.repo.editar(id, { nombre, rol, activo: activo === '1', ...(password ? { password } : {}) })
         : await this.repo.crear({ nombre, username, password, rol });
-      if (!res || !res.ok) { toast((res && res.error) || 'Error al guardar', 'error'); return; }
+      if (!res || !res.ok) { toast(esc((res && res.error) || 'Error al guardar'), 'error'); return; }
       closeModal();
       toast(id != null ? 'Usuario actualizado' : 'Usuario creado correctamente', 'success');
       void this.cargar();
@@ -239,7 +239,7 @@ export class UsuariosComponent extends Component {
   private async eliminar(id: number): Promise<void> {
     try {
       const res = await this.repo.eliminar(id);
-      if (!res || !res.ok) { toast((res && res.error) || 'Error al eliminar', 'error'); return; }
+      if (!res || !res.ok) { toast(esc((res && res.error) || 'Error al eliminar'), 'error'); return; }
       closeModal();
       toast('Usuario eliminado', 'success');
       void this.cargar();

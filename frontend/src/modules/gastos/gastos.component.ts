@@ -591,7 +591,7 @@ export class GastosComponent extends Component {
     }) as { error?: string } | null;
 
     if (res && res.error) {
-      toast(res.error, 'error');
+      toast(esc(res.error), 'error');
       if (btn) { btn.disabled = false; btn.textContent = 'Registrar ingreso'; }
       return;
     }
