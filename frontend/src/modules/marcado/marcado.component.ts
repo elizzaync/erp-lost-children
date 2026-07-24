@@ -34,7 +34,10 @@ export class MarcadoComponent extends Component {
   private statusTimer: ReturnType<typeof setTimeout> | null = null;
   private readonly onClick = (e: Event) => this.handleClick(e);
 
-  constructor(private readonly store: AppStore) {
+  constructor(
+    private readonly store: AppStore,
+    private readonly navigateTo: (name: string) => void,
+  ) {
     super();
   }
 
@@ -66,7 +69,7 @@ export class MarcadoComponent extends Component {
     switch (action) {
       case 'simular': this.simular(); break;
       case 'marcar-manual': this.marcarManual(); break;
-      case 'ver-asistencia': toast('El módulo Asistencia todavía no está migrado a esta vista previa', 'info'); break;
+      case 'ver-asistencia': this.navigateTo('asistencia'); break;
       case 'cerrar-modal': closeModal(); break;
       case 'confirmar-manual': void this.confirmarManual(); break;
     }

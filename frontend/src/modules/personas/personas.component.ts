@@ -104,7 +104,10 @@ export class PersonasComponent extends Component {
   private readonly onClick = (e: Event) => this.handleClick(e);
   private readonly onInput = (e: Event) => this.handleInput(e);
 
-  constructor(private readonly store: AppStore) {
+  constructor(
+    private readonly store: AppStore,
+    private readonly navigateTo: (name: string) => void,
+  ) {
     super();
   }
 
@@ -661,13 +664,14 @@ export class PersonasComponent extends Component {
       </div>`, { wide: true });
   }
 
-  /** Atajo de enrolamiento biométrico: Asistencia todavía no está migrado a
-   *  esta app en paralelo (será el módulo 7), así que — mismo criterio que
-   *  el botón "Ver lista completa" de Marcado ya migrado — no hay a dónde
-   *  navegar todavía; se informa con un toast en vez de romper la navegación. */
+  /** Atajo de enrolamiento biométrico: navega a Asistencia → pestaña Timmy,
+   *  donde vive el panel real de enrolar cara/huella. navigate() no admite
+   *  pestaña inicial (el Component no expone parámetros de entrada), así
+   *  que aterriza en "Asistencia de hoy" — el usuario cambia a la pestaña
+   *  Timmy con un clic. Mejor que un callejón sin salida. */
   private registrarHuella(): void {
     closeModal();
-    toast('El módulo Asistencia todavía no está migrado a esta vista previa. Usa el panel actual para registrar huella/rostro en el Timmy.', 'info');
+    this.navigateTo('asistencia');
   }
 
   /* ---------- ELIMINAR ---------- */

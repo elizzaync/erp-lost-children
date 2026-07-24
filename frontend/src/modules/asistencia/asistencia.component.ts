@@ -90,7 +90,11 @@ export class AsistenciaComponent extends Component {
   private readonly onClick = (e: Event) => this.handleClick(e);
   private readonly onChangeEvt = (e: Event) => this.handleChange(e);
 
-  constructor(private readonly store: AppStore, api: ApiClient) {
+  constructor(
+    private readonly store: AppStore,
+    api: ApiClient,
+    private readonly navigateTo: (name: string) => void,
+  ) {
     super();
     this.asistRepo = new AsistenciaRepository(api);
     this.timmyRepo = new TimmyRepository(api);
@@ -136,7 +140,7 @@ export class AsistenciaComponent extends Component {
       case 'set-filtro-tipo': { const t = target.dataset.tipo; if (t) this.setFiltroTipo(t); break; }
       case 'toggle-presente': { const id = Number(target.dataset.id); void this.store.toggleAsistencia(id, 'Manual'); break; }
       case 'sincronizar': void this.sincronizar(); break;
-      case 'facial': toast('El módulo Marcado facial es una pantalla aparte — todavía no hay navegación directa entre módulos migrados en esta vista previa', 'info'); break;
+      case 'facial': this.navigateTo('marcado'); break;
       case 'cerrar-modal': closeModal(); break;
 
       case 'marcas-actualizar': void this.cargarMarcas(); break;
