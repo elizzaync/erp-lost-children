@@ -19,6 +19,7 @@ import { EntregasComponent } from '@modules/entregas/entregas.component';
 import { AlmacenComponent } from '@modules/almacen/almacen.component';
 import { PersonasComponent } from '@modules/personas/personas.component';
 import { GastosComponent } from '@modules/gastos/gastos.component';
+import { AsistenciaComponent } from '@modules/asistencia/asistencia.component';
 
 export interface ModuleContext {
   api: ApiClient;
@@ -88,5 +89,11 @@ export const MODULOS: ModuleDescriptor[] = [
     icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 1 0 0 7h5a3.5 3.5 0 1 1 0 7H6"/></svg>',
     factory: (ctx) => new GastosComponent(ctx.store, ctx.api),
   },
-  // Próximos (Fase 2): asistencia, dashboard.
+  {
+    name: 'asistencia',
+    label: 'Asistencia',
+    icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z"/><path d="M3.5 20a5.5 5.5 0 0 1 11 0"/><path d="m16 12 2 2 4-4"/></svg>',
+    factory: (ctx) => new AsistenciaComponent(ctx.store, ctx.api),
+  },
+  // Próximo (Fase 2, último): dashboard.
 ];
