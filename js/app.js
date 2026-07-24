@@ -98,19 +98,32 @@ window.App = (function () {
   function currentScreen() { return _current; }
   function isActive(screen) { return _current === screen; }
 
-  /* refresh() se llama una vez por cada evento DB emitido (asistencia, gastos,
-     fondos, etc.), y una sola recarga (cargarTodo) emite varios eventos
-     seguidos de forma síncrona -- sin este colapso, cada uno disparaba un
-     navigate() completo (destruye y reconstruye todo el DOM de la pantalla),
-     causando el parpadeo visible de varias tarjetas en cadena. rAF colapsa
-     todas las llamadas de la misma ráfaga en un solo navigate(). */
+  /* refresh() = "re-renderiza la pantalla actual porque cambiaron los datos".
+     Es DISTINTO de navigate() ("ir a una pantalla", que monta el ciclo de vida
+     completo: onUnmount -> render -> onMount).
+
+     IMPORTANTE — por qué refresh() NO llama a navigate()/onMount():
+     onMount() de varios módulos (p.ej. dashboard) hace la carga inicial de
+     datos con DB.recargar(). DB.recargar() al terminar emite ~7 eventos, y el
+     módulo escucha esos eventos llamando a App.refresh(). Si refresh() volviera
+     a montar (onMount), se formaba un BUCLE INFINITO:
+        onMount -> recargar -> emite eventos -> refresh -> onMount -> recargar...
+     que hacía parpadear la pantalla sin parar. Por eso refresh() SOLO vuelve a
+     pintar el HTML desde la caché ya actualizada, sin re-ejecutar onMount.
+
+     El rAF colapsa una ráfaga de eventos (los 7 de una recarga) en UN solo
+     repintado, evitando el parpadeo de varias tarjetas en cadena. */
   let _refreshScheduled = false;
   function refresh() {
     if (!_current || _refreshScheduled) return;
     _refreshScheduled = true;
     requestAnimationFrame(() => {
       _refreshScheduled = false;
-      if (_current) navigate(_current);
+      if (!_current || !_currentModule) return;
+      const content = document.getElementById('content');
+      if (content) {
+        content.innerHTML = `<div class="screen">${_currentModule.render()}</div>`;
+      }
     });
   }
 
