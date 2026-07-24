@@ -42,6 +42,10 @@ export default defineConfig({
       '/attendance': 'http://localhost:7793',
       '/db': 'http://localhost:7793',
       '/health': 'http://localhost:7793',
+      // Fotos de personas subidas/sincronizadas (bridge/static/fotos/...) —
+      // sin esto Vite intenta servirlas desde su propio public/ y da 404,
+      // así que en Asistencia/Marcado/Timmy las fotos no cargaban.
+      '/static': 'http://localhost:7793',
       '/ws': { target: 'ws://localhost:7793', ws: true },
     },
   },
