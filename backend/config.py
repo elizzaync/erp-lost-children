@@ -218,7 +218,6 @@ MODULOS = (
     ("incidencias",   "Incidencias",            "Beneficiarios"),
     ("voluntarios",   "Voluntarios",            "Otros"),
     ("capacitaciones", "Capacitaciones",        "Otros"),
-    ("sst",           "Homologación / SST",     "Otros"),
     ("evaluaciones",  "Evaluación de Desempeño", "Otros"),
     ("reportes",      "Reportes",               "General"),
     ("configuracion", "Configuración",          "Sistema"),

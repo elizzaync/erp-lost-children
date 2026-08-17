@@ -4541,7 +4541,6 @@ class Component extends DCLogic {
           : (esNinos
             ? "Ingreso, salida a colegio y retorno de los 26 beneficiarios de ambas casas, registrado por el tutor de turno."
             : "Marcaciones del día tomadas de los marcadores de huella y reconocimiento facial, con el calendario mensual del equipo.")],
-      sst: ["Homologación / SST", "Módulo reservado para seguridad y salud en el trabajo y homologación de proveedores."],
       permisos: ["Bandeja de Solicitudes", "Solicitudes de permisos y vacaciones por aprobar, con el saldo de días de cada colaborador."],
       nomina: ["Planillas", "Planilla mensual del personal, recibos por honorarios y estado de los pagos. Solo aplica a colaboradores."],
       documentos: ["Documentos", "Expedientes del personal, vigencias y renovaciones por vencer."],
@@ -4567,7 +4566,6 @@ class Component extends DCLogic {
       ["permisos", "Bandeja de Solicitudes", "", "ph-tray", ["solicitudes"]],
       ["voluntariado", "Voluntarios", "", "ph-hand-heart", ["voluntarios"]],
       ["capacitaciones", "Capacitaciones", "", "ph-graduation-cap", ["capacitaciones"]],
-      ["sst", "Homologación / SST", "", "ph-shield-check", ["sst"]],
       ["evaluaciones", "Evaluación de Desempeño", "", "ph-check-square", ["evaluaciones"]]
     ];
 
@@ -4686,7 +4684,6 @@ class Component extends DCLogic {
       isLegajo: v === "legajo",
       isDir: v === "legajo" && lt === "dir",
       isOrg: v === "legajo" && (lt === "org" || lt === "benef"),
-      isSst: v === "sst",
       /* Cada pestaña es un módulo distinto a efectos de permisos: quien
          no llega a Contratos no debe ver ni la pestaña. */
       legajoTabs: [
@@ -4694,7 +4691,10 @@ class Component extends DCLogic {
         {key:"org", label:"Organigrama", icon:"ph-tree-structure", mod:"organigrama", count:""},
         {key:"docs", label:"Documentos", icon:"ph-file-text", mod:"documentos", count:String((this.state.vencDocs || []).length || "")},
         {key:"contratos", label:"Contratos", icon:"ph-scroll", mod:"contratos", count:String((this.state.vencContratos || []).length || "")},
-        {key:"benef", label:"Beneficiarios", icon:"ph-baby", mod:"beneficiarios", count:"26"}
+        {key:"benef", label:"Beneficiarios", icon:"ph-baby", mod:"beneficiarios",
+         /* Cifra real de la base. Antes era un 26 fijo de la maqueta, que con
+            la base vacía anunciaba 26 expedientes inexistentes. */
+         count:String((this.state.beneficiarios || []).length || "")}
       ].filter(t => this.puede(t.mod, "vista")).map(t => ({
         ...t,
         style: "display:flex; align-items:center; gap:8px; padding:8px 15px; border-radius:2px; font-size:14.5px;"

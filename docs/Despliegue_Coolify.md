@@ -59,8 +59,8 @@ sistema funciona con normalidad.
 El orden importa. Hecho al revés, el sistema queda un rato accesible sin
 contraseña en una URL pública.
 
-1. **Despliega con `LOGIN_ESTRICTO=0`.** La base se crea sola y se puebla con
-   los 20 registros de `backend/_semilla_personal.json`.
+1. **Despliega con `LOGIN_ESTRICTO=0`.** La base se crea sola, vacía: no hay
+   ninguna ficha de personal hasta que se registren desde la interfaz.
 
 2. **Comprueba que responde**: `https://tu-dominio/api/health` debe devolver
    `{"ok": true, ...}`.

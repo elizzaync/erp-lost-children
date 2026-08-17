@@ -38,11 +38,12 @@ y hay que ponerlas a mano en cada instalación:
   plantilla.
 - `data/` — la base y los adjuntos. Es estado de ejecución, no código: cada
   instalación tiene la suya, y va acumulando sueldos, documentos y fichas de
-  beneficiarios. `py backend/app.py` la crea vacía y la puebla desde
-  `backend/_semilla_personal.json`.
+  beneficiarios. `py backend/app.py` la crea vacía en el primer arranque.
 
-Los 20 nombres de la semilla y de la maqueta son **inventados**: vienen del
-diseño, no de un volcado del equipo.
+El sistema arranca **sin ningún registro**: las fichas de personal se crean
+desde la propia interfaz, en Hoja de Vida → Agregar usuario. Las pantallas
+que aún no leen de la base (Voluntarios, Capacitaciones, Evaluación) siguen
+mostrando datos de maqueta con nombres inventados.
 
 ## Despliegue
 
