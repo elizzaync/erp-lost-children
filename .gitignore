@@ -1,35 +1,27 @@
-# Python
+# ── Nunca al repositorio ─────────────────────────────────────────────────
+#
+# El repositorio es PÚBLICO. Lo que sigue no puede salir de esta máquina.
+
+# Credenciales reales de yunatt: la cuenta está compartida con el ERP
+# anterior y da acceso al terminal biométrico. La plantilla vacía
+# (.env.example) sí se versiona.
+backend/.env
+
+# La base es estado de ejecución, no código: cada instalación tiene la suya.
+# Además va acumulando lo que el equipo registre —sueldos, adjuntos, fichas
+# de beneficiarios—, así que nunca debe viajar en el repositorio. Tampoco
+# sus respaldos.
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db.*
+
+# Documentos y contratos que sube el personal.
+data/archivos/
+
+
+# ── Ruido ────────────────────────────────────────────────────────────────
 __pycache__/
 *.pyc
-*.pyo
 .venv/
-bridge/.venv/
-
-# Logs
-*.log
-*.log.err
-
-# Certificados y llaves — NUNCA subir
-bridge/ssl/
-
-# Fotos de personas (datos sensibles de menores) — NUNCA subir
-bridge/static/fotos/
-static/fotos/
-
-# Comprobantes subidos (datos de producción)
-bridge/static/comprobantes/
-
-# Variables de entorno / secretos locales (las credenciales van en bridge/.env)
-.env
-bridge/.env
-*.local.py
-
-# Sistema
-Thumbs.db
-Desktop.ini
-
-# Volcados de reconocimiento de yunatt.com (generados por explore_yunatt.py) —
-# no son parte de la app, no deben versionarse
-bridge/addUI.html
-bridge/staffUI.js
-bridge/staff_index.html
+venv/

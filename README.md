@@ -1,49 +1,60 @@
-# ERP Lost Children
+# Módulo RRHH — Lost Children Perú
 
-Sistema de gestión para ONG: beneficiarios, asistencia biométrica, alimentación,
-almacén, entregas y finanzas.
+Sistema de Recursos Humanos para la ONG Lost Children of Peru, con
+integración al terminal biométrico **Timmy TM-AI03F** a través de yunatt.
 
-## Stack
+Esta es una **reescritura completa**: sustituye la primera versión de este
+repositorio, que quedó descartada. El historial anterior sigue disponible en
+`git log` y en las ramas `dev` y `refactor/frontend-arquitectura`.
 
-- **Frontend**: SPA en JavaScript vanilla (sin frameworks) — `index.html` + `js/` + `modules/`
-- **Backend**: Flask (puerto 7793) — `bridge/server.py`
-- **Base de datos**: MySQL (XAMPP) — esquema en `erp_lost_children_mysql.sql`
-- **Biometría**: dispositivo Timmy TM-AI03F (reconocimiento facial) vía nube yunatt.com (protocolo ADMS)
+## Qué hace hoy
 
-## Características principales
-
-- Asistencia en **tiempo real** vía WebSocket (`/ws/asistencia`) — las marcas del
-  dispositivo aparecen al instante en el dashboard.
-- Enrolamiento remoto: el ERP envía el comando y el Timmy activa su pantalla de
-  registro; la foto que captura el dispositivo se sincroniza como foto de perfil.
-- Monitoreo del enrolamiento (registrado / cancelado) con banner en vivo.
-- Borrado sincronizado: eliminar una persona la quita también del dispositivo y de la nube.
-- Almacén con alertas de stock mínimo, gastos y fondos con balance, servicios de alimentación.
+| Módulo | Estado |
+|---|---|
+| Dashboard | conectado a la base |
+| Hoja de Vida (personal, organigrama, documentos, contratos, beneficiarios) | conectado |
+| Asistencia y enrolamiento biométrico | conectado al terminal real |
+| Condiciones y sueldos | conectado |
+| Planillas | cálculo y cierre de período |
+| Usuarios y permisos | login real, roles y registro de accesos |
+| Bandeja de Solicitudes, Voluntarios, Capacitaciones, Evaluación, Homologación/SST | pantallas de diseño, aún sin base |
 
 ## Puesta en marcha
 
 ```bash
-# 1. Requisitos
-pip install -r bridge/requirements.txt
-pip install flask-sock
-
-# 2. Base de datos (XAMPP/MySQL)
-#    Importar erp_lost_children_mysql.sql en una BD llamada erp_lost_children
-
-# 3. Arrancar el servidor
-python bridge/server.py
-# → abrir http://localhost:7793
+pip install -r backend/requirements.txt
+cp backend/.env.example backend/.env     # y completar las credenciales
+py backend/crear_director.py             # crea la primera cuenta
+py backend/app.py                        # http://127.0.0.1:7801
 ```
 
-## Configuración sensible
+## Lo que este repositorio NO contiene
 
-Las credenciales de yunatt.com **no** están en el código. Se leen desde
-`bridge/.env` (excluido de git). Para configurarlas:
+El repositorio es público, así que estas dos cosas quedan fuera a propósito
+y hay que ponerlas a mano en cada instalación:
 
-```bash
-cp bridge/.env.example bridge/.env
-# editar bridge/.env con las credenciales reales
-```
+- `backend/.env` — credenciales de yunatt; la cuenta está compartida con el
+  ERP anterior y da acceso al terminal biométrico. Usa `.env.example` como
+  plantilla.
+- `data/` — la base y los adjuntos. Es estado de ejecución, no código: cada
+  instalación tiene la suya, y va acumulando sueldos, documentos y fichas de
+  beneficiarios. `py backend/app.py` la crea vacía y la puebla desde
+  `backend/_semilla_personal.json`.
 
-Las carpetas `bridge/static/fotos/` (fotos de beneficiarios), `bridge/ssl/`
-(llaves) y `bridge/static/comprobantes/` están excluidas del repositorio.
+Los 20 nombres de la semilla y de la maqueta son **inventados**: vienen del
+diseño, no de un volcado del equipo.
+
+## Documentación
+
+**[LEEME.md](LEEME.md)** explica el modelo de datos, el protocolo del
+terminal, el sistema de usuarios y permisos, el rango de IDs reservado
+durante la transición desde el ERP anterior, y las decisiones de diseño con
+su motivo.
+
+## Pendiente antes de producción
+
+- HTTPS y servidor WSGI en el VPS; hasta entonces `LOGIN_ESTRICTO` sigue en
+  `0` y el sistema funciona en modo convivencia.
+- Interfaz móvil para los voluntarios.
+- Revisión de la Ley 29733 de protección de datos personales antes de cargar
+  datos reales de menores.
