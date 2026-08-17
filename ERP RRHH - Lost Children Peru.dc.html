@@ -1455,45 +1455,6 @@
         </div>
       </sc-if>
 
-      <sc-if value="{{ isPermisos }}">
-        <div style="padding:32px 0 0;">
-          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:48px; align-items:start;">
-            <div style="min-width:0;">
-              <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">Solicitudes</h2>
-              <p style="margin:0 0 18px; font-size:14.5px; color:#7d8e9c;">Vacaciones y permisos por aprobar</p>
-              <div style="display:flex; flex-direction:column; gap:8px;">
-                <sc-for list="{{ requests }}" as="r" hint-placeholder-count="6">
-                  <div style="padding:14px 16px; background:{{ r.tint }}; border-left:4px solid {{ r.color }}; border-radius:2px;">
-                    <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
-                      <div style="flex:1; min-width:0; font-size:15.5px; font-weight:600;">{{ r.nombre }}</div>
-                      <div style="font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; color:{{ r.dark }};">{{ r.estado }}</div>
-                    </div>
-                    <div style="font-size:14px; color:#4d5b66; margin-top:4px;">{{ r.detalle }}</div>
-                    <sc-if value="{{ r.pendiente }}">
-                      <div style="display:flex; gap:9px; margin-top:12px;">
-                        <button style="font-size:13.5px; background:#2f8f5b; color:#f4f3f1; padding:6px 15px; border-radius:2px;" style-hover="background:#1c5f3a">Aprobar</button>
-                        <button style="font-size:13.5px; color:#a8321f; padding:6px 15px; border-radius:2px; border:1px solid #e2503c;" style-hover="background:#fbe7e3">Observar</button>
-                      </div>
-                    </sc-if>
-                  </div>
-                </sc-for>
-              </div>
-              <div style="margin-top:30px; padding-top:20px; border-top:1px solid #dcd9d5;">
-                <h3 style="font-size:17px; font-weight:600; margin:0 0 12px; color:#0e3d69;">Saldo de vacaciones</h3>
-                <sc-for list="{{ saldos }}" as="s" hint-placeholder-count="4">
-                  <div style="display:flex; align-items:center; gap:14px; padding:7px 0;">
-                    <div style="flex:1; min-width:0; font-size:15px;">{{ s.nombre }}</div>
-                    <div style="width:110px; height:11px; background:#e7e3de; border-radius:1px;">
-                      <div style="height:100%; width:{{ s.pct }}; background:{{ s.color }}; border-radius:1px;"></div>
-                    </div>
-                    <div style="font-size:14px; width:52px; text-align:right; color:#3c4a55; font-variant-numeric:tabular-nums;">{{ s.dias }}</div>
-                  </div>
-                </sc-for>
-              </div>
-            </div>
-          </div>
-        </div>
-      </sc-if>
 
       <sc-if value="{{ isNomina }}">
         <div style="padding:32px 0 0;">
@@ -4541,12 +4502,10 @@ class Component extends DCLogic {
           : (esNinos
             ? "Ingreso, salida a colegio y retorno de los 26 beneficiarios de ambas casas, registrado por el tutor de turno."
             : "Marcaciones del día tomadas de los marcadores de huella y reconocimiento facial, con el calendario mensual del equipo.")],
-      permisos: ["Bandeja de Solicitudes", "Solicitudes de permisos y vacaciones por aprobar, con el saldo de días de cada colaborador."],
       nomina: ["Planillas", "Planilla mensual del personal, recibos por honorarios y estado de los pagos. Solo aplica a colaboradores."],
       documentos: ["Documentos", "Expedientes del personal, vigencias y renovaciones por vencer."],
       evaluaciones: ["Evaluación de Desempeño", "Ciclo 2026-I de desempeño, con evaluador y fecha de cierre."],
       capacitaciones: ["Capacitaciones", "Programa anual de formación, salvaguarda infantil y sesiones próximas."],
-      voluntariado: ["Voluntarios", "Voluntarios permanentes y de temporada que apoyan a los equipos."],
       config: ["Configuración", "Parámetros institucionales del sistema: nombre, sede y fecha de fundación."],
       reportes: ["Reportes", "Reportes de personal listos para descargar o enviar a donantes."],
       usuarios: ["Usuarios y permisos", "Quién entra al sistema, con qué cargo y hasta dónde llega."]
@@ -4562,11 +4521,6 @@ class Component extends DCLogic {
       ["legajo", "Hoja de Vida", String((this.state.personal || []).length || ""), "ph-identification-card",
         ["personal", "documentos", "contratos", "condiciones", "beneficiarios"]],
       ["asistencia", "Asistencia", String((this.state.personasReales || []).length || ""), "ph-clock-user", ["asistencia"]],
-      ["nomina", "Planillas", "", "ph-money", ["planillas"]],
-      ["permisos", "Bandeja de Solicitudes", "", "ph-tray", ["solicitudes"]],
-      ["voluntariado", "Voluntarios", "", "ph-hand-heart", ["voluntarios"]],
-      ["capacitaciones", "Capacitaciones", "", "ph-graduation-cap", ["capacitaciones"]],
-      ["evaluaciones", "Evaluación de Desempeño", "", "ph-check-square", ["evaluaciones"]]
     ];
 
     const admin = PEOPLE.filter(p => p.br === "adm");
@@ -4778,7 +4732,7 @@ class Component extends DCLogic {
                        : n + " beneficiarios con ficha real";
       })(),
 
-      isAsistencia: v === "asistencia", isPermisos: v === "permisos", isNomina: v === "nomina", isDocs: v === "legajo" && (lt === "docs" || lt === "contratos"),
+      isAsistencia: v === "asistencia", isNomina: v === "nomina", isDocs: v === "legajo" && (lt === "docs" || lt === "contratos"),
 
       /* ── Vista consolidada de vencimientos ─────────────────────────── */
       /* ── Documentos y Contratos del módulo ───────────────────────────
@@ -4891,7 +4845,6 @@ class Component extends DCLogic {
         return "Ningún " + (esContrato ? "contrato" : "documento")
           + " en ese estado. Prueba con otro filtro.";
       })(),
-      isEval: v === "evaluaciones", isCapa: v === "capacitaciones", isVol: v === "voluntariado",
       isRep: v === "reportes",
       isUsuarios: v === "usuarios",
 
@@ -5142,6 +5095,14 @@ class Component extends DCLogic {
       /* Configuración ya existe de verdad; el resto siguen siendo etiquetas
          de módulos futuros y no llevan a ninguna parte. */
       otherModules: [
+        /* Desactivados el 17/08: se anuncian pero no se entra. Sus pantallas
+           solo tenían título, nunca se construyeron. */
+        /* Planillas SÍ está construida y funciona —cálculo, cierre de período
+           y boletas—; se desactiva a petición del equipo, no por estar a
+           medias. Su pantalla y sus endpoints siguen intactos. */
+        {label:"Planillas", tag:"Desactivado"},
+        {label:"Capacitaciones", tag:"Pendiente"},
+        {label:"Evaluación de Desempeño", tag:"Pendiente"},
         {label:"Finanzas", tag:"Q4"}, {label:"Donaciones", tag:"Q4"}, {label:"Proyectos", tag:"2027"},
         {label:"Beneficiarios", tag:"2027"}, {label:"Inventario", tag:"2027"},
         {label:"Configuración", tag:"", vivo:true, mod:"configuracion", ir:"config"},
@@ -5216,12 +5177,6 @@ class Component extends DCLogic {
             /* A la vista consolidada, no a una ficha: el aviso habla de
                varios documentos, no de uno. Y con el filtro ya puesto. */
             go: () => this.abrirVencimientos("documento", doc.total ? "por_vencer" : "todos")
-          },
-          {
-            count: "5", title: "Evaluaciones sin iniciar",
-            detail: "Ciclo 2026-I. El cierre es el 30 de setiembre.",
-            color: GOLD, dark: GOLD_D, tint: GOLD_T,
-            go: () => this.go("evaluaciones")
           },
           {
             count: String(ctr.total || 0),
@@ -6090,20 +6045,6 @@ class Component extends DCLogic {
       weekDays: ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],
       legend: Object.keys(TIPO).map(k => ({ label: TIPO[k].label, color: TIPO[k].bar })),
       calendar: cal,
-      requests: [
-        {nombre:"José Puma Quispe", detalle:"Vacaciones · 17 al 21 de agosto · 5 días", estado:"Pendiente", color:GOLD, dark:GOLD_D, tint:GOLD_T, pendiente:true},
-        {nombre:"Karen Ttito Mamani", detalle:"Permiso por trámite personal · 25 de agosto · 4 horas", estado:"Pendiente", color:GOLD, dark:GOLD_D, tint:GOLD_T, pendiente:true},
-        {nombre:"Milagros Apaza Yupanqui", detalle:"Vacaciones · 26 al 28 de agosto · 3 días", estado:"Pendiente", color:GOLD, dark:GOLD_D, tint:GOLD_T, pendiente:true},
-        {nombre:"Wilder Ccorimanya Taipe", detalle:"Comisión de servicio a Cusco · 20 y 21 de agosto", estado:"Pendiente", color:GOLD, dark:GOLD_D, tint:GOLD_T, pendiente:true},
-        {nombre:"Rosa Huillca Ccahua", detalle:"Vacaciones · 3 al 7 de agosto · 5 días", estado:"Aprobada", color:GREEN, dark:GREEN_D, tint:GREEN_T, pendiente:false},
-        {nombre:"Elvis Quispe Arone", detalle:"Licencia médica · 11 y 12 de agosto", estado:"Registrada", color:RED, dark:RED_D, tint:RED_T, pendiente:false}
-      ],
-      saldos: [
-        {nombre:"Marco Ancco Puma", pct:"90%", dias:"27 d", color:GREEN},
-        {nombre:"Silvia Paredes León", pct:"60%", dias:"18 d", color:GREEN},
-        {nombre:"Diego Mamani Flores", pct:"40%", dias:"12 d", color:GOLD},
-        {nombre:"Ana Chávez Melgar", pct:"23%", dias:"7 d", color:RED}
-      ],
 
       /* ── Planillas ──────────────────────────────────────────────────
          Todo sale de /api/planillas: el sueldo de las condiciones de cada
