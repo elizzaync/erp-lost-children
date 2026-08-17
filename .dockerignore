@@ -1,0 +1,16 @@
+# La base y los adjuntos llegan por volumen, no dentro de la imagen. Copiarlos
+# haría que el primer arranque pisara el volumen con una copia vieja.
+data/
+
+# Credenciales: van por variables de entorno del panel de Coolify.
+backend/.env
+
+.git/
+.gitignore
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Material del diseño que no hace falta en el servidor.
+.thumbnail

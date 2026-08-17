@@ -1,0 +1,56 @@
+# Despliegue en Coolify (Contabo).
+#
+# A diferencia del ERP anterior, este módulo NO necesita servidor de base de
+# datos: usa SQLite, un archivo dentro de data/. Eso simplifica el despliegue
+# pero traslada la responsabilidad al volumen: si data/ no persiste, cada
+# redespliegue empieza con la base vacía.
+#
+# Ningún secreto va escrito aquí. Las variables ${...} se configuran en el
+# panel de Coolify.
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+    # Coolify enruta por dominio con su propio Traefik y termina el TLS ahí,
+    # así que el contenedor solo expone HTTP en su puerto interno. Si en
+    # cambio se accede por IP directa, descomentar el mapeo y elegir un puerto
+    # que no choque con el 80/443 de Coolify.
+    expose:
+      - "7801"
+    # ports:
+    #   - "${PUBLIC_PORT:-8444}:7801"
+
+    environment:
+      # ── Terminal biométrico ───────────────────────────────────────────
+      # La cuenta está compartida con el ERP anterior mientras dure la
+      # transición. Sin estas dos, la asistencia y el enrolamiento quedan
+      # inactivos pero el resto del sistema funciona.
+      YUNATT_EMAIL: ${YUNATT_EMAIL}
+      YUNATT_PASSWORD: ${YUNATT_PASSWORD}
+      YUNATT_DEVICE_ID: ${YUNATT_DEVICE_ID}
+      YUNATT_DEPT_ID: ${YUNATT_DEPT_ID}
+      YUNATT_DEPT_NAME: ${YUNATT_DEPT_NAME:-RRHH-Nuevo}
+
+      # ── Acceso ────────────────────────────────────────────────────────
+      # El corte. Dejarlo en 0 hasta que Coolify sirva el dominio por HTTPS:
+      # con login real y sin TLS, las contraseñas viajarían en claro. Una vez
+      # el dominio tenga certificado, ponerlo en 1 desde el panel — no hace
+      # falta tocar el código ni reconstruir la imagen.
+      LOGIN_ESTRICTO: ${LOGIN_ESTRICTO:-0}
+      # Marca la cookie de sesión como Secure. Activarlo junto al anterior.
+      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+
+      PUERTO: "7801"
+
+    volumes:
+      # La base y los adjuntos. Esto NO puede faltar: rrhh.db vive aquí y sin
+      # volumen se pierde en cada rebuild, junto con los documentos y
+      # contratos que haya subido el equipo.
+      - rrhh_datos:/app/data
+
+volumes:
+  rrhh_datos:

@@ -13,3 +13,9 @@
 # producción, porque comparten el mismo Python del sistema.
 flask>=3.0
 requests>=2.31
+
+# Solo para el despliegue en contenedor. En local no hace falta: `py
+# backend/app.py` usa el servidor de Flask, que además escucha únicamente en
+# 127.0.0.1 —correcto para una máquina de trabajo, inalcanzable dentro de un
+# contenedor. Ver Dockerfile y backend/wsgi.py.
+gunicorn>=21.2

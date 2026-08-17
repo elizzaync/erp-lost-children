@@ -44,6 +44,20 @@ y hay que ponerlas a mano en cada instalación:
 Los 20 nombres de la semilla y de la maqueta son **inventados**: vienen del
 diseño, no de un volcado del equipo.
 
+## Despliegue
+
+```bash
+docker compose up -d --build      # http://localhost:7801
+```
+
+En Coolify hay dos cosas que no pueden faltar, y ambas están explicadas en
+**[docs/Despliegue_Coolify.md](docs/Despliegue_Coolify.md)**:
+
+- un **volumen persistente en `/app/data`** — la base es un archivo SQLite y
+  sin volumen se borra en cada redespliegue;
+- poner `LOGIN_ESTRICTO=1` en cuanto el dominio sirva por HTTPS. Hasta
+  entonces, cualquiera con la URL entra al sistema completo.
+
 ## Documentación
 
 **[LEEME.md](LEEME.md)** explica el modelo de datos, el protocolo del
