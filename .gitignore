@@ -19,6 +19,18 @@ data/*.db.*
 # Documentos y contratos que sube el personal.
 data/archivos/
 
+# Fotos de personas. Son dato personal, no configuración: la cara de un
+# tutor no viaja en un repositorio, y menos en uno público.
+data/fotos/
+
+# La llave de la cuenta de servicio de Google, que lee la hoja de
+# respuestas del formulario. Quien la tenga puede leer lo que esa cuenta
+# lea. Si alguna vez se filtra: se borra desde la pestaña CLAVES de la
+# cuenta de servicio y se crea otra; no hay que rehacer el formulario.
+backend/data/credenciales/
+data/credenciales/
+*.iam.gserviceaccount.com.json
+
 
 # ── Ruido ────────────────────────────────────────────────────────────────
 __pycache__/

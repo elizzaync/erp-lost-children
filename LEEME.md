@@ -481,3 +481,32 @@ No comparte base de datos, procesos ni archivos con el ERP anterior.
 | `GET` | `/api/asistencia?fecha=` | marcas del día |
 | `GET` | `/api/asistencia/rango?desde=&hasta=` | marcas por persona y día (semanal y calendario) |
 | `POST` | `/api/asistencia/sync` | descarga marcas de yunatt |
+| `GET` | `/api/responsables/<id>/foto` | la foto del tutor, para verla en su ficha |
+| `POST` | `/api/responsables/<id>/foto` | la pone o la reemplaza; se endereza, reduce y limpia de metadatos |
+| `DELETE` | `/api/responsables/<id>/foto` | la quita; la ficha se conserva entera |
+| `GET` | `/api/invitaciones` | los enlaces del formulario entregados a cada familia |
+| `POST` | `/api/invitaciones` | crea uno; devuelve el enlace listo para entregar |
+| `POST` | `/api/invitaciones/<id>/anular` | lo deja sin efecto, conservando el rastro |
+
+## Resuelto: el estado de enrolamiento (2026-08-20)
+
+Era **un fallo real y encadenado**, no de visualización. La fila de
+identidad se crea al PEDIR el enrolamiento, y todo lo que la leía sin
+mirar más daba por enrolada a esa persona: cuatro intentos cancelados
+dejaron a cuatro personas fuera de la cola sin que nadie lo notara, y el
+motor rechazaba reintentar con un mensaje falso («ya está enrolada»).
+
+Ahora **«enrolado» se calcula en un solo sitio** —la vista
+`v_identidades`, columna `enrolado`— y significa lo que el terminal
+confirmó: rostro o huella guardados. `sin_enrolar()` excluye por eso y no
+por «tiene fila»; el reintento reaprovecha el número anterior en vez de
+crear una segunda identidad; y Registro de Asistencia solo cuenta a quien
+puede marcar.
+
+**Las vistas se rehacen en cada arranque** (`DROP VIEW` antes del
+esquema). Con `CREATE VIEW IF NOT EXISTS`, una base ya creada conservaba
+la definición vieja en silencio, que es como esto pasó inadvertido.
+
+Lo cubren `prueba_enrolado_real` y `prueba_biometria_estado`, y
+`verifica_aplicado` comprueba contra la base REAL que la vista no se haya
+quedado atrás.

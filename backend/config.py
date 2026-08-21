@@ -211,8 +211,10 @@ MODULOS = (
     ("contratos",     "Contratos",              "Personal"),
     ("condiciones",   "Condiciones y sueldos",  "Personal"),
     ("asistencia",    "Asistencia",             "Operación"),
+    ("permisos",      "Gestión de Permisos",    "Operación"),
     ("planillas",     "Planillas",              "Operación"),
     ("beneficiarios", "Beneficiarios",          "Beneficiarios"),
+    ("responsables",  "Responsables / Tutores", "Beneficiarios"),
     ("sesiones",      "Sesiones de acompañamiento", "Beneficiarios"),
     ("incidencias",   "Incidencias",            "Beneficiarios"),
     ("capacitaciones", "Capacitaciones",        "Otros"),
@@ -285,6 +287,83 @@ PUERTO = int(env("PUERTO", "7801"))
 # variable apunta a la de siempre.
 DB_PATH = env("DB_PATH", "") or os.path.join(RAIZ_PROYECTO, "data", "rrhh.db")
 
+# ── Canal web de marcación facial ─────────────────────────────────────────
+#
+# Segundo canal, además del terminal Timmy. El trabajador marca desde su
+# celular cuando no puede pasar por el equipo: corte de luz, está en otra
+# sede, el terminal no responde.
+#
+# DÓNDE PASA CADA COSA
+#
+#   navegador   captura la imagen y calcula el descriptor. La FOTO NO SALE
+#               DEL TELÉFONO: se descarta ahí mismo.
+#   servidor    recibe el descriptor —un vector, no una cara— y decide si
+#               coincide con el de referencia.
+#
+# La comparación se hace en el SERVIDOR a propósito. Si la decidiera el
+# navegador, bastaría con que alguien mandara {"coincide": true} desde la
+# consola para marcar por otra persona: el servidor no tendría forma de
+# comprobarlo. Mandar el descriptor en vez de la foto conserva la privacidad
+# —de un vector no se reconstruye un rostro— y deja la decisión donde se
+# puede confiar en ella.
+
+# MODELO ELEGIDO: face-api.js (MIT, descriptor de 128 valores, 99.38 % en LFW).
+# Se descartó InsightFace —más preciso— porque sus pesos preentrenados son solo
+# para investigación no comercial, y Human porque no documenta la licencia de
+# sus modelos, cabo suelto que no conviene en biometría del personal.
+#
+# Distancia euclídea máxima para dar por bueno un rostro. 0.6 es el umbral que
+# usa face-api sobre sus 128 dimensiones: por debajo hay falsos rechazos
+# molestos, por encima empiezan los falsos positivos.
+#
+# OJO al cambiar de modelo: ArcFace y compañía comparan por similitud coseno,
+# donde MAYOR es mejor. No es solo otro número, es otra métrica.
+ROSTRO_WEB_UMBRAL = float(env("ROSTRO_WEB_UMBRAL", "0.6"))
+
+# Longitud esperada del vector. Si llega otra, el modelo del navegador no es
+# el que generó la referencia y compararlos no significa nada.
+ROSTRO_WEB_DIMENSION = int(env("ROSTRO_WEB_DIMENSION", "128"))
+
+# Minutos mínimos entre dos marcas web de la misma persona. Sin esto, un
+# doble toque en el botón deja dos marcas seguidas.
+ROSTRO_WEB_MINUTOS_ENTRE_MARCAS = 2
+
+CANALES_MARCA = ("terminal", "web")
+
+# El texto del consentimiento, versionado.
+#
+# La versión importa: cada aceptación guarda una copia del texto que la
+# persona leyó. Si este texto se cambia, hay que subir la versión, y quienes
+# aceptaron la anterior tienen que volver a aceptar — no se les puede dar por
+# consentida una redacción que nunca vieron.
+CONSENTIMIENTO_ROSTRO_VERSION = "v1-2026-08"
+CONSENTIMIENTO_ROSTRO_TEXTO = """\
+Para poder marcar tu asistencia desde el celular, el sistema necesita
+registrar una referencia de tu rostro.
+
+Qué se guarda
+  · Un código numérico calculado a partir de tu rostro. No es una fotografía
+    y no se puede reconstruir tu cara a partir de él.
+  · La fecha y hora de cada marca, y desde qué canal la hiciste.
+
+Qué NO se guarda
+  · Ninguna fotografía tuya. La imagen se procesa en tu propio teléfono y se
+    descarta al instante: no llega al servidor.
+
+Para qué se usa
+  · Únicamente para confirmar tu identidad al marcar asistencia. No se usa
+    para vigilancia, ni se comparte con terceros.
+
+Tus derechos
+  · Puedes retirar este permiso cuando quieras. Al hacerlo se elimina la
+    referencia de tu rostro y dejas de poder marcar por el celular; seguirás
+    marcando en el terminal con normalidad.
+  · Puedes pedir a RRHH que te muestre o elimine estos datos.
+
+Marcar por el celular es una alternativa, no una obligación: el terminal
+biométrico sigue funcionando igual.
+"""
+
 # ── Archivos adjuntos ─────────────────────────────────────────────────────
 #
 # El sistema NO genera documentos ni contratos: guarda el archivo que la
@@ -293,6 +372,33 @@ DB_PATH = env("DB_PATH", "") or os.path.join(RAIZ_PROYECTO, "data", "rrhh.db")
 # lenta de copiar y de respaldar, y aquí los respaldos se hacen copiando
 # el .db a mano.
 ARCHIVOS_DIR = os.path.join(RAIZ_PROYECTO, "data", "archivos")
+
+# Las fotos de personas van aparte de los adjuntos. Son de otra naturaleza
+# —dato personal de la persona, no papeleo— y separarlas permite respaldar
+# o restringir unas sin las otras.
+FOTOS_DIR = os.path.join(RAIZ_PROYECTO, "data", "fotos")
+
+# ── El formulario público de tutores ─────────────────────────────────────
+# La dirección prerrellenada que da Google, con la palabra de plantilla
+# donde va el código de cada familia. No se arma a mano: el número de campo
+# (entry.NNN) lo asigna Google y cambia si se rehace la pregunta.
+FORM_URL_PRELLENADO = env("FORM_URL_PRELLENADO", "")
+FORM_MARCA_TOKEN = env("FORM_MARCA_TOKEN", "PLANTILLA")
+# La hoja donde Google deja las respuestas. De aquí las leerá el paso 3.
+FORM_HOJA_ID = env("FORM_HOJA_ID", "")
+# Cuánto vale un enlace entregado. Ver invitaciones.py.
+FORM_DIAS_VIGENCIA = int(env("FORM_DIAS_VIGENCIA", "30") or 30)
+
+# La llave de la cuenta de servicio que lee la hoja. Aquí solo va la
+# ruta: el archivo vive fuera del repositorio (ver .gitignore).
+FORM_CREDENCIAL = env("FORM_CREDENCIAL", "")
+if FORM_CREDENCIAL and not os.path.isabs(FORM_CREDENCIAL):
+    FORM_CREDENCIAL = os.path.join(RAIZ_PROYECTO, FORM_CREDENCIAL)
+
+
+def credencial_lista():
+    """¿Está la llave donde dice la configuración?"""
+    return bool(FORM_CREDENCIAL) and os.path.isfile(FORM_CREDENCIAL)
 
 # 15 MB. Un escaneo de DNI o un contrato firmado no llega ni de lejos;
 # el tope está para que un error no llene el disco.

@@ -280,6 +280,26 @@ def anotar_acceso(sesion, modulo, accion, resultado):
 
 # ── El decorador ──────────────────────────────────────────────────────────
 
+def csrf_valido(sesion):
+    """
+    ¿Trae esta petición el token CSRF de su sesión?
+
+    Vivía dentro del decorador 'requiere', así que solo protegía a los
+    endpoints que piden permiso de módulo. Los de autoservicio no lo piden
+    —trabajan sobre la persona de la sesión— y se quedaban escribiendo sin
+    esta comprobación: otra web podía hacer que tu navegador pidiera un
+    permiso, o cancelara el tuyo, aprovechando tu sesión abierta.
+
+    Las lecturas no lo necesitan: no cambian nada.
+    """
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return True
+    if not sesion:
+        return True          # sin sesión no hay nada de lo que aprovecharse
+    enviado = request.headers.get("X-CSRF-Token", "")
+    return secrets.compare_digest(str(enviado), str(sesion.get("csrf") or ""))
+
+
 def sesion_actual():
     """La sesión de esta petición, cacheada en 'g' para no repetir consulta."""
     if not hasattr(g, "_sesion"):
@@ -325,13 +345,11 @@ def requiere(modulo, nivel="vista"):
             # Con sesión, las peticiones que ESCRIBEN exigen el token CSRF:
             # sin esto, otra web podría hacer que tu navegador enviara
             # peticiones al sistema aprovechando tu sesión abierta.
-            if request.method in ("POST", "PUT", "PATCH", "DELETE"):
-                enviado = request.headers.get("X-CSRF-Token", "")
-                if not secrets.compare_digest(str(enviado), str(ses["csrf"])):
-                    anotar_acceso(ses, modulo, nivel, 403)
-                    return jsonify({"ok": False,
-                                    "error": "Petición sin token de seguridad válido",
-                                    "motivo": "csrf"}), 403
+            if not csrf_valido(ses):
+                anotar_acceso(ses, modulo, nivel, 403)
+                return jsonify({"ok": False,
+                                "error": "Petición sin token de seguridad válido",
+                                "motivo": "csrf"}), 403
 
             anotar_acceso(ses, modulo, nivel, 200)
             return fn(*args, **kwargs)

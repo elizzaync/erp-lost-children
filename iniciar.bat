@@ -15,10 +15,13 @@ echo   Iniciando servidor local...
 echo.
 
 where py >nul 2>nul
+REM  Se llama a servidor.py y no a app.py: libera el puerto 7801 si
+REM  quedo ocupado por un arranque anterior, para que la direccion
+REM  http://127.0.0.1:7801/ sea SIEMPRE la misma.
 if %errorlevel%==0 (
-    py backend\app.py
+    py backend\servidor.py
 ) else (
-    python backend\app.py
+    python backend\servidor.py
 )
 
 if errorlevel 1 (

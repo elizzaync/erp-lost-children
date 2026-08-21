@@ -138,25 +138,34 @@ def _lanzar_fase(sesion):
 
 def iniciar(tipo, titular_id, metodo):
     """
-    Arranca la captura para una persona QUE YA EXISTE (en personal o en
-    beneficiarios): le reserva un staffNumber, la da de alta en yunatt y
-    pone el dispositivo en modo registro.
+    Arranca la captura para una persona QUE YA EXISTE (en personal, en
+    beneficiarios o en responsables): le reserva un staffNumber, la da de
+    alta en yunatt y pone el dispositivo en modo registro.
 
     Antes este módulo creaba también a la persona, y eso obligaba a
     escribir su nombre por segunda vez y dejaba dos copias del mismo dato.
     Ahora la ficha es la fuente única y esto solo añade su identidad
     biométrica.
     """
-    if tipo not in ("personal", "beneficiario"):
+    if tipo not in db.COLUMNA_TITULAR:
         raise ValueError(f"Tipo no reconocido: {tipo!r}")
 
-    titular = (db.persona_personal(titular_id) if tipo == "personal"
-               else next((b for b in db.beneficiarios() if b["id"] == int(titular_id)), None))
+    if tipo == "personal":
+        titular = db.persona_personal(titular_id)
+    elif tipo == "beneficiario":
+        titular = db.beneficiario(titular_id)
+    else:
+        titular = db.responsable(titular_id)
     if not titular:
         raise KeyError(f"No existe {tipo} con id {titular_id}")
 
+    # Solo bloquea quien está enrolado DE VERDAD, es decir, con rostro o
+    # huella confirmados por el terminal. Antes bastaba con que existiera
+    # la fila —que se crea al pedir el enrolamiento— y eso dejaba
+    # atrapado a cualquiera que cancelara la captura, con un mensaje que
+    # además no era cierto.
     ya = db.identidad_de(tipo, titular_id)
-    if ya:
+    if ya and ya["enrolado"]:
         raise ValueError(
             f"{titular['nombre']} ya está enrolada con el ID {ya['staff_number']}. "
             "Quítala del terminal antes de volver a enrolarla."
@@ -181,11 +190,19 @@ def iniciar(tipo, titular_id, metodo):
 
     nombre = titular["nombre"]
 
-    # Reservar el número mirando local + nube, para no chocar con nada
-    # creado a mano desde el panel de yunatt.
-    usados = [f.get("staffNumber") for f in cliente.staff_en_nube()]
-    sn = db.siguiente_staff_number(usados)
-    config.validar_rango(sn)
+    if ya:
+        # Un intento anterior que no llegó a cuajar: se reaprovecha su
+        # número. Pedir uno nuevo dejaría la fila vieja suelta apuntando a
+        # la misma persona, y con dos identidades no se sabría cuál de las
+        # dos marca.
+        sn = ya["staff_number"]
+        config.validar_rango(sn)
+    else:
+        # Reservar el número mirando local + nube, para no chocar con nada
+        # creado a mano desde el panel de yunatt.
+        usados = [f.get("staffNumber") for f in cliente.staff_en_nube()]
+        sn = db.siguiente_staff_number(usados)
+        config.validar_rango(sn)
 
     db.crear_identidad(sn, tipo, titular_id, metodo)
 

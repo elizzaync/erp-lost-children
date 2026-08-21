@@ -13,6 +13,8 @@ http://127.0.0.1:7801/ y no haciendo doble click en el .dc.html.
 
 Arranque:  python backend/app.py      (o iniciar.bat)
 """
+import datetime
+import json
 import logging
 import os
 import sys
@@ -33,10 +35,13 @@ for _flujo in (sys.stdout, sys.stderr):
         pass
 
 import archivos
+import fotos
+import invitaciones as invi
 import auth
 import config
 import db
 import enrolamiento
+import solicitudes as reglas_permisos
 import personas
 import planillas
 from yunatt_client import cliente, YunattError
@@ -73,6 +78,50 @@ def estatico(ruta):
     sobre este comodín, así que no se lo come.
     """
     return send_from_directory(RAIZ, ruta)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  ERRORES DE LA API
+# ══════════════════════════════════════════════════════════════════════════
+#
+# Lo que el sistema rechaza a propósito ya sale en JSON. Estos son los que
+# genera Flask por su cuenta: una ruta que no existe, un método que esa
+# ruta no acepta, o algo que reventó sin capturar.
+#
+# Sin esto, la interfaz recibe una página HTML donde espera JSON y enseña
+# «Unexpected token '<'», que no le dice nada a nadie. El comodín de
+# archivos estáticos es solo GET, así que cualquier POST a una dirección
+# equivocada caía justo aquí.
+
+def _es_api():
+    return request.path.startswith("/api/")
+
+
+@app.errorhandler(404)
+def _no_existe(e):
+    if _es_api():
+        return jsonify({"ok": False,
+                        "error": f"No existe la dirección {request.path}"}), 404
+    return e
+
+
+@app.errorhandler(405)
+def _metodo_no_admitido(e):
+    if _es_api():
+        return jsonify({"ok": False,
+                        "error": f"{request.method} no está permitido en {request.path}"}), 405
+    return e
+
+
+@app.errorhandler(500)
+def _reventon(e):
+    if _es_api():
+        # El detalle va al registro, no a la respuesta: puede llevar rutas
+        # del servidor o fragmentos de consulta.
+        app.logger.exception("error no capturado en %s", request.path)
+        return jsonify({"ok": False,
+                        "error": "Algo falló en el servidor. Quedó anotado en el registro."}), 500
+    return e
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -479,6 +528,104 @@ def _cuerpo_documento():
     if request.files:
         return request.form.to_dict(), request.files.get("archivo")
     return (request.get_json(silent=True) or {}), None
+
+
+# ── Invitaciones al formulario público ────────────────────────────────
+# Los enlaces se crean y se anulan aquí. Lo que llega del formulario NO
+# entra por estos endpoints: eso es el paso 3, y pasa por la bandeja.
+
+@app.get("/api/invitaciones")
+@auth.requiere("responsables", "vista")
+def listar_invitaciones():
+    return jsonify({
+        "ok": True,
+        "invitaciones": invi.listar(),
+        # Sin esto la pantalla no puede explicar por qué no hay enlaces.
+        "configurado": bool(config.FORM_URL_PRELLENADO),
+    })
+
+
+@app.post("/api/invitaciones")
+@auth.requiere("responsables", "edicion")
+def crear_invitacion_api():
+    d = request.get_json(silent=True) or {}
+    ses = auth.sesion_actual()
+    try:
+        fila = invi.crear(
+            responsable_id=d.get("responsable_id") or None,
+            etiqueta=d.get("etiqueta") or "",
+            dias=d.get("dias"),
+            usuario_id=(ses or {}).get("usuario_id"),
+            nota=d.get("nota") or "")
+    except invi.InvitacionError as e:
+        return _error(e, 400)
+    return jsonify({"ok": True, "invitacion": fila,
+                    "invitaciones": invi.listar()})
+
+
+@app.post("/api/invitaciones/<int:id_>/anular")
+@auth.requiere("responsables", "edicion")
+def anular_invitacion_api(id_):
+    d = request.get_json(silent=True) or {}
+    try:
+        fila = invi.anular(id_, d.get("motivo") or "")
+    except invi.InvitacionError as e:
+        return _error(e, 404)
+    return jsonify({"ok": True, "invitacion": fila,
+                    "invitaciones": invi.listar()})
+
+
+# ── La foto del responsable ───────────────────────────────────────────
+# Tres operaciones y una sola forma de entrar: fotos.aceptar(). El día que
+# la foto llegue del formulario público, ese origen llama a lo mismo.
+
+@app.get("/api/responsables/<int:id_>/foto")
+@auth.requiere("responsables", "vista")
+def foto_responsable(id_):
+    r = db.responsable(id_)
+    if not r:
+        return _error(f"No existe el responsable {id_}", 404)
+    ruta = fotos.ruta_de(r.get("foto"))
+    if not ruta:
+        return _error("Esa ficha no tiene foto", 404)
+    # as_attachment=False: la foto se mira en la ficha, no se descarga.
+    return send_file(ruta, mimetype=r.get("foto_mime") or "image/jpeg",
+                     as_attachment=False, download_name="foto.jpg")
+
+
+@app.post("/api/responsables/<int:id_>/foto")
+@auth.requiere("responsables", "edicion")
+def subir_foto_responsable(id_):
+    """Pone o reemplaza la foto. La anterior se borra del disco."""
+    if not db.responsable(id_):
+        return _error(f"No existe el responsable {id_}", 404)
+    try:
+        meta = fotos.desde_fichero(request.files.get("foto"))
+    except fotos.FotoError as e:
+        return _error(e, 400)
+    except Exception:
+        app.logger.exception("foto de responsable %s", id_)
+        return _error("No se pudo guardar la foto", 500)
+    anterior = db.actualizar_foto_responsable(id_, meta)
+    if anterior and anterior != meta["foto"] and not fotos.borrar(anterior):
+        # La foto nueva quedó bien guardada; esto solo deja constancia de
+        # que la vieja sigue ocupando sitio.
+        app.logger.warning("foto huérfana en disco: %s (responsable %s)", anterior, id_)
+    return jsonify({"ok": True, "responsable": db.responsable(id_),
+                    "responsables": db.responsables()})
+
+
+@app.delete("/api/responsables/<int:id_>/foto")
+@auth.requiere("responsables", "edicion")
+def quitar_foto_responsable(id_):
+    """Quita la foto y conserva la ficha entera."""
+    if not db.responsable(id_):
+        return _error(f"No existe el responsable {id_}", 404)
+    anterior = db.actualizar_foto_responsable(id_, None)
+    if anterior and not fotos.borrar(anterior):
+        app.logger.warning("foto huérfana en disco: %s (responsable %s)", anterior, id_)
+    return jsonify({"ok": True, "responsable": db.responsable(id_),
+                    "responsables": db.responsables()})
 
 
 @app.get("/api/documentos/<int:id_>/archivo")
@@ -1072,6 +1219,824 @@ def borrar_beneficiario_(id_):
                     "beneficiarios": _beneficiarios_completos()})
 
 
+# ══════════════════════════════════════════════════════════════════════════
+#  HOJA DE VIDA: FORMACIÓN Y EXPERIENCIA
+#
+#  Cuelgan de 'personal', así que el permiso es el mismo: quien puede ver una
+#  ficha ve su trayectoria, y quien puede editarla la modifica. No hacía falta
+#  un módulo de permisos propio para esto.
+# ══════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/personal/<int:id_>/trayectoria")
+@auth.requiere("personal", "vista")
+def trayectoria(id_):
+    """
+    Las dos series de una vez: la hoja de vida las muestra juntas y pedirlas
+    por separado serían dos viajes para pintar una sola pantalla.
+    """
+    if not db.persona_personal(id_):
+        return _error(f"No existe la persona {id_}", 404)
+    return jsonify({"ok": True,
+                    "formacion": db.formacion_de(id_),
+                    "experiencia": db.experiencia_de(id_)})
+
+
+@app.post("/api/personal/<int:id_>/formacion")
+@auth.requiere("personal", "edicion")
+def crear_formacion_(id_):
+    if not db.persona_personal(id_):
+        return _error(f"No existe la persona {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    if not str(cuerpo.get("institucion") or "").strip() \
+            and not str(cuerpo.get("carrera") or "").strip():
+        return _error("Pon al menos la institución o la carrera", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_FORMACION if c in cuerpo}
+    fid = db.crear_formacion(id_, datos)
+    return jsonify({"ok": True, "id": fid, "formacion": db.formacion_de(id_)})
+
+
+@app.put("/api/formacion/<int:id_>")
+@auth.requiere("personal", "edicion")
+def editar_formacion_(id_):
+    cuerpo = request.get_json(silent=True) or {}
+    datos = {c: cuerpo[c] for c in db.CAMPOS_FORMACION if c in cuerpo}
+    if not datos:
+        return _error("No llegó ningún cambio", 400)
+    db.editar_formacion(id_, datos)
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/formacion/<int:id_>")
+@auth.requiere("personal", "edicion")
+def borrar_formacion_(id_):
+    db.borrar_formacion(id_)
+    return jsonify({"ok": True})
+
+
+@app.post("/api/personal/<int:id_>/experiencia")
+@auth.requiere("personal", "edicion")
+def crear_experiencia_(id_):
+    if not db.persona_personal(id_):
+        return _error(f"No existe la persona {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    if not str(cuerpo.get("empresa") or "").strip() \
+            and not str(cuerpo.get("cargo") or "").strip():
+        return _error("Pon al menos la empresa o el cargo", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_EXPERIENCIA if c in cuerpo}
+    eid = db.crear_experiencia(id_, datos)
+    return jsonify({"ok": True, "id": eid, "experiencia": db.experiencia_de(id_)})
+
+
+@app.put("/api/experiencia/<int:id_>")
+@auth.requiere("personal", "edicion")
+def editar_experiencia_(id_):
+    cuerpo = request.get_json(silent=True) or {}
+    datos = {c: cuerpo[c] for c in db.CAMPOS_EXPERIENCIA if c in cuerpo}
+    if not datos:
+        return _error("No llegó ningún cambio", 400)
+    db.editar_experiencia(id_, datos)
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/experiencia/<int:id_>")
+@auth.requiere("personal", "edicion")
+def borrar_experiencia_(id_):
+    db.borrar_experiencia(id_)
+    return jsonify({"ok": True})
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  SERIES DEL EXPEDIENTE DE BENEFICIARIO
+#
+#  Programas, historial educativo y seguimiento social. Van bajo el permiso
+#  de 'beneficiarios', no bajo uno propio: son partes del mismo expediente, y
+#  quien puede abrirlo puede ver lo que contiene.
+#
+#  Las tres siguen la misma forma: un GET que las trae juntas, y por cada una
+#  un POST colgado del beneficiario más un PUT y un DELETE colgados de la
+#  fila. El id del beneficiario va en la ruta del POST para que no se pueda
+#  colar por el cuerpo y escribir en el expediente de otro.
+# ══════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════
+#  PANEL DE GESTIÓN DE PERSONAS
+# ══════════════════════════════════════════════════════════════════════════
+
+# ══════════════════════════════════════════════════════════════════════════
+#  GESTIÓN DE PERMISOS
+#
+#  Dos caminos sobre los mismos datos:
+#
+#    · AUTOSERVICIO — /api/permisos/mios y el POST de alta. Actúan sobre
+#      quien está en la sesión y sobre nadie más. El personal_id sale de
+#      auth.sesion_actual(), NUNCA del cuerpo: si viniera de fuera,
+#      cualquiera podría pedir permisos a nombre de otro.
+#
+#    · REVISIÓN — el listado completo y las tres acciones. Piden permiso de
+#      edición sobre 'permisos', que es lo que tiene la jefatura.
+#
+#  Las reglas (saldo, umbral de días, transiciones) no están aquí: viven en
+#  solicitudes.py. Esto solo traduce entre HTTP y esas reglas.
+# ══════════════════════════════════════════════════════════════════════════
+
+def _sol_visible(s):
+    """La solicitud con lo que la pantalla necesita y la base no guarda."""
+    d = reglas_permisos.con_etiquetas(s)
+    d["dias"] = reglas_permisos.dias(d["desde"], d["hasta"])
+    persona = db.persona_personal(d["personal_id"])
+    d["persona"] = persona["nombre"] if persona else "(ficha eliminada)"
+    d["cargo"] = (persona or {}).get("cargo") or ""
+    jefe = db.persona_personal(d["jefe_id"]) if d.get("jefe_id") else None
+    d["jefe"] = jefe["nombre"] if jefe else ""
+    return d
+
+
+@app.get("/api/permisos/tipos")
+@auth.requiere("permisos", "vista")
+def tipos_permiso():
+    """
+    Los tipos y sus etiquetas, para que la pantalla no los tenga escritos.
+    Si mañana cambia la lista, cambia en un sitio.
+    """
+    return jsonify({"ok": True,
+                    "tipos": [{"valor": t, "etiqueta": reglas_permisos.ETIQUETAS[t]}
+                              for t in reglas_permisos.TIPOS],
+                    "dias_visto_bueno_admin": config.DIAS_VISTO_BUENO_ADMIN})
+
+
+@app.get("/api/permisos")
+@auth.requiere("permisos", "vista")
+def listar_permisos():
+    """
+    Todas las solicitudes, con filtro opcional por estado.
+
+    Sin filtro devuelve las que están por resolver, que es lo que la
+    pantalla de revisión necesita al abrirse.
+    """
+    estado = (request.args.get("estado") or "").strip()
+    if estado == "todas":
+        filas = db.solicitudes()
+    elif estado:
+        filas = db.solicitudes(estado=estado)
+    else:
+        filas = [s for s in db.solicitudes()
+                 if s["estado"] in reglas_permisos.ABIERTOS]
+    return jsonify({"ok": True,
+                    "solicitudes": [_sol_visible(s) for s in filas],
+                    "resumen": db.resumen_solicitudes()})
+
+
+@app.get("/api/permisos/mios")
+def mis_permisos():
+    """Las solicitudes de quien está conectado, y su saldo de vacaciones."""
+    pid, error = _yo()
+    if error:
+        return error
+    filas = db.solicitudes_de(pid)
+    return jsonify({
+        "ok": True,
+        "solicitudes": [_sol_visible(s) for s in filas],
+        # None significa "esto no aplica" (no está en planilla, o no tiene
+        # fecha de ingreso), que no es lo mismo que cero días.
+        "saldo_vacaciones": reglas_permisos.saldo_vacaciones(pid),
+        "dias_visto_bueno_admin": config.DIAS_VISTO_BUENO_ADMIN,
+        "tipos": [{"valor": t, "etiqueta": reglas_permisos.ETIQUETAS[t]}
+                  for t in reglas_permisos.TIPOS],
+    })
+
+
+@app.post("/api/permisos")
+def crear_permiso():
+    """
+    Alta desde el autoservicio. Siempre a nombre de quien está en la sesión.
+    """
+    pid, error = _yo()
+    if error:
+        return error
+    cuerpo = request.get_json(silent=True) or {}
+    try:
+        sid = reglas_permisos.crear(
+            pid,
+            (cuerpo.get("tipo") or "").strip(),
+            (cuerpo.get("desde") or "").strip(),
+            (cuerpo.get("hasta") or "").strip(),
+            (cuerpo.get("motivo") or "").strip(),
+        )
+    except reglas_permisos.ReglaRota as e:
+        return _error(e, 400)
+    except ValueError as e:
+        return _error(e, 400)
+    return jsonify({"ok": True, "id": sid,
+                    "solicitud": _sol_visible(db.solicitud(sid))})
+
+
+def _resolver(id_, accion):
+    cuerpo = request.get_json(silent=True) or {}
+    try:
+        sol = reglas_permisos.resolver(id_, accion,
+                                       (cuerpo.get("nota") or "").strip())
+    except KeyError as e:
+        return _error(e, 404)
+    except reglas_permisos.ReglaRota as e:
+        return _error(e, 409)
+    return jsonify({"ok": True, "solicitud": _sol_visible(sol)})
+
+
+@app.post("/api/permisos/<int:id_>/aprobar")
+@auth.requiere("permisos", "edicion")
+def aprobar_permiso(id_):
+    """
+    Aprobar. Si la solicitud es larga y solo pasó por la jefatura, no queda
+    aprobada: pasa a esperar el visto bueno de Administración.
+    """
+    return _resolver(id_, "aprobar")
+
+
+@app.post("/api/permisos/<int:id_>/rechazar")
+@auth.requiere("permisos", "edicion")
+def rechazar_permiso(id_):
+    """Rechazar. La nota es el motivo, y se guarda: el trabajador la lee."""
+    cuerpo = request.get_json(silent=True) or {}
+    if not (cuerpo.get("nota") or "").strip():
+        return _error("Escribe el motivo del rechazo: quien la pidió tiene "
+                      "derecho a saber por qué.", 400)
+    return _resolver(id_, "rechazar")
+
+
+@app.post("/api/permisos/<int:id_>/cancelar")
+def cancelar_permiso(id_):
+    """
+    Cancelar. Lo puede hacer quien la pidió —es suya— o la jefatura.
+
+    Se comprueba aquí y no con un decorador porque la regla depende de la
+    fila: sin sesión no se puede saber si es tuya, y con permiso de edición
+    da igual de quién sea.
+    """
+    sol = db.solicitud(id_)
+    if not sol:
+        return _error(f"No existe la solicitud {id_}", 404)
+    ses = auth.sesion_actual()
+    if not auth.csrf_valido(ses):
+        return _error("Petición sin token de seguridad válido", 403)
+    mia = bool(ses) and ses.get("personal_id") == sol["personal_id"]
+    if not mia and not auth.puede(ses, "permisos", "edicion"):
+        return _error("Solo puedes cancelar tus propias solicitudes.", 403)
+    return _resolver(id_, "cancelar")
+
+
+@app.get("/api/campos-requeridos")
+def campos_requeridos():
+    """
+    Qué campos exige cada ficha, y con qué nombre mostrarlos.
+
+    La pantalla los pide en vez de tenerlos escritos: si estuvieran en los
+    dos sitios acabarían discrepando, y el formulario pediría cosas que el
+    servidor no exige o al revés. No lleva permiso porque no revela ningún
+    dato: es la forma de las fichas, no su contenido.
+    """
+    return jsonify({
+        "ok": True,
+        "personal":     [{"campo": c, "etiqueta": e} for c, e in db.CAMPOS_PERSONAL_COMPLETO],
+        "beneficiario": [{"campo": c, "etiqueta": e} for c, e in db.CAMPOS_FICHA_COMPLETA],
+        "responsable":  [{"campo": c, "etiqueta": e} for c, e in db.CAMPOS_RESPONSABLE_COMPLETO],
+    })
+
+
+@app.get("/api/personas/resumen")
+@auth.requiere("personal", "vista")
+def resumen_personas():
+    """
+    Los números del panel, calculados en el servidor.
+
+    Se hace aquí y no en la pantalla porque hay que recorrer las tres tablas
+    y decidir qué cuenta como ficha incompleta; si eso viviera en el
+    navegador, cada vista tendría su propia idea de lo que significa.
+    """
+    return jsonify({"ok": True, "resumen": db.resumen_personas()})
+
+
+@app.get("/api/beneficiarios/<int:id_>/series")
+@auth.requiere("beneficiarios", "vista")
+def series_beneficiario(id_):
+    """
+    Las tres de una vez: el expediente las muestra en pestañas del mismo
+    bloque, y pedirlas por separado serían tres viajes para pintar una sola
+    pantalla.
+    """
+    if not db.beneficiario(id_):
+        return _error(f"No existe el beneficiario {id_}", 404)
+    return jsonify({"ok": True,
+                    "programas": db.programas_de(id_),
+                    "historial": db.historial_de(id_),
+                    "seguimiento": db.seguimiento_de(id_)})
+
+
+# ── Programas ─────────────────────────────────────────────────────────────
+
+@app.post("/api/beneficiarios/<int:id_>/programas")
+@auth.requiere("beneficiarios", "edicion")
+def crear_programa_(id_):
+    if not db.beneficiario(id_):
+        return _error(f"No existe el beneficiario {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    if not str(cuerpo.get("programa") or "").strip():
+        return _error("El programa no puede quedar vacío", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_PROGRAMA if c in cuerpo}
+    pid = db.crear_programa(id_, datos)
+    return jsonify({"ok": True, "id": pid, "programas": db.programas_de(id_)})
+
+
+@app.put("/api/programas/<int:id_>")
+@auth.requiere("beneficiarios", "edicion")
+def editar_programa_(id_):
+    cuerpo = request.get_json(silent=True) or {}
+    datos = {c: cuerpo[c] for c in db.CAMPOS_PROGRAMA if c in cuerpo}
+    if not datos:
+        return _error("No llegó ningún cambio", 400)
+    db.editar_programa(id_, datos)
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/programas/<int:id_>")
+@auth.requiere("beneficiarios", "edicion")
+def borrar_programa_(id_):
+    db.borrar_programa(id_)
+    return jsonify({"ok": True})
+
+
+# ── Historial educativo ───────────────────────────────────────────────────
+
+@app.post("/api/beneficiarios/<int:id_>/historial")
+@auth.requiere("beneficiarios", "edicion")
+def crear_historial_(id_):
+    if not db.beneficiario(id_):
+        return _error(f"No existe el beneficiario {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    if not str(cuerpo.get("anio") or "").strip() \
+            and not str(cuerpo.get("institucion") or "").strip():
+        return _error("Pon al menos el año o la institución", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_HISTORIAL if c in cuerpo}
+    hid = db.crear_historial(id_, datos)
+    return jsonify({"ok": True, "id": hid, "historial": db.historial_de(id_)})
+
+
+@app.put("/api/historial/<int:id_>")
+@auth.requiere("beneficiarios", "edicion")
+def editar_historial_(id_):
+    cuerpo = request.get_json(silent=True) or {}
+    datos = {c: cuerpo[c] for c in db.CAMPOS_HISTORIAL if c in cuerpo}
+    if not datos:
+        return _error("No llegó ningún cambio", 400)
+    db.editar_historial(id_, datos)
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/historial/<int:id_>")
+@auth.requiere("beneficiarios", "edicion")
+def borrar_historial_(id_):
+    db.borrar_historial(id_)
+    return jsonify({"ok": True})
+
+
+# ── Seguimiento social ────────────────────────────────────────────────────
+
+@app.post("/api/beneficiarios/<int:id_>/seguimiento")
+@auth.requiere("beneficiarios", "edicion")
+def crear_seguimiento_(id_):
+    if not db.beneficiario(id_):
+        return _error(f"No existe el beneficiario {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    if not str(cuerpo.get("fecha") or "").strip():
+        return _error("Un seguimiento sin fecha no sirve para nada", 400)
+    if not str(cuerpo.get("situacion") or "").strip():
+        return _error("Escribe qué se detectó", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_SEGUIMIENTO if c in cuerpo}
+    # El responsable llega como texto desde un <select>; la columna es un id.
+    if "responsable_id" in datos:
+        datos["responsable_id"] = int(datos["responsable_id"] or 0) or None
+    sid = db.crear_seguimiento(id_, datos)
+    return jsonify({"ok": True, "id": sid, "seguimiento": db.seguimiento_de(id_)})
+
+
+@app.put("/api/seguimiento/<int:id_>")
+@auth.requiere("beneficiarios", "edicion")
+def editar_seguimiento_(id_):
+    cuerpo = request.get_json(silent=True) or {}
+    datos = {c: cuerpo[c] for c in db.CAMPOS_SEGUIMIENTO if c in cuerpo}
+    if not datos:
+        return _error("No llegó ningún cambio", 400)
+    if "responsable_id" in datos:
+        datos["responsable_id"] = int(datos["responsable_id"] or 0) or None
+    db.editar_seguimiento(id_, datos)
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/seguimiento/<int:id_>")
+@auth.requiere("beneficiarios", "edicion")
+def borrar_seguimiento_(id_):
+    db.borrar_seguimiento(id_)
+    return jsonify({"ok": True})
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  CANAL WEB DE MARCACIÓN FACIAL
+#
+#  Todo esto es AUTOSERVICIO: cada endpoint actúa sobre la persona de la
+#  sesión y sobre nadie más. El personal_id sale de auth.sesion_actual(),
+#  NUNCA del cuerpo de la petición — si viniera de fuera, cualquiera podría
+#  enrolar un rostro ajeno o marcar por un compañero pasando otro id.
+#
+#  Esto además cierra el hueco de "ver solo lo mío": aquí no hace falta
+#  filtrar por permisos de módulo, porque el propio endpoint no sabe hablar
+#  de otra persona que no sea la que está conectada.
+# ══════════════════════════════════════════════════════════════════════════
+
+def _yo():
+    """
+    La ficha de personal de quien está conectado, o un error listo para
+    devolver. En convivencia no hay sesión: el autoservicio no puede
+    funcionar sin saber quién eres, y decirlo claro es mejor que adivinar.
+    """
+    ses = auth.sesion_actual()
+    if not ses:
+        return None, (jsonify({
+            "ok": False, "motivo": "sin_sesion",
+            "error": "Para marcar desde el navegador tienes que entrar con tu "
+                     "usuario: el sistema necesita saber quién eres."}), 401)
+    # Las escrituras del autoservicio no pasan por @auth.requiere, así que
+    # el CSRF se exige aquí: es el punto por el que pasan todas.
+    if not auth.csrf_valido(ses):
+        return None, (jsonify({
+            "ok": False, "motivo": "csrf",
+            "error": "Petición sin token de seguridad válido"}), 403)
+    pid = ses.get("personal_id")
+    if not pid:
+        return None, (jsonify({
+            "ok": False, "motivo": "sin_ficha",
+            "error": "Tu cuenta no está vinculada a una ficha de personal. "
+                     "Avisa a RRHH."}), 400)
+    return pid, None
+
+
+@app.get("/api/consentimiento/rostro")
+def consentimiento_rostro():
+    """El texto que hay que aceptar, y si esta persona ya lo aceptó."""
+    pid, err = _yo()
+    if err:
+        return err
+    vigente = db.consentimiento_vigente(pid, "rostro_web")
+    return jsonify({
+        "ok": True,
+        "version": config.CONSENTIMIENTO_ROSTRO_VERSION,
+        "texto": config.CONSENTIMIENTO_ROSTRO_TEXTO,
+        "aceptado": vigente is not None,
+        # Si aceptó una versión anterior del texto, tiene que volver a
+        # aceptar: no se le puede dar por consentida una redacción que no vio.
+        "version_aceptada": (vigente or {}).get("version", ""),
+        "al_dia": bool(vigente) and vigente["version"] == config.CONSENTIMIENTO_ROSTRO_VERSION,
+        "tiene_rostro": db.rostro_web(pid) is not None,
+    })
+
+
+@app.post("/api/consentimiento/rostro")
+def aceptar_consentimiento_rostro():
+    """
+    Registra la decisión, sea sí o no. Un rechazo también se guarda: hace
+    falta poder demostrar que se preguntó y qué contestó.
+    """
+    pid, err = _yo()
+    if err:
+        return err
+    cuerpo = request.get_json(silent=True) or {}
+    acepta = bool(cuerpo.get("acepto"))
+    db.registrar_consentimiento(
+        pid, acepta,
+        config.CONSENTIMIENTO_ROSTRO_VERSION,
+        config.CONSENTIMIENTO_ROSTRO_TEXTO,
+        tipo="rostro_web", ip=_ip(),
+        agente=request.headers.get("User-Agent", "")[:200],
+    )
+    if not acepta:
+        # Si ya tenía rostro y ahora dice que no, el dato biométrico se va.
+        db.borrar_rostro_web(pid)
+        db.revocar_consentimiento(pid, "rostro_web")
+    log.info(f"consentimiento de rostro web: personal {pid} → "
+             f"{'aceptado' if acepta else 'rechazado'}")
+    return jsonify({"ok": True, "aceptado": acepta})
+
+
+@app.delete("/api/consentimiento/rostro")
+def revocar_consentimiento_rostro():
+    """Retirar el permiso. Se borra el rostro; la constancia se conserva."""
+    pid, err = _yo()
+    if err:
+        return err
+    db.revocar_consentimiento(pid, "rostro_web")
+    db.borrar_rostro_web(pid)
+    log.info(f"consentimiento de rostro web revocado: personal {pid}")
+    return jsonify({"ok": True, "revocado": True})
+
+
+def _validar_descriptor(cuerpo):
+    """
+    Un descriptor válido o un error. Se comprueba la longitud porque comparar
+    vectores de modelos distintos no da un resultado malo: da un resultado
+    sin significado.
+    """
+    d = cuerpo.get("descriptor")
+    if not isinstance(d, list) or not d:
+        return None, "No llegó el descriptor del rostro"
+    if len(d) != config.ROSTRO_WEB_DIMENSION:
+        return None, (f"El descriptor tiene {len(d)} valores y se esperaban "
+                      f"{config.ROSTRO_WEB_DIMENSION}: el navegador está usando "
+                      f"otro modelo del que generó la referencia")
+    try:
+        vector = [float(x) for x in d]
+    except (TypeError, ValueError):
+        return None, "El descriptor tiene valores que no son números"
+    return vector, None
+
+
+@app.post("/api/rostro-web")
+def guardar_rostro_web_():
+    """
+    Guarda el rostro de referencia del canal web.
+
+    Exige consentimiento vigente ANTES de escribir. No es una comprobación
+    de cortesía: sin ella el sistema podría acabar guardando un dato
+    biométrico que nadie autorizó.
+    """
+    pid, err = _yo()
+    if err:
+        return err
+
+    vigente = db.consentimiento_vigente(pid, "rostro_web")
+    if vigente is None:
+        return jsonify({
+            "ok": False, "motivo": "sin_consentimiento",
+            "error": "Antes de registrar tu rostro tienes que aceptar el aviso "
+                     "de tratamiento de datos."}), 403
+    if vigente["version"] != config.CONSENTIMIENTO_ROSTRO_VERSION:
+        return jsonify({
+            "ok": False, "motivo": "consentimiento_antiguo",
+            "error": "El aviso cambió desde que lo aceptaste. Léelo de nuevo "
+                     "y vuelve a aceptarlo."}), 403
+
+    cuerpo = request.get_json(silent=True) or {}
+    vector, problema = _validar_descriptor(cuerpo)
+    if problema:
+        return _error(problema, 400)
+
+    ses = auth.sesion_actual()
+    db.guardar_rostro_web(
+        pid, json.dumps(vector), len(vector),
+        str(cuerpo.get("modelo") or "")[:60],
+        registrado_por=(ses or {}).get("usuario_id"))
+    log.info(f"rostro web registrado para personal {pid}")
+    return jsonify({"ok": True, "registrado": True})
+
+
+@app.delete("/api/rostro-web")
+def borrar_rostro_web_():
+    """Quitar el propio rostro sin revocar el consentimiento."""
+    pid, err = _yo()
+    if err:
+        return err
+    db.borrar_rostro_web(pid)
+    return jsonify({"ok": True})
+
+
+@app.get("/api/rostro-web/pendientes")
+@auth.requiere("asistencia", "vista")
+def rostros_web_pendientes():
+    """
+    Quién falta por enrolar. El segundo enrolamiento se exige a todo el
+    personal desde el lanzamiento, así que hace falta una lista de pendientes
+    para poder agendarlos.
+    """
+    filas = db.rostros_web_registrados()
+    return jsonify({
+        "ok": True,
+        "personal": filas,
+        "con_rostro": len([f for f in filas if f["creado"]]),
+        "total": len(filas),
+    })
+
+
+def _distancia(a, b):
+    """Distancia euclídea. Sin numpy: son 128 números una vez por marca."""
+    return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
+
+
+@app.post("/api/asistencia/web")
+def marcar_por_web():
+    """
+    Marca desde el navegador del propio trabajador.
+
+    El navegador manda el descriptor que acaba de calcular; la comparación se
+    hace AQUÍ. Si la decidiera el navegador, cualquiera podría mandar
+    {"coincide": true} desde la consola y el servidor no tendría forma de
+    saberlo.
+
+    La marca cae en la misma tabla que las del terminal, con canal='web': un
+    solo historial, como se acordó.
+    """
+    pid, err = _yo()
+    if err:
+        return err
+
+    if db.consentimiento_vigente(pid, "rostro_web") is None:
+        return jsonify({"ok": False, "motivo": "sin_consentimiento",
+                        "error": "No tienes el aviso aceptado."}), 403
+
+    guardado = db.rostro_web(pid)
+    if not guardado:
+        return jsonify({
+            "ok": False, "motivo": "sin_rostro",
+            "error": "Todavía no registraste tu rostro para el canal web. "
+                     "RRHH te va a agendar el enrolamiento."}), 409
+
+    cuerpo = request.get_json(silent=True) or {}
+    vector, problema = _validar_descriptor(cuerpo)
+    if problema:
+        return _error(problema, 400)
+
+    referencia = json.loads(guardado["descriptor"])
+    if len(referencia) != len(vector):
+        return jsonify({
+            "ok": False, "motivo": "modelo_distinto",
+            "error": "Tu rostro de referencia se generó con otro modelo. "
+                     "Hay que volver a enrolarlo."}), 409
+
+    dist = _distancia(referencia, vector)
+    if dist > config.ROSTRO_WEB_UMBRAL:
+        log.info(f"marca web rechazada para personal {pid}: distancia {dist:.3f}")
+        return jsonify({
+            "ok": False, "motivo": "no_coincide", "distancia": round(dist, 4),
+            "error": "No pudimos confirmar que eres tú. Prueba con más luz y "
+                     "de frente, o marca en el terminal."}), 401
+
+    identidad = db.identidad_de("personal", pid)
+    if not identidad:
+        return jsonify({
+            "ok": False, "motivo": "sin_identidad",
+            "error": "Tu ficha no tiene número de asistencia asignado. "
+                     "Avisa a RRHH."}), 409
+
+    sn = identidad["staff_number"]
+    ahora = datetime.datetime.now()
+    fecha, hora = ahora.strftime("%Y-%m-%d"), ahora.strftime("%H:%M")
+
+    # Un doble toque en el botón no deja dos marcas seguidas.
+    recientes = db.consultar(
+        """SELECT hora FROM marcas WHERE staff_number = ? AND fecha = ?
+            ORDER BY hora DESC LIMIT 1""", (sn, fecha))
+    if recientes:
+        h, m = (recientes[0]["hora"].split(":") + ["0"])[:2]
+        try:
+            minutos = (ahora.hour * 60 + ahora.minute) - (int(h) * 60 + int(m))
+            if 0 <= minutos < config.ROSTRO_WEB_MINUTOS_ENTRE_MARCAS:
+                return jsonify({
+                    "ok": False, "motivo": "muy_seguida",
+                    "error": f"Ya marcaste a las {recientes[0]['hora']}. "
+                             f"Espera un momento."}), 429
+        except ValueError:
+            pass
+
+    db.guardar_marca(sn, fecha, hora, metodo="facial", canal="web")
+    log.info(f"marca web de personal {pid} ({sn}) a las {hora} · "
+             f"distancia {dist:.3f}")
+    return jsonify({"ok": True, "fecha": fecha, "hora": hora,
+                    "distancia": round(dist, 4), "canal": "web"})
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  RESPONSABLES / TUTORES
+#
+#  Entidad propia: el responsable de un niño casi nunca trabaja en la ONG.
+#  Se registra una vez y se vincula a los beneficiarios que corresponda.
+# ══════════════════════════════════════════════════════════════════════════
+
+@app.get("/api/responsables")
+@auth.requiere("responsables", "vista")
+def listar_responsables():
+    return jsonify({
+        "ok": True,
+        "responsables": db.responsables(
+            incluir_inactivos=request.args.get("todos") == "1",
+            texto=(request.args.get("q") or "").strip()),
+    })
+
+
+@app.get("/api/responsables/<int:id_>")
+@auth.requiere("responsables", "vista")
+def ver_responsable(id_):
+    r = db.responsable(id_)
+    if not r:
+        return _error(f"No existe el responsable {id_}", 404)
+    return jsonify({"ok": True, "responsable": r,
+                    "beneficiarios": db.beneficiarios_de(id_)})
+
+
+@app.post("/api/responsables")
+@auth.requiere("responsables", "edicion")
+def crear_responsable_():
+    cuerpo = request.get_json(silent=True) or {}
+    nombre = str(cuerpo.get("nombre") or "").strip()
+    if not nombre:
+        return _error("El nombre es obligatorio", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_RESPONSABLE if c in cuerpo}
+    datos["nombre"] = nombre
+    # El origen lo fija el servidor: 'manual' aquí siempre. La migración usa
+    # su propia ruta y marca 'migrado', que es lo que permite distinguir
+    # después qué fichas hay que revisar a mano.
+    datos["origen"] = "manual"
+    datos.pop("origen_personal_id", None)
+    rid = db.crear_responsable(datos)
+    return jsonify({"ok": True, "id": rid, "responsable": db.responsable(rid)})
+
+
+@app.put("/api/responsables/<int:id_>")
+@auth.requiere("responsables", "edicion")
+def editar_responsable_(id_):
+    if not db.responsable(id_):
+        return _error(f"No existe el responsable {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    if "nombre" in cuerpo and not str(cuerpo["nombre"]).strip():
+        return _error("El nombre no puede quedar vacío", 400)
+    datos = {c: cuerpo[c] for c in db.CAMPOS_RESPONSABLE if c in cuerpo}
+    datos.pop("origen", None)
+    datos.pop("origen_personal_id", None)
+    if not datos:
+        return _error("No llegó ningún cambio", 400)
+    db.editar_responsable(id_, datos)
+    return jsonify({"ok": True, "responsable": db.responsable(id_)})
+
+
+@app.delete("/api/responsables/<int:id_>")
+@auth.requiere("responsables", "edicion")
+def borrar_responsable_(id_):
+    r = db.responsable(id_)
+    if not r:
+        return _error(f"No existe el responsable {id_}", 404)
+    vinculos = db.beneficiarios_de(id_)
+    db.borrar_responsable(id_)
+    log.info(f"responsable '{r['nombre']}' eliminado ({len(vinculos)} vínculo(s))")
+    return jsonify({"ok": True, "vinculos_retirados": len(vinculos)})
+
+
+# ── El vínculo ────────────────────────────────────────────────────────────
+
+@app.get("/api/beneficiarios/<int:id_>/responsables")
+@auth.requiere("beneficiarios", "vista")
+def responsables_del_beneficiario(id_):
+    if not db.beneficiario(id_):
+        return _error(f"No existe el beneficiario {id_}", 404)
+    return jsonify({"ok": True, "responsables": db.responsables_de(id_)})
+
+
+@app.post("/api/beneficiarios/<int:id_>/responsables")
+@auth.requiere("beneficiarios", "edicion")
+def vincular_responsable(id_):
+    """
+    Vincula un responsable que YA existe. No se crea aquí una ficha nueva a
+    partir de un nombre suelto: sería la puerta de entrada a tener tres
+    'Rosa Huamán' distintas, que es justo lo que la entidad propia evita.
+    """
+    if not db.beneficiario(id_):
+        return _error(f"No existe el beneficiario {id_}", 404)
+    cuerpo = request.get_json(silent=True) or {}
+    try:
+        rid = int(cuerpo.get("responsable_id") or 0)
+    except (TypeError, ValueError):
+        return _error("Falta el responsable", 400)
+    if not db.responsable(rid):
+        return _error("Ese responsable no existe. Regístralo primero en "
+                      "Responsables / Tutores", 400)
+
+    datos = {c: cuerpo[c] for c in db.CAMPOS_VINCULO if c in cuerpo}
+    for bandera in ("es_principal", "es_legal", "puede_recoger", "es_emergencia"):
+        if bandera in datos:
+            datos[bandera] = 1 if datos[bandera] else 0
+
+    # Un solo responsable principal por beneficiario: si se marca uno nuevo,
+    # el anterior deja de serlo. Dos "principales" no significan nada.
+    if datos.get("es_principal"):
+        for otro in db.responsables_de(id_):
+            if otro["responsable_id"] != rid and otro["es_principal"]:
+                db.vincular(otro["responsable_id"], id_, {"es_principal": 0})
+
+    db.vincular(rid, id_, datos)
+    return jsonify({"ok": True, "responsables": db.responsables_de(id_)})
+
+
+@app.delete("/api/beneficiarios/<int:id_>/responsables/<int:rid>")
+@auth.requiere("beneficiarios", "edicion")
+def desvincular_responsable(id_, rid):
+    db.desvincular(rid, id_)
+    return jsonify({"ok": True, "responsables": db.responsables_de(id_)})
+
+
 @app.get("/api/identidades")
 @auth.requiere("asistencia", "vista")
 def listar_identidades():
@@ -1184,6 +2149,47 @@ def cancelar_enrolamiento(staff_number):
 def asistencia():
     fecha = request.args.get("fecha") or date.today().isoformat()
     return jsonify({"ok": True, "fecha": fecha, "filas": db.marcas_de(fecha)})
+
+
+@app.get("/api/asistencia/resumen")
+@auth.requiere("asistencia", "vista")
+def resumen_asistencia():
+    """
+    Los números del panel de Asistencia, de una sola llamada.
+
+    'esperados' son las personas enroladas en el terminal: son las únicas de
+    las que puede haber marca. Alguien con ficha pero sin enrolar no está
+    ausente — es que todavía no puede marcar, y por eso se cuenta aparte.
+
+    No se calcula 'tardanzas': haría falta el horario de cada persona, que
+    hoy no se guarda en ninguna parte. Se omite en vez de inventarlo.
+    """
+    fecha = request.args.get("fecha") or date.today().isoformat()
+    filas = db.marcas_de(fecha)
+
+    presentes = [f for f in filas if f.get("entrada")]
+    completas = [f for f in filas if f.get("salida")]
+    sin_marcar = [f for f in filas if not f.get("entrada")]
+    candidatos = db.sin_enrolar()
+
+    permisos_hoy = [
+        s for s in db.solicitudes(estado="aprobada")
+        if s["desde"] <= fecha <= s["hasta"]
+    ]
+    por_resolver = db.resumen_solicitudes().get("por_resolver", 0)
+
+    return jsonify({
+        "ok": True,
+        "fecha": fecha,
+        "esperados": len(filas),
+        "presentes": len(presentes),
+        "jornada_cerrada": len(completas),
+        "sin_marcar": len(sin_marcar),
+        # Quien tiene ficha y todavía no puede marcar. No es una ausencia.
+        "sin_enrolar": len(candidatos),
+        "con_permiso": len(permisos_hoy),
+        "permisos_por_resolver": por_resolver,
+    })
 
 
 @app.get("/api/asistencia/rango")

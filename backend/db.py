@@ -120,20 +120,190 @@ CREATE TABLE IF NOT EXISTS beneficiarios (
     plan_vida    TEXT DEFAULT ''
 );
 
+-- ─────────────────────────────────────────────────────────────────────────
+-- RESPONSABLES / TUTORES
+--
+-- Entidad propia, no una fila de 'personal'. Un responsable es la madre, la
+-- abuela o el hermano mayor de un beneficiario: no trabaja aquí, no cobra, no
+-- marca en el terminal. Meterlo en 'personal' obligaba a inventarle cargo y
+-- área, y lo hacía aparecer en el directorio del equipo.
+-- ─────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS responsables (
+    id          INTEGER PRIMARY KEY,
+    codigo      TEXT DEFAULT '',
+    nombre      TEXT NOT NULL,
+    documento   TEXT DEFAULT '',
+    fecha_nac   TEXT DEFAULT '',
+    sexo        TEXT DEFAULT '',
+    nacionalidad TEXT DEFAULT '',
+    estado      TEXT DEFAULT 'activo',
+
+    -- Contacto
+    telefono    TEXT DEFAULT '',
+    telefono_alt TEXT DEFAULT '',
+    correo      TEXT DEFAULT '',
+    departamento TEXT DEFAULT '',
+    provincia   TEXT DEFAULT '',
+    distrito    TEXT DEFAULT '',
+    direccion   TEXT DEFAULT '',
+    referencia  TEXT DEFAULT '',
+
+    -- Situación laboral. Alimenta la ficha socioeconómica del beneficiario,
+    -- así que vive aquí una sola vez y no repetida en cada niño.
+    ocupacion         TEXT DEFAULT '',
+    situacion_laboral TEXT DEFAULT '',
+    centro_trabajo    TEXT DEFAULT '',
+    tipo_trabajo      TEXT DEFAULT '',
+    rango_ingresos    TEXT DEFAULT '',
+    personas_a_cargo  INTEGER DEFAULT 0,
+
+    nota    TEXT DEFAULT '',
+    creado  TEXT DEFAULT (datetime('now','localtime')),
+
+    -- De dónde salió esta ficha. 'migrado' marca las que vinieron de
+    -- 'personal' y conviene revisar a mano; queda escrito en la propia fila
+    -- para que la revisión no dependa de acordarse.
+    origen  TEXT DEFAULT 'manual',
+    origen_personal_id INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_responsables_doc ON responsables(documento);
+
+-- El vínculo. Los campos describen la RELACIÓN, no a la persona: la misma
+-- señora puede ser abuela y responsable legal de un nieto, y solo contacto de
+-- emergencia de otro.
+CREATE TABLE IF NOT EXISTS responsable_beneficiario (
+    id              INTEGER PRIMARY KEY,
+    responsable_id  INTEGER NOT NULL REFERENCES responsables(id) ON DELETE CASCADE,
+    beneficiario_id INTEGER NOT NULL REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    parentesco      TEXT DEFAULT '',
+    es_principal    INTEGER DEFAULT 0,
+    es_legal        INTEGER DEFAULT 0,
+    puede_recoger   INTEGER DEFAULT 0,
+    es_emergencia   INTEGER DEFAULT 0,
+    nota            TEXT DEFAULT '',
+    creado          TEXT DEFAULT (datetime('now','localtime')),
+    -- Un responsable no puede estar dos veces sobre el mismo niño.
+    UNIQUE (responsable_id, beneficiario_id)
+);
+CREATE INDEX IF NOT EXISTS idx_rb_benef ON responsable_beneficiario(beneficiario_id);
+CREATE INDEX IF NOT EXISTS idx_rb_resp  ON responsable_beneficiario(responsable_id);
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- SERIES EN EL TIEMPO
+--
+-- Lo que no cabe en una columna porque son varios registros por persona y su
+-- valor está en la secuencia, no en el último.
+-- ─────────────────────────────────────────────────────────────────────────
+
+-- Cada año escolar de un beneficiario. La ficha guarda el año en curso; aquí
+-- queda la evolución, que es lo que responde "¿repitió?, ¿mejoró?".
+CREATE TABLE IF NOT EXISTS historial_educativo (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    beneficiario_id INTEGER NOT NULL REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    anio            TEXT DEFAULT '',
+    institucion     TEXT DEFAULT '',
+    nivel           TEXT DEFAULT '',
+    grado           TEXT DEFAULT '',
+    seccion         TEXT DEFAULT '',
+    situacion       TEXT DEFAULT '',   -- aprobado, repitió, retirado
+    rendimiento     TEXT DEFAULT '',
+    asistencia      TEXT DEFAULT '',
+    nota            TEXT DEFAULT '',
+    creado          TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_hist_edu ON historial_educativo(beneficiario_id, anio);
+
+-- Seguimiento social: cada visita o intervención. Distinto de
+-- 'sesiones_acompanamiento', que es el acompañamiento psicológico; esto es el
+-- historial de situaciones detectadas y qué se hizo con cada una.
+CREATE TABLE IF NOT EXISTS seguimiento (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    beneficiario_id INTEGER NOT NULL REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    fecha           TEXT NOT NULL,
+    -- Quién lo hizo, apuntando a la ficha de personal: si se guardara el
+    -- nombre como texto acabarían conviviendo tres formas de escribirlo.
+    responsable_id  INTEGER REFERENCES personal(id) ON DELETE SET NULL,
+    tipo            TEXT DEFAULT '',
+    situacion       TEXT DEFAULT '',   -- qué se detectó
+    accion          TEXT DEFAULT '',   -- qué se hizo
+    compromisos     TEXT DEFAULT '',
+    nota            TEXT DEFAULT '',
+    proxima_fecha   TEXT DEFAULT '',
+    creado          TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_seguimiento ON seguimiento(beneficiario_id, fecha);
+
+-- Programas en los que participa un beneficiario. La gestión de programas
+-- vivirá en su propio módulo; aquí solo se guarda el vínculo, así que el
+-- nombre va como texto a propósito: todavía no hay tabla 'programas' a la que
+-- apuntar, y fabricar una vacía sería adivinar su forma.
+CREATE TABLE IF NOT EXISTS programas_beneficiario (
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    beneficiario_id INTEGER NOT NULL REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    programa        TEXT NOT NULL,
+    fecha_ingreso   TEXT DEFAULT '',
+    fecha_salida    TEXT DEFAULT '',
+    estado          TEXT DEFAULT 'activo',
+    nota            TEXT DEFAULT '',
+    creado          TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_prog_benef ON programas_beneficiario(beneficiario_id);
+
+-- Formación académica del personal.
+CREATE TABLE IF NOT EXISTS formacion (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    personal_id INTEGER NOT NULL REFERENCES personal(id) ON DELETE CASCADE,
+    nivel       TEXT DEFAULT '',   -- secundaria, técnico, universitario…
+    institucion TEXT DEFAULT '',
+    carrera     TEXT DEFAULT '',
+    grado       TEXT DEFAULT '',   -- bachiller, titulado, egresado
+    anio_inicio TEXT DEFAULT '',
+    anio_fin    TEXT DEFAULT '',
+    -- Los cursos y certificaciones caben aquí mismo con nivel='curso': son la
+    -- misma forma de dato y separarlos duplicaría la tabla sin ganar nada.
+    nota        TEXT DEFAULT '',
+    creado      TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_formacion ON formacion(personal_id);
+
+-- Experiencia laboral anterior del personal.
+CREATE TABLE IF NOT EXISTS experiencia (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    personal_id INTEGER NOT NULL REFERENCES personal(id) ON DELETE CASCADE,
+    empresa     TEXT DEFAULT '',
+    cargo       TEXT DEFAULT '',
+    desde       TEXT DEFAULT '',
+    hasta       TEXT DEFAULT '',
+    funciones   TEXT DEFAULT '',
+    nota        TEXT DEFAULT '',
+    creado      TEXT DEFAULT (datetime('now','localtime'))
+);
+CREATE INDEX IF NOT EXISTS idx_experiencia ON experiencia(personal_id);
+
 -- Capa compartida: lo único que personal y beneficiarios tienen en común.
 CREATE TABLE IF NOT EXISTS identidades (
     staff_number    INTEGER PRIMARY KEY,   -- el ID en yunatt/terminal, >= 9000
     personal_id     INTEGER REFERENCES personal(id)      ON DELETE CASCADE,
     beneficiario_id INTEGER REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    -- Los tutores son una entidad propia, no una fila de 'personal': no
+    -- trabajan aquí. Por eso tienen columna propia en vez de colarse por la
+    -- de personal. Las bases anteriores a esto se arreglan con
+    -- backend/migrar_identidades.py, porque un CHECK no se puede alterar.
+    responsable_id  INTEGER REFERENCES responsables(id)  ON DELETE CASCADE,
     metodo          TEXT DEFAULT 'facial',   -- facial | huella | ambos
     estado          TEXT DEFAULT 'pendiente',-- pendiente | esperando | enrolado | error
     tiene_rostro    INTEGER DEFAULT 0,
     tiene_huella    INTEGER DEFAULT 0,
     detalle         TEXT DEFAULT '',
     creado          TEXT DEFAULT (datetime('now','localtime')),
-    CHECK ((personal_id IS NOT NULL) + (beneficiario_id IS NOT NULL) = 1),
+    -- Exactamente un dueño. Con cero la identidad no apunta a nadie; con
+    -- dos no habría forma de saber quién marcó.
+    CHECK ((personal_id     IS NOT NULL)
+         + (beneficiario_id IS NOT NULL)
+         + (responsable_id  IS NOT NULL) = 1),
     UNIQUE (personal_id),
-    UNIQUE (beneficiario_id)
+    UNIQUE (beneficiario_id),
+    UNIQUE (responsable_id)
 );
 
 -- [UN SOLO DISPOSITIVO] no se guarda de qué terminal vino cada marca.
@@ -144,8 +314,61 @@ CREATE TABLE IF NOT EXISTS marcas (
     fecha        TEXT NOT NULL,
     hora         TEXT NOT NULL,
     metodo       TEXT DEFAULT 'facial',
+    -- De dónde vino: 'terminal' es el Timmy; 'web' es el navegador del propio
+    -- trabajador. Ambos canales terminan en ESTA tabla a propósito —un solo
+    -- historial— pero se puede saber cuál fue cada marca.
+    canal        TEXT DEFAULT 'terminal',
     UNIQUE (staff_number, fecha, hora)
 );
+
+-- ─────────────────────────────────────────────────────────────────────────
+-- CANAL WEB: ROSTRO DE REFERENCIA Y CONSENTIMIENTO
+--
+-- El enrolamiento del Timmy guarda su plantilla DENTRO del dispositivo y de
+-- la nube de yunatt: no es legible desde aquí ni sirve para comparar en un
+-- navegador. El canal web necesita su propia referencia, y por eso cada
+-- trabajador pasa por dos enrolamientos.
+-- ─────────────────────────────────────────────────────────────────────────
+CREATE TABLE IF NOT EXISTS rostros_web (
+    personal_id INTEGER PRIMARY KEY REFERENCES personal(id) ON DELETE CASCADE,
+
+    -- El descriptor: un vector de números en JSON. NO es una imagen y no se
+    -- reconstruye una cara con él. La foto se procesa en el navegador del
+    -- trabajador y se descarta ahí; nunca llega al servidor ni a esta tabla.
+    descriptor  TEXT NOT NULL,
+    dimension   INTEGER DEFAULT 0,   -- longitud del vector, para validar
+    modelo      TEXT DEFAULT '',     -- qué modelo lo generó: si cambia, hay
+                                     -- que reenrolar, no comparar a ciegas
+    creado      TEXT DEFAULT (datetime('now','localtime')),
+    actualizado TEXT DEFAULT (datetime('now','localtime')),
+
+    -- Quién hizo el enrolamiento. En el canal web lo hace la propia persona,
+    -- pero puede acompañarla RRHH en la sesión que agenden.
+    registrado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
+);
+
+-- El consentimiento. Vive aparte del rostro a propósito: si mañana se borra
+-- el descriptor, la constancia de que se pidió permiso NO debe irse con él.
+CREATE TABLE IF NOT EXISTS consentimientos (
+    id          INTEGER PRIMARY KEY AUTOINCREMENT,
+    personal_id INTEGER NOT NULL REFERENCES personal(id) ON DELETE CASCADE,
+    tipo        TEXT NOT NULL DEFAULT 'rostro_web',
+    aceptado    INTEGER NOT NULL DEFAULT 0,   -- 0 = lo rechazó, y eso también consta
+
+    -- El texto EXACTO que la persona leyó, copiado aquí. Si mañana se
+    -- reescribe el aviso, este registro sigue diciendo a qué dijo sí.
+    version     TEXT DEFAULT '',
+    texto       TEXT DEFAULT '',
+
+    cuando      TEXT DEFAULT (datetime('now','localtime')),
+    ip          TEXT DEFAULT '',
+    agente      TEXT DEFAULT '',
+    -- Se guarda el histórico completo: revocar es un registro nuevo, no
+    -- borrar el anterior.
+    revocado_el TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_consent_persona
+    ON consentimientos(personal_id, tipo);
 
 -- Documentos y contratos del personal. Una sola tabla con 'tipo' porque
 -- comparten todos los campos (nombre, emisión, vencimiento, estado) y solo
@@ -241,7 +464,11 @@ CREATE INDEX IF NOT EXISTS idx_boletas_periodo ON boletas(periodo, estado);
 CREATE TABLE IF NOT EXISTS solicitudes (
     id             INTEGER PRIMARY KEY AUTOINCREMENT,
     personal_id    INTEGER NOT NULL REFERENCES personal(id) ON DELETE CASCADE,
-    tipo           TEXT NOT NULL DEFAULT 'vacaciones', -- vacaciones|permiso|licencia
+    -- vacaciones: se generan por antigüedad y salen de un saldo.
+    -- personal | familiar | medico | licencia | otro: no tienen saldo.
+    -- Las bases anteriores a esto se arreglan con
+    -- backend/migrar_tipos_permiso.py, porque un CHECK no se puede alterar.
+    tipo           TEXT NOT NULL DEFAULT 'otro',
     desde          TEXT NOT NULL,          -- 'YYYY-MM-DD'
     hasta          TEXT NOT NULL,
     motivo         TEXT DEFAULT '',
@@ -254,7 +481,7 @@ CREATE TABLE IF NOT EXISTS solicitudes (
     resuelto_el    TEXT DEFAULT '',
     nota           TEXT DEFAULT '',        -- motivo del rechazo o comentario
     creado         TEXT DEFAULT (datetime('now','localtime')),
-    CHECK (tipo IN ('vacaciones','permiso','licencia')),
+    CHECK (tipo IN ('vacaciones','personal','familiar','medico','licencia','otro')),
     CHECK (estado IN ('pendiente','pendiente_admin','aprobada','rechazada','cancelada')),
     CHECK (hasta >= desde)
 );
@@ -409,18 +636,110 @@ CREATE TABLE IF NOT EXISTS parametros (
 -- no tengan que ramificar según el tipo.
 CREATE VIEW IF NOT EXISTS v_identidades AS
 SELECT i.staff_number, i.metodo, i.estado, i.tiene_rostro, i.tiene_huella,
-       i.detalle, i.creado, i.personal_id, i.beneficiario_id,
-       CASE WHEN i.personal_id IS NOT NULL THEN 'personal' ELSE 'beneficiario' END AS tipo,
-       COALESCE(p.nombre, b.nombre)       AS nombre,
-       COALESCE(p.documento, b.documento) AS documento,
+       i.detalle, i.creado,
+       i.personal_id, i.beneficiario_id, i.responsable_id,
+       CASE WHEN i.personal_id     IS NOT NULL THEN 'personal'
+            WHEN i.beneficiario_id IS NOT NULL THEN 'beneficiario'
+            ELSE 'responsable' END          AS tipo,
+
+       -- LA definición de «enrolado», y la única.
+       --
+       -- No es "tiene fila": la fila se crea al pedir el enrolamiento,
+       -- antes de mandarle nada al terminal. Tampoco es estado='enrolado':
+       -- ese campo cuenta cómo fue la conversación con TIMMY, y una
+       -- captura puede quedarse a medias sin que nadie la cierre.
+       --
+       -- Enrolado es lo que el terminal confirmó que guardó. Sin rostro ni
+       -- huella esa persona no puede marcar, y decir lo contrario es
+       -- informar en falso sobre alguien real.
+       CASE WHEN i.tiene_rostro = 1 OR i.tiene_huella = 1
+            THEN 1 ELSE 0 END               AS enrolado,
+       COALESCE(p.nombre,    b.nombre,    r.nombre)    AS nombre,
+       COALESCE(p.documento, b.documento, r.documento) AS documento,
        CASE WHEN i.beneficiario_id IS NOT NULL THEN 'ninos'
-            WHEN p.vinculo = 'voluntario'  THEN NULL     -- solo aparece en General
-            ELSE p.ambito END              AS ambito,
+            -- Los tutores no pertenecen a ningún ámbito: no trabajan aquí.
+            WHEN i.responsable_id  IS NOT NULL THEN NULL
+            WHEN p.vinculo = 'voluntario'      THEN NULL  -- solo en General
+            ELSE p.ambito END                 AS ambito,
        p.vinculo, p.cargo, p.area, p.sede,
        b.casa, b.sala, b.grado
   FROM identidades i
   LEFT JOIN personal      p ON p.id = i.personal_id
-  LEFT JOIN beneficiarios b ON b.id = i.beneficiario_id;
+  LEFT JOIN beneficiarios b ON b.id = i.beneficiario_id
+  LEFT JOIN responsables  r ON r.id = i.responsable_id;
+
+-- ══════════════════════════════════════════════════════════════════════
+--  El formulario público de tutores
+-- ══════════════════════════════════════════════════════════════════════
+
+-- Un enlace entregado a una familia. El token viaja dentro de la
+-- dirección; al volver, dice de quién es la respuesta.
+--
+-- El token IDENTIFICA, no autentica: Google Forms sin sesión no puede
+-- impedir que alguien borre o cambie ese campo. Por eso una respuesta con
+-- token desconocido no se rechaza en silencio — entra a la bandeja
+-- marcada, y decide una persona.
+CREATE TABLE IF NOT EXISTS invitaciones (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    token          TEXT NOT NULL UNIQUE,
+
+    -- A quién se le dio. Si la ficha ya existe, apunta a ella y la
+    -- respuesta servirá para actualizarla. Si todavía no existe, va la
+    -- etiqueta a mano ("Familia Quispe") para saber a quién se entregó.
+    responsable_id INTEGER REFERENCES responsables(id) ON DELETE SET NULL,
+    etiqueta       TEXT DEFAULT '',
+
+    creada         TEXT DEFAULT (datetime('now','localtime')),
+    creada_por     INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+
+    -- Un enlace que se filtra deja de servir solo. Sin fecha de fin,
+    -- cualquier copia reenviada seguiría abierta para siempre.
+    caduca         TEXT NOT NULL,
+
+    -- Cuándo llegó la respuesta. Una invitación usada no vuelve a servir.
+    usada          TEXT DEFAULT '',
+
+    estado         TEXT NOT NULL DEFAULT 'vigente'
+                   CHECK (estado IN ('vigente','usada','anulada')),
+    nota           TEXT DEFAULT ''
+);
+CREATE INDEX IF NOT EXISTS idx_invit_token ON invitaciones(token);
+CREATE INDEX IF NOT EXISTS idx_invit_resp  ON invitaciones(responsable_id);
+
+-- Lo que llegó del formulario. NO es una ficha: es lo que alguien escribió,
+-- esperando a que una persona lo revise.
+CREATE TABLE IF NOT EXISTS respuestas_formulario (
+    id             INTEGER PRIMARY KEY AUTOINCREMENT,
+    origen         TEXT NOT NULL DEFAULT 'google_forms',
+    recibida       TEXT DEFAULT (datetime('now','localtime')),
+
+    -- La fila tal y como venía, sin tocar. Si mañana se descubre que la
+    -- limpieza se equivocaba en algo, el original sigue aquí.
+    cruda          TEXT DEFAULT '',
+    -- Lo mismo después de normalizar, que es lo que se propone guardar.
+    normalizada    TEXT DEFAULT '',
+
+    token          TEXT DEFAULT '',
+    invitacion_id  INTEGER REFERENCES invitaciones(id) ON DELETE SET NULL,
+
+    -- 1 autorizó, 0 dijo que no. Una respuesta con 0 no se puede ingresar
+    -- de ninguna manera; solo descartarse.
+    consentimiento INTEGER NOT NULL DEFAULT 0,
+
+    estado         TEXT NOT NULL DEFAULT 'por_revisar'
+                   CHECK (estado IN ('por_revisar','ingresada','descartada')),
+    motivo         TEXT DEFAULT '',
+
+    responsable_id INTEGER REFERENCES responsables(id) ON DELETE SET NULL,
+    resuelta       TEXT DEFAULT '',
+    resuelta_por   INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+
+    -- Huella de la fila de origen. Evita que traer las respuestas dos
+    -- veces duplique lo mismo: es la misma fila, no una respuesta nueva.
+    huella         TEXT NOT NULL UNIQUE
+);
+CREATE INDEX IF NOT EXISTS idx_resp_form_estado ON respuestas_formulario(estado);
+CREATE INDEX IF NOT EXISTS idx_resp_form_token  ON respuestas_formulario(token);
 """
 
 
@@ -461,6 +780,37 @@ _COLUMNAS_NUEVAS = {
         "direccion":           "TEXT DEFAULT ''",
         "emergencia_nombre":   "TEXT DEFAULT ''",
         "emergencia_telefono": "TEXT DEFAULT ''",
+        # Ficha completa (paso 4)
+        "sexo":                  "TEXT DEFAULT ''",
+        "nacionalidad":          "TEXT DEFAULT ''",
+        "lugar_nacimiento":      "TEXT DEFAULT ''",
+        "jornada":               "TEXT DEFAULT ''",
+        "estado_laboral":        "TEXT DEFAULT ''",
+        "departamento":          "TEXT DEFAULT ''",
+        "provincia":             "TEXT DEFAULT ''",
+        "distrito":              "TEXT DEFAULT ''",
+        # Fecha de alta. Las filas anteriores quedan en NULL a propósito:
+        # darles la fecha de la migración las contaría como altas de ese día
+        # y el panel informaría de ingresos que nunca ocurrieron.
+        "creado":                "TEXT DEFAULT NULL",
+        # Campos que alguien declaró «sin dato por ahora». Ver _sin_dato().
+        "sin_dato":              "TEXT DEFAULT ''",
+    },
+    "marcas": {
+        # Las marcas anteriores a esta columna vinieron todas del terminal:
+        # el canal web no existía. El valor por defecto es correcto, no una
+        # suposición cómoda.
+        "canal": "TEXT DEFAULT 'terminal'",
+    },
+    "responsables": {
+        "sin_dato": "TEXT DEFAULT ''",   # ver _sin_dato()
+        # La foto se guarda en disco; aquí solo va su nombre interno y lo
+        # que hace falta para servirla sin abrir el archivo. Ver fotos.py.
+        "foto":       "TEXT DEFAULT NULL",
+        "foto_mime":  "TEXT DEFAULT NULL",
+        "foto_tam":   "INTEGER DEFAULT NULL",
+        "foto_ancho": "INTEGER DEFAULT NULL",
+        "foto_alto":  "INTEGER DEFAULT NULL",
     },
     "documentos": {
         "archivo":        "TEXT DEFAULT ''",
@@ -471,6 +821,13 @@ _COLUMNAS_NUEVAS = {
     # SQLite admite ADD COLUMN con REFERENCES siempre que el valor por
     # defecto sea NULL, que es el caso de tutor_id y psicologo_id.
     "beneficiarios": {
+        # OJO: este diccionario tenía DOS claves "beneficiarios". En Python la
+        # segunda gana y la primera desaparece sin error, así que la columna
+        # 'creado' que vivía en la otra nunca llegó a la base: el panel de
+        # Gestión de Personas contaba altas de una columna inexistente.
+        # Todo lo de esta tabla va aquí, en un solo bloque.
+        "creado":                "TEXT DEFAULT NULL",   # ver personal.creado
+        "sin_dato":              "TEXT DEFAULT ''",     # ver _sin_dato()
         "procedencia":           "TEXT DEFAULT ''",
         "lengua_materna":        "TEXT DEFAULT ''",
         "via_ingreso":           "TEXT DEFAULT ''",
@@ -488,6 +845,45 @@ _COLUMNAS_NUEVAS = {
         "tutor_id":              "INTEGER REFERENCES personal(id) ON DELETE SET NULL",
         "psicologo_id":          "INTEGER REFERENCES personal(id) ON DELETE SET NULL",
         "plan_vida":             "TEXT DEFAULT ''",
+        # ── Ficha completa (paso 4) ──────────────────────────────────────
+        # Todas son un solo valor vigente: lo que es serie en el tiempo vive
+        # en sus propias tablas (historial_educativo, seguimiento…).
+        "codigo":                    "TEXT DEFAULT ''",
+        "sexo":                      "TEXT DEFAULT ''",
+        "nacionalidad":              "TEXT DEFAULT ''",
+        "lugar_nacimiento":          "TEXT DEFAULT ''",
+        "departamento":              "TEXT DEFAULT ''",
+        "provincia":                 "TEXT DEFAULT ''",
+        "distrito":                  "TEXT DEFAULT ''",
+        "direccion":                 "TEXT DEFAULT ''",
+        "referencia":                "TEXT DEFAULT ''",
+        "tipo_vivienda":             "TEXT DEFAULT ''",
+        "servicios_basicos":         "TEXT DEFAULT ''",
+        "domicilio_del_responsable": "INTEGER DEFAULT 0",
+        "nivel_educativo":           "TEXT DEFAULT ''",
+        "seccion":                   "TEXT DEFAULT ''",
+        "turno":                     "TEXT DEFAULT ''",
+        "anio_academico":            "TEXT DEFAULT ''",
+        "situacion_academica":       "TEXT DEFAULT ''",
+        "asistencia_escolar":        "TEXT DEFAULT ''",
+        "dificultades":              "TEXT DEFAULT ''",
+        "nota_educativa":            "TEXT DEFAULT ''",
+        "tipo_seguro":               "TEXT DEFAULT ''",
+        "centro_salud":              "TEXT DEFAULT ''",
+        "discapacidad":              "TEXT DEFAULT ''",
+        "necesidades_especiales":    "TEXT DEFAULT ''",
+        "info_medica":               "TEXT DEFAULT ''",
+        "emergencia_nombre":         "TEXT DEFAULT ''",
+        "emergencia_telefono":       "TEXT DEFAULT ''",
+        "nota_salud":                "TEXT DEFAULT ''",
+        "integrantes_hogar":         "INTEGER DEFAULT 0",
+        "hermanos":                  "INTEGER DEFAULT 0",
+        "con_quien_vive":            "TEXT DEFAULT ''",
+        "responsable_economico":     "TEXT DEFAULT ''",
+        "tenencia_vivienda":         "TEXT DEFAULT ''",
+        "rango_ingresos":            "TEXT DEFAULT ''",
+        "personas_dependientes":     "INTEGER DEFAULT 0",
+        "nota_socioeconomica":       "TEXT DEFAULT ''",
     },
 }
 
@@ -514,6 +910,11 @@ def iniciar():
                 "SELECT staff_number, fecha, hora, metodo FROM marcas")]
             con.execute("DROP TABLE marcas")
 
+        # Las vistas se rehacen siempre. No guardan datos —son consultas
+        # con nombre— y con IF NOT EXISTS una base ya creada conserva la
+        # definición vieja en silencio. Así una corrección de la vista
+        # llega a todas las bases sin migración aparte.
+        con.execute("DROP VIEW IF EXISTS v_identidades")
         con.executescript(ESQUEMA)
         _asegurar_columnas(con)
         _sembrar_personal(con)
@@ -788,9 +1189,9 @@ def personal(incluir_inactivos=False):
     donde = "" if incluir_inactivos else "WHERE p.estado = 'activo'"
     return consultar(
         f"""SELECT p.*, i.staff_number, i.estado AS estado_biometrico,
-                   i.metodo, i.tiene_rostro, i.tiene_huella
+                   i.metodo, i.tiene_rostro, i.tiene_huella, i.enrolado
               FROM personal p
-              LEFT JOIN identidades i ON i.personal_id = p.id
+              LEFT JOIN v_identidades i ON i.personal_id = p.id
               {donde}
              ORDER BY p.nivel, p.id"""
     )
@@ -799,9 +1200,9 @@ def personal(incluir_inactivos=False):
 def persona_personal(id_):
     filas = consultar(
         """SELECT p.*, i.staff_number, i.estado AS estado_biometrico,
-                  i.metodo, i.tiene_rostro, i.tiene_huella
+                  i.metodo, i.tiene_rostro, i.tiene_huella, i.enrolado
              FROM personal p
-             LEFT JOIN identidades i ON i.personal_id = p.id
+             LEFT JOIN v_identidades i ON i.personal_id = p.id
             WHERE p.id = ?""",
         (int(id_),),
     )
@@ -812,15 +1213,47 @@ CAMPOS_PERSONAL = ("nombre", "documento", "cargo", "area", "sede", "ambito",
                    "vinculo", "contrato", "fecha_ingreso", "fecha_nac",
                    "jefe_id", "estado",
                    "email", "telefono", "direccion",
-                   "emergencia_nombre", "emergencia_telefono")
+                   "emergencia_nombre", "emergencia_telefono",
+                   # ── Hoja de Vida (paso 4) ────────────────────────────
+                   # La antigüedad no está: se calcula de fecha_ingreso, por
+                   # lo mismo que la edad del beneficiario sale de su fecha
+                   # de nacimiento y no se guarda.
+                   "sexo", "nacionalidad", "lugar_nacimiento",
+                   "jornada", "estado_laboral",
+                   "departamento", "provincia", "distrito",
+                   "sin_dato")
+
+
+_COLUMNAS_VISTAS = {}
+
+
+def _tiene_columna(con, tabla, columna):
+    """
+    ¿Existe la columna? Se consulta una vez por tabla y se recuerda.
+
+    Hace falta porque la fecha de alta es una columna añadida después: una
+    base que todavía no pasó por iniciar() no la tiene, y no vale tumbar el
+    alta de una persona por un dato de control. Sin columna se guarda igual,
+    solo que sin fecha.
+    """
+    if tabla not in _COLUMNAS_VISTAS:
+        _COLUMNAS_VISTAS[tabla] = {
+            f[1] for f in con.execute(f"PRAGMA table_info({tabla})")}
+    return columna in _COLUMNAS_VISTAS[tabla]
 
 
 def crear_personal(datos):
+        # La fecha de alta la pone la base, no quien llama: si viniera en
+        # los datos, una importación podría fecharlo todo el mismo día.
     campos = [c for c in CAMPOS_PERSONAL if c in datos]
     marcas_ = ", ".join("?" for _ in campos)
     with _lock, _conectar() as con:
+        hay = _tiene_columna(con, "personal", "creado")
+        fecha_col = ", creado" if hay else ""
+        fecha_val = ", datetime('now','localtime')" if hay else ""
         cur = con.execute(
-            f"INSERT INTO personal ({', '.join(campos)}) VALUES ({marcas_})",
+            f"INSERT INTO personal ({', '.join(campos)}{fecha_col}) "
+            f"VALUES ({marcas_}{fecha_val})",
             tuple(datos[c] for c in campos),
         )
         con.commit()
@@ -852,7 +1285,27 @@ CAMPOS_BENEFICIARIO = ("nombre", "documento", "fecha_nac", "casa", "sala",
                        "referente_familiar", "regimen_visitas",
                        "institucion_educativa", "rendimiento", "refuerzo_escolar",
                        "seguro", "alergias", "control_medico", "tratamiento",
-                       "tutor_id", "psicologo_id", "plan_vida")
+                       "tutor_id", "psicologo_id", "plan_vida",
+                       # ── Ficha completa (paso 4) ──────────────────────
+                       # La EDAD no está aquí a propósito: se calcula de
+                       # fecha_nac. Guardarla sería un dato que envejece mal,
+                       # correcto el día que se escribe y falso al siguiente
+                       # cumpleaños.
+                       "codigo", "sexo", "nacionalidad", "lugar_nacimiento",
+                       "departamento", "provincia", "distrito", "direccion",
+                       "referencia", "tipo_vivienda", "servicios_basicos",
+                       "domicilio_del_responsable",
+                       "nivel_educativo", "seccion", "turno", "anio_academico",
+                       "situacion_academica", "asistencia_escolar",
+                       "dificultades", "nota_educativa",
+                       "tipo_seguro", "centro_salud", "discapacidad",
+                       "necesidades_especiales", "info_medica",
+                       "emergencia_nombre", "emergencia_telefono", "nota_salud",
+                       "integrantes_hogar", "hermanos", "con_quien_vive",
+                       "responsable_economico", "tenencia_vivienda",
+                       "rango_ingresos", "personas_dependientes",
+                       "nota_socioeconomica",
+                       "sin_dato")
 
 # Lo que hace falta para considerar la ficha completa. No bloquea el alta:
 # solo sirve para decir qué falta, con el mismo criterio que "sin jefe
@@ -874,19 +1327,192 @@ CAMPOS_FICHA_COMPLETA = (
 )
 
 
+def sin_dato_de(fila):
+    """
+    Los campos que en esta ficha se declararon «sin dato por ahora».
+
+    Se guardan como una lista separada por comas. Es un formato pobre a
+    propósito: cabe en una columna de texto sin migrar nada, y lo único que
+    se hace con él es preguntar si un nombre está dentro.
+    """
+    crudo = str((fila or {}).get("sin_dato") or "")
+    return {c.strip() for c in crudo.split(",") if c.strip()}
+
+
+def _faltan(fila, definicion):
+    """
+    Qué campos siguen vacíos SIN que nadie haya dicho que no hay dato.
+
+    Un campo marcado deja de contar como falta: eso es lo que separa «se
+    olvidó» de «todavía no existe esa información», que era justo lo que no
+    se podía distinguir cuando el vacío era solo un vacío.
+    """
+    declarados = sin_dato_de(fila)
+    return [etiqueta for campo, etiqueta in definicion
+            if campo not in declarados
+            and not str((fila or {}).get(campo) or "").strip()]
+
+
 def faltantes_beneficiario(b):
     """Qué campos le faltan a una ficha para estar completa."""
-    return [etiqueta for campo, etiqueta in CAMPOS_FICHA_COMPLETA
-            if not str(b.get(campo) or "").strip()]
+    return _faltan(b, CAMPOS_FICHA_COMPLETA)
+
+
+# Lo mínimo para que una ficha sirva de algo. No es "todos los campos":
+# exigirlo todo haría que ninguna ficha estuviera nunca completa y el
+# indicador dejaría de significar nada.
+CAMPOS_PERSONAL_COMPLETO = (
+    ("documento", "documento"),
+    ("cargo", "cargo"),
+    ("area", "área"),
+    ("fecha_ingreso", "fecha de ingreso"),
+    ("telefono", "teléfono"),
+)
+
+CAMPOS_RESPONSABLE_COMPLETO = (
+    ("documento", "documento"),
+    ("telefono", "teléfono"),
+)
+
+
+def faltantes_personal(p):
+    """Qué le falta a una ficha de personal para estar completa."""
+    return _faltan(p, CAMPOS_PERSONAL_COMPLETO)
+
+
+# Las columnas que escribe una foto. En una sola lista para que guardar y
+# quitar no puedan desincronizarse.
+CAMPOS_FOTO = ("foto", "foto_mime", "foto_tam", "foto_ancho", "foto_alto")
+
+
+def actualizar_foto_responsable(id_, datos):
+    """
+    Apunta la ficha a una foto nueva, o la deja sin ninguna si datos es None.
+
+    Devuelve el nombre interno de la anterior, para que quien llama pueda
+    borrar ese archivo: aquí no se toca el disco, porque si la transacción
+    fallara ya no habría forma de recuperarlo.
+    """
+    fila = responsable(id_)
+    if not fila:
+        return None
+    anterior = fila.get("foto")
+    valores = [(datos or {}).get(c) for c in CAMPOS_FOTO]
+    with _lock, _conectar() as con:
+        con.execute("UPDATE responsables SET "
+                    + ", ".join(c + " = ?" for c in CAMPOS_FOTO)
+                    + " WHERE id = ?", (*valores, int(id_)))
+    return anterior
+
+
+# ── Invitaciones al formulario público ───────────────────────────────────
+
+CAMPOS_INVITACION = ("token", "responsable_id", "etiqueta", "creada_por",
+                     "caduca", "usada", "estado", "nota")
+
+
+def crear_invitacion(datos):
+    campos = [c for c in CAMPOS_INVITACION if c in datos]
+    marcas_ = ", ".join("?" for _ in campos)
+    with _lock, _conectar() as con:
+        cur = con.execute(
+            f"INSERT INTO invitaciones ({', '.join(campos)}) VALUES ({marcas_})",
+            tuple(datos[c] for c in campos))
+        nuevo = cur.lastrowid
+    return invitacion(nuevo)
+
+
+# Una invitación se lee siempre con el nombre de a quién se le entregó:
+# sale de la ficha si existe y, si no, de la etiqueta escrita a mano. La
+# consulta es una sola para que la fila recién creada y la de la lista
+# tengan exactamente la misma forma.
+_SELECT_INVITACION = """
+    SELECT i.*, COALESCE(NULLIF(r.nombre, ''), i.etiqueta) AS para
+      FROM invitaciones i
+      LEFT JOIN responsables r ON r.id = i.responsable_id
+"""
+
+
+def invitacion(id_):
+    filas = consultar(_SELECT_INVITACION + " WHERE i.id = ?", (int(id_),))
+    return filas[0] if filas else None
+
+
+def invitacion_por_token(token):
+    filas = consultar(_SELECT_INVITACION + " WHERE i.token = ?", (str(token),))
+    return filas[0] if filas else None
+
+
+def invitaciones():
+    return consultar(_SELECT_INVITACION + " ORDER BY i.id DESC")
+
+
+def actualizar_invitacion(id_, cambios):
+    campos = [c for c in ("estado", "usada", "nota", "responsable_id") if c in cambios]
+    if not campos:
+        return invitacion(id_)
+    with _lock, _conectar() as con:
+        con.execute("UPDATE invitaciones SET "
+                    + ", ".join(c + " = ?" for c in campos)
+                    + " WHERE id = ?",
+                    (*[cambios[c] for c in campos], int(id_)))
+    return invitacion(id_)
+
+
+def faltantes_responsable(r):
+    """Qué le falta a la ficha de un responsable."""
+    return _faltan(r, CAMPOS_RESPONSABLE_COMPLETO)
+
+
+def resumen_personas(dias_nuevos=30):
+    """
+    Los números del panel de Gestión de Personas, calculados de una vez.
+
+    'nuevos' cuenta las altas de los últimos `dias_nuevos` días. Las fichas
+    sin fecha de alta —las anteriores a que existiera la columna— no cuentan
+    como nuevas: no se sabe cuándo entraron, y suponerlo sería inventar.
+    """
+    from datetime import date, timedelta
+    corte = (date.today() - timedelta(days=dias_nuevos)).isoformat()
+
+    bens = beneficiarios()
+    pers = personal()
+    resp = responsables()
+
+    def nuevos(filas):
+        return sum(1 for f in filas
+                   if f.get("creado") and str(f["creado"])[:10] >= corte)
+
+    incompletos = (
+        sum(1 for b in bens if faltantes_beneficiario(b))
+        + sum(1 for p in pers if faltantes_personal(p))
+        + sum(1 for r in resp if faltantes_responsable(r))
+    )
+
+    return {
+        "nna": len(bens),
+        "responsables": len(resp),
+        "personal": len(pers),
+        # 'activos' es el total: las tres consultas ya filtran por
+        # estado='activo'. Se devuelve igual para que el panel no tenga que
+        # saber ese detalle, y para que siga siendo cierto si algún día se
+        # deja de filtrar.
+        "activos": len(bens) + len(resp) + len(pers),
+        "nuevos": nuevos(bens) + nuevos(pers) + nuevos(resp),
+        "dias_nuevos": dias_nuevos,
+        "incompletos": incompletos,
+        "sin_fecha_alta": sum(1 for f in list(bens) + list(pers) + list(resp)
+                              if not f.get("creado")),
+    }
 
 
 def beneficiarios(incluir_inactivos=False):
     donde = "" if incluir_inactivos else "WHERE b.estado = 'activo'"
     return consultar(
         f"""SELECT b.*, i.staff_number, i.estado AS estado_biometrico,
-                   i.metodo, i.tiene_rostro, i.tiene_huella
+                   i.metodo, i.tiene_rostro, i.tiene_huella, i.enrolado
               FROM beneficiarios b
-              LEFT JOIN identidades i ON i.beneficiario_id = b.id
+              LEFT JOIN v_identidades i ON i.beneficiario_id = b.id
               {donde}
              ORDER BY b.nombre"""
     )
@@ -922,12 +1548,483 @@ def crear_beneficiario(datos):
     campos = [c for c in CAMPOS_BENEFICIARIO if c in datos]
     marcas_ = ", ".join("?" for _ in campos)
     with _lock, _conectar() as con:
+        hay = _tiene_columna(con, "beneficiarios", "creado")
+        fecha_col = ", creado" if hay else ""
+        fecha_val = ", datetime('now','localtime')" if hay else ""
         cur = con.execute(
-            f"INSERT INTO beneficiarios ({', '.join(campos)}) VALUES ({marcas_})",
+            f"INSERT INTO beneficiarios ({', '.join(campos)}{fecha_col}) "
+            f"VALUES ({marcas_}{fecha_val})",
             tuple(datos[c] for c in campos),
         )
         con.commit()
         return cur.lastrowid
+
+
+# ── Hoja de Vida: formación y experiencia ─────────────────────────────────
+#
+# Dos series por persona. Van en tablas y no en columnas porque nadie sabe de
+# antemano cuántos estudios o cuántos trabajos anteriores tiene alguien, y
+# 'trabajo_1, trabajo_2, trabajo_3' se queda corto el día que aparece el
+# cuarto.
+
+CAMPOS_FORMACION = ("nivel", "institucion", "carrera", "grado",
+                    "anio_inicio", "anio_fin", "nota")
+CAMPOS_EXPERIENCIA = ("empresa", "cargo", "desde", "hasta", "funciones", "nota")
+
+
+def formacion_de(personal_id):
+    """
+    De lo más reciente a lo más antiguo: al abrir una hoja de vida lo que se
+    busca es el último título, no el primero.
+    """
+    return consultar(
+        """SELECT * FROM formacion WHERE personal_id = ?
+            ORDER BY COALESCE(NULLIF(anio_fin,''), NULLIF(anio_inicio,''), '') DESC,
+                     id DESC""",
+        (int(personal_id),))
+
+
+def crear_formacion(personal_id, datos):
+    campos = ["personal_id"] + [c for c in CAMPOS_FORMACION if c in datos]
+    vals = [int(personal_id)] + [datos[c] for c in campos[1:]]
+    with _lock, _conectar() as con:
+        cur = con.execute(
+            f"INSERT INTO formacion ({', '.join(campos)}) "
+            f"VALUES ({', '.join('?' for _ in campos)})", tuple(vals))
+        con.commit()
+        return cur.lastrowid
+
+
+def editar_formacion(id_, datos):
+    campos = [c for c in CAMPOS_FORMACION if c in datos]
+    if not campos:
+        return
+    ejecutar(f"UPDATE formacion SET {', '.join(c + ' = ?' for c in campos)} WHERE id = ?",
+             tuple(datos[c] for c in campos) + (int(id_),))
+
+
+def borrar_formacion(id_):
+    ejecutar("DELETE FROM formacion WHERE id = ?", (int(id_),))
+
+
+def experiencia_de(personal_id):
+    return consultar(
+        """SELECT * FROM experiencia WHERE personal_id = ?
+            ORDER BY COALESCE(NULLIF(hasta,''), NULLIF(desde,''), '') DESC, id DESC""",
+        (int(personal_id),))
+
+
+def crear_experiencia(personal_id, datos):
+    campos = ["personal_id"] + [c for c in CAMPOS_EXPERIENCIA if c in datos]
+    vals = [int(personal_id)] + [datos[c] for c in campos[1:]]
+    with _lock, _conectar() as con:
+        cur = con.execute(
+            f"INSERT INTO experiencia ({', '.join(campos)}) "
+            f"VALUES ({', '.join('?' for _ in campos)})", tuple(vals))
+        con.commit()
+        return cur.lastrowid
+
+
+def editar_experiencia(id_, datos):
+    campos = [c for c in CAMPOS_EXPERIENCIA if c in datos]
+    if not campos:
+        return
+    ejecutar(f"UPDATE experiencia SET {', '.join(c + ' = ?' for c in campos)} WHERE id = ?",
+             tuple(datos[c] for c in campos) + (int(id_),))
+
+
+def borrar_experiencia(id_):
+    ejecutar("DELETE FROM experiencia WHERE id = ?", (int(id_),))
+
+
+# ── Series del expediente de beneficiario ─────────────────────────────────
+#
+# Tres listas que crecen con el tiempo: los programas en los que participa, su
+# historial escolar año a año, y el seguimiento social. Las tres cuelgan del
+# beneficiario con ON DELETE CASCADE, así que al borrar la ficha se van con
+# ella; no hace falta limpiarlas a mano.
+#
+# El patrón es el mismo de formación y experiencia: una tupla de campos
+# permitidos, y el INSERT/UPDATE se arma solo con las claves que llegan. Lo
+# que no esté en la tupla se ignora en silencio, que es lo que se quiere: el
+# cliente no decide qué columnas existen.
+
+CAMPOS_PROGRAMA = ("programa", "fecha_ingreso", "fecha_salida", "estado", "nota")
+
+CAMPOS_HISTORIAL = ("anio", "institucion", "nivel", "grado", "seccion",
+                    "situacion", "rendimiento", "asistencia", "nota")
+
+CAMPOS_SEGUIMIENTO = ("fecha", "responsable_id", "tipo", "situacion", "accion",
+                      "compromisos", "nota", "proxima_fecha")
+
+
+def _crear_en(tabla, campos_ok, beneficiario_id, datos):
+    campos = ["beneficiario_id"] + [c for c in campos_ok if c in datos]
+    vals = [int(beneficiario_id)] + [datos[c] for c in campos[1:]]
+    with _lock, _conectar() as con:
+        cur = con.execute(
+            f"INSERT INTO {tabla} ({', '.join(campos)}) "
+            f"VALUES ({', '.join('?' for _ in campos)})", tuple(vals))
+        con.commit()
+        return cur.lastrowid
+
+
+def _editar_en(tabla, campos_ok, id_, datos):
+    campos = [c for c in campos_ok if c in datos]
+    if not campos:
+        return
+    ejecutar(f"UPDATE {tabla} SET {', '.join(c + ' = ?' for c in campos)} WHERE id = ?",
+             tuple(datos[c] for c in campos) + (int(id_),))
+
+
+# ── Programas ─────────────────────────────────────────────────────────────
+
+def programas_de(beneficiario_id):
+    """
+    Los activos primero: son los que importan al abrir la ficha. Dentro de
+    cada grupo, el que entró más tarde arriba.
+    """
+    return consultar(
+        """SELECT * FROM programas_beneficiario WHERE beneficiario_id = ?
+            ORDER BY CASE WHEN estado = 'activo' THEN 0 ELSE 1 END,
+                     COALESCE(NULLIF(fecha_ingreso,''), '') DESC, id DESC""",
+        (int(beneficiario_id),))
+
+
+def crear_programa(beneficiario_id, datos):
+    return _crear_en("programas_beneficiario", CAMPOS_PROGRAMA,
+                     beneficiario_id, datos)
+
+
+def editar_programa(id_, datos):
+    _editar_en("programas_beneficiario", CAMPOS_PROGRAMA, id_, datos)
+
+
+def borrar_programa(id_):
+    ejecutar("DELETE FROM programas_beneficiario WHERE id = ?", (int(id_),))
+
+
+# ── Historial educativo ───────────────────────────────────────────────────
+
+def historial_de(beneficiario_id):
+    """Del año más reciente al más antiguo."""
+    return consultar(
+        """SELECT * FROM historial_educativo WHERE beneficiario_id = ?
+            ORDER BY COALESCE(NULLIF(anio,''), '') DESC, id DESC""",
+        (int(beneficiario_id),))
+
+
+def crear_historial(beneficiario_id, datos):
+    return _crear_en("historial_educativo", CAMPOS_HISTORIAL,
+                     beneficiario_id, datos)
+
+
+def editar_historial(id_, datos):
+    _editar_en("historial_educativo", CAMPOS_HISTORIAL, id_, datos)
+
+
+def borrar_historial(id_):
+    ejecutar("DELETE FROM historial_educativo WHERE id = ?", (int(id_),))
+
+
+# ── Seguimiento social ────────────────────────────────────────────────────
+
+def seguimiento_de(beneficiario_id):
+    """
+    Lo último arriba. Se trae el nombre de quien lo hizo con un LEFT JOIN: la
+    tabla guarda el id, no el nombre, para que no acaben conviviendo tres
+    formas de escribir a la misma persona. Si esa ficha se borró, el id queda
+    en NULL y aquí sale vacío en vez de romper.
+    """
+    return consultar(
+        """SELECT s.*, p.nombre AS responsable_nombre
+             FROM seguimiento s
+             LEFT JOIN personal p ON p.id = s.responsable_id
+            WHERE s.beneficiario_id = ?
+            ORDER BY s.fecha DESC, s.id DESC""",
+        (int(beneficiario_id),))
+
+
+def crear_seguimiento(beneficiario_id, datos):
+    return _crear_en("seguimiento", CAMPOS_SEGUIMIENTO, beneficiario_id, datos)
+
+
+def editar_seguimiento(id_, datos):
+    _editar_en("seguimiento", CAMPOS_SEGUIMIENTO, id_, datos)
+
+
+def borrar_seguimiento(id_):
+    ejecutar("DELETE FROM seguimiento WHERE id = ?", (int(id_),))
+
+
+# ── Canal web: consentimiento y rostro de referencia ──────────────────────
+#
+# El orden importa y está impuesto por la ley, no por comodidad: sin
+# consentimiento aceptado no se guarda ningún descriptor. Esa regla se
+# comprueba en app.py antes de escribir, y aquí se le da lo que necesita para
+# poder comprobarla.
+
+def consentimiento_vigente(personal_id, tipo="rostro_web"):
+    """
+    El último consentimiento de esta persona, aceptado y no revocado. None si
+    nunca aceptó, si dijo que no, o si lo revocó después.
+    """
+    filas = consultar(
+        """SELECT * FROM consentimientos
+            WHERE personal_id = ? AND tipo = ?
+            ORDER BY id DESC LIMIT 1""",
+        (int(personal_id), tipo),
+    )
+    if not filas:
+        return None
+    ult = filas[0]
+    if not ult["aceptado"] or (ult["revocado_el"] or "").strip():
+        return None
+    return ult
+
+
+def consentimientos_de(personal_id, tipo=None):
+    """El histórico completo. Un rechazo o una revocación también cuentan."""
+    if tipo:
+        return consultar(
+            """SELECT * FROM consentimientos WHERE personal_id = ? AND tipo = ?
+                ORDER BY id DESC""", (int(personal_id), tipo))
+    return consultar(
+        "SELECT * FROM consentimientos WHERE personal_id = ? ORDER BY id DESC",
+        (int(personal_id),))
+
+
+def registrar_consentimiento(personal_id, aceptado, version, texto,
+                             tipo="rostro_web", ip="", agente=""):
+    """
+    Siempre INSERTA. Nunca actualiza el anterior: el histórico de quién
+    aceptó qué y cuándo es justamente lo que hay que poder demostrar.
+    """
+    return ejecutar(
+        """INSERT INTO consentimientos
+               (personal_id, tipo, aceptado, version, texto, ip, agente)
+           VALUES (?, ?, ?, ?, ?, ?, ?)""",
+        (int(personal_id), tipo, 1 if aceptado else 0, version, texto, ip, agente),
+    )
+
+
+def revocar_consentimiento(personal_id, tipo="rostro_web"):
+    """
+    Marca el vigente como revocado. No borra nada: quedan las dos cosas, que
+    lo aceptó y que después se echó atrás.
+    """
+    ejecutar(
+        """UPDATE consentimientos
+              SET revocado_el = datetime('now','localtime')
+            WHERE personal_id = ? AND tipo = ? AND aceptado = 1
+              AND (revocado_el IS NULL OR revocado_el = '')""",
+        (int(personal_id), tipo),
+    )
+
+
+# ── El rostro del canal web ───────────────────────────────────────────────
+
+def rostro_web(personal_id):
+    filas = consultar("SELECT * FROM rostros_web WHERE personal_id = ?",
+                      (int(personal_id),))
+    return filas[0] if filas else None
+
+
+def rostros_web_registrados():
+    """
+    Quién tiene rostro del canal web y quién no. Alimenta el seguimiento del
+    enrolamiento, que se exige a todo el personal desde el lanzamiento.
+    """
+    return consultar(
+        """SELECT p.id, p.nombre, p.cargo, p.area,
+                  r.creado, r.modelo, r.dimension,
+                  (SELECT COUNT(*) FROM consentimientos c
+                    WHERE c.personal_id = p.id AND c.tipo = 'rostro_web'
+                      AND c.aceptado = 1
+                      AND (c.revocado_el IS NULL OR c.revocado_el = '')) AS consintio
+             FROM personal p
+             LEFT JOIN rostros_web r ON r.personal_id = p.id
+            WHERE p.estado = 'activo'
+            ORDER BY p.nombre"""
+    )
+
+
+def guardar_rostro_web(personal_id, descriptor_json, dimension, modelo,
+                       registrado_por=None):
+    """
+    Crea o reemplaza el descriptor. Reemplazar es lo correcto: si alguien
+    vuelve a enrolarse es porque el anterior no servía.
+    """
+    ejecutar(
+        """INSERT INTO rostros_web
+               (personal_id, descriptor, dimension, modelo, registrado_por)
+           VALUES (?, ?, ?, ?, ?)
+           ON CONFLICT(personal_id) DO UPDATE SET
+               descriptor = excluded.descriptor,
+               dimension = excluded.dimension,
+               modelo = excluded.modelo,
+               registrado_por = excluded.registrado_por,
+               actualizado = datetime('now','localtime')""",
+        (int(personal_id), descriptor_json, int(dimension), modelo,
+         registrado_por),
+    )
+
+
+def borrar_rostro_web(personal_id):
+    """
+    Se lleva el descriptor y deja el consentimiento. Son cosas distintas: el
+    dato biométrico se puede eliminar; la constancia de que se pidió permiso
+    hay que conservarla.
+    """
+    ejecutar("DELETE FROM rostros_web WHERE personal_id = ?", (int(personal_id),))
+
+
+# ── Responsables / tutores ────────────────────────────────────────────────
+#
+# Un responsable existe por sí mismo, no cuelga de ningún beneficiario: se
+# registra una vez y se vincula a los niños que corresponda. Por eso las
+# consultas del vínculo van aparte de las de la ficha.
+
+CAMPOS_RESPONSABLE = (
+    "codigo", "nombre", "documento", "fecha_nac", "sexo", "nacionalidad",
+    "estado", "telefono", "telefono_alt", "correo", "departamento",
+    "provincia", "distrito", "direccion", "referencia", "ocupacion",
+    "situacion_laboral", "centro_trabajo", "tipo_trabajo", "rango_ingresos",
+    "personas_a_cargo", "nota", "origen", "origen_personal_id",
+    "sin_dato",
+)
+
+
+def responsables(incluir_inactivos=False, texto=""):
+    """
+    Con cuántos beneficiarios está vinculado cada uno, que es lo primero que
+    se quiere ver en el listado.
+
+    'texto' busca por nombre o documento: en una lista de responsables el
+    buscador no es un lujo, porque no hay otra forma de encontrar a alguien
+    cuyo nombre solo se recuerda a medias.
+    """
+    donde, params = [], []
+    if not incluir_inactivos:
+        donde.append("r.estado = 'activo'")
+    if texto:
+        donde.append("(r.nombre LIKE ? OR r.documento LIKE ?)")
+        params += [f"%{texto}%", f"%{texto}%"]
+    sql = """SELECT r.*,
+                    (SELECT COUNT(*) FROM responsable_beneficiario rb
+                      WHERE rb.responsable_id = r.id) AS beneficiarios
+               FROM responsables r"""
+    if donde:
+        sql += " WHERE " + " AND ".join(donde)
+    return consultar(sql + " ORDER BY r.nombre", tuple(params))
+
+
+def responsable(id_):
+    filas = consultar("SELECT * FROM responsables WHERE id = ?", (int(id_),))
+    return filas[0] if filas else None
+
+
+def crear_responsable(datos):
+    campos = [c for c in CAMPOS_RESPONSABLE if c in datos]
+    marcas_ = ", ".join("?" for _ in campos)
+    with _lock, _conectar() as con:
+        cur = con.execute(
+            f"INSERT INTO responsables ({', '.join(campos)}) VALUES ({marcas_})",
+            tuple(datos[c] for c in campos),
+        )
+        con.commit()
+        return cur.lastrowid
+
+
+def editar_responsable(id_, datos):
+    campos = [c for c in CAMPOS_RESPONSABLE if c in datos]
+    if not campos:
+        return
+    ejecutar(
+        f"UPDATE responsables SET {', '.join(c + ' = ?' for c in campos)} WHERE id = ?",
+        tuple(datos[c] for c in campos) + (int(id_),),
+    )
+
+
+def borrar_responsable(id_):
+    # Los vínculos se van solos por la clave foránea en cascada; el
+    # beneficiario NO, que para eso son entidades distintas.
+    ejecutar("DELETE FROM responsables WHERE id = ?", (int(id_),))
+
+
+# ── El vínculo ────────────────────────────────────────────────────────────
+
+CAMPOS_VINCULO = ("parentesco", "es_principal", "es_legal", "puede_recoger",
+                  "es_emergencia", "nota")
+
+
+def responsables_de(beneficiario_id):
+    """Quiénes están a cargo de un beneficiario, con el papel de cada uno."""
+    return consultar(
+        """SELECT rb.*, r.nombre, r.documento, r.telefono, r.correo,
+                  r.ocupacion, r.estado AS estado_responsable
+             FROM responsable_beneficiario rb
+             JOIN responsables r ON r.id = rb.responsable_id
+            WHERE rb.beneficiario_id = ?
+            ORDER BY rb.es_principal DESC, r.nombre""",
+        (int(beneficiario_id),),
+    )
+
+
+def beneficiarios_de(responsable_id):
+    """A qué niños está vinculado un responsable."""
+    return consultar(
+        """SELECT rb.*, b.nombre, b.fecha_nac, b.casa, b.sala, b.grado,
+                  b.estado AS estado_beneficiario
+             FROM responsable_beneficiario rb
+             JOIN beneficiarios b ON b.id = rb.beneficiario_id
+            WHERE rb.responsable_id = ?
+            ORDER BY b.nombre""",
+        (int(responsable_id),),
+    )
+
+
+def vincular(responsable_id, beneficiario_id, datos=None):
+    """
+    Crea o actualiza el vínculo. Es idempotente a propósito: volver a
+    vincular al mismo par actualiza el papel en vez de reventar contra el
+    UNIQUE, que es lo que espera quien corrige un parentesco mal puesto.
+    """
+    datos = datos or {}
+    campos = [c for c in CAMPOS_VINCULO if c in datos]
+    with _lock, _conectar() as con:
+        fila = con.execute(
+            """SELECT id FROM responsable_beneficiario
+                WHERE responsable_id = ? AND beneficiario_id = ?""",
+            (int(responsable_id), int(beneficiario_id)),
+        ).fetchone()
+        if fila:
+            if campos:
+                con.execute(
+                    f"""UPDATE responsable_beneficiario
+                           SET {', '.join(c + ' = ?' for c in campos)}
+                         WHERE id = ?""",
+                    tuple(datos[c] for c in campos) + (fila["id"],),
+                )
+            con.commit()
+            return fila["id"]
+        cols = ["responsable_id", "beneficiario_id"] + campos
+        vals = [int(responsable_id), int(beneficiario_id)] + [datos[c] for c in campos]
+        cur = con.execute(
+            f"""INSERT INTO responsable_beneficiario ({', '.join(cols)})
+                VALUES ({', '.join('?' for _ in cols)})""",
+            tuple(vals),
+        )
+        con.commit()
+        return cur.lastrowid
+
+
+def desvincular(responsable_id, beneficiario_id):
+    ejecutar(
+        """DELETE FROM responsable_beneficiario
+            WHERE responsable_id = ? AND beneficiario_id = ?""",
+        (int(responsable_id), int(beneficiario_id)),
+    )
 
 
 # ── Identidades biométricas ───────────────────────────────────────────────
@@ -942,8 +2039,26 @@ def identidad(staff_number):
     return filas[0] if filas else None
 
 
+# Las tres entidades que pueden tener identidad biométrica, y la columna
+# donde vive cada una. En un solo sitio: cuando esto era un ternario de dos
+# ramas repetido en dos funciones, añadir la tercera obligaba a acordarse de
+# los dos.
+COLUMNA_TITULAR = {
+    "personal":     "personal_id",
+    "beneficiario": "beneficiario_id",
+    "responsable":  "responsable_id",
+}
+
+
+def _columna_titular(tipo):
+    try:
+        return COLUMNA_TITULAR[tipo]
+    except KeyError:
+        raise ValueError(f"Tipo de titular no reconocido: {tipo!r}")
+
+
 def identidad_de(tipo, titular_id):
-    columna = "personal_id" if tipo == "personal" else "beneficiario_id"
+    columna = _columna_titular(tipo)
     filas = consultar(f"SELECT * FROM v_identidades WHERE {columna} = ?",
                       (int(titular_id),))
     return filas[0] if filas else None
@@ -952,10 +2067,10 @@ def identidad_de(tipo, titular_id):
 def crear_identidad(staff_number, tipo, titular_id, metodo):
     """
     Reserva el staffNumber para una persona que YA existe. El CHECK de la
-    tabla garantiza que solo se rellene una de las dos claves.
+    tabla garantiza que solo se rellene una de las tres claves.
     """
     sn = config.validar_rango(staff_number)
-    columna = "personal_id" if tipo == "personal" else "beneficiario_id"
+    columna = _columna_titular(tipo)
     ejecutar(
         f"""INSERT OR REPLACE INTO identidades
             (staff_number, {columna}, metodo, estado)
@@ -992,23 +2107,48 @@ def borrar_identidad(staff_number):
 
 def sin_enrolar():
     """
-    Quiénes pueden enrolarse todavía: personal y beneficiarios activos que
-    aún no tienen identidad biométrica. Es lo que alimenta el desplegable de
-    "Agregar registro".
+    Quiénes pueden enrolarse todavía: personal, beneficiarios y responsables
+    activos que aún no tienen identidad biométrica.
+
+    Nadie se da de alta aquí a mano: en cuanto se crea una ficha en Gestión
+    de Personas aparece sola en esta lista, y desaparece en cuanto se enrola.
+    Es lo que alimenta la pantalla de Gestión Biométrica.
     """
+    # Se une contra la VISTA, no contra la tabla: ahí vive la única
+    # definición de «enrolado». Y la condición es «no está enrolado», no
+    # «no tiene fila»: quien lo intentó y se quedó a medias sigue sin poder
+    # marcar, así que sigue haciendo falta en esta lista.
     filas = consultar(
-        """SELECT 'personal' AS tipo, p.id, p.nombre, p.cargo AS detalle,
-                  p.vinculo, p.ambito
+        """SELECT * FROM (
+           SELECT 'personal' AS tipo, p.id, p.nombre, p.cargo AS detalle,
+                  p.vinculo, p.ambito,
+                  i.staff_number AS intento_sn, i.estado AS intento_estado,
+                  i.metodo AS intento_metodo, i.detalle AS intento_detalle
              FROM personal p
-             LEFT JOIN identidades i ON i.personal_id = p.id
-            WHERE p.estado = 'activo' AND i.staff_number IS NULL
+             LEFT JOIN v_identidades i ON i.personal_id = p.id
+            WHERE p.estado = 'activo'
+              AND (i.staff_number IS NULL OR i.enrolado = 0)
             UNION ALL
            SELECT 'beneficiario' AS tipo, b.id, b.nombre, b.casa AS detalle,
-                  NULL AS vinculo, 'ninos' AS ambito
+                  NULL AS vinculo, 'ninos' AS ambito,
+                  i.staff_number, i.estado, i.metodo, i.detalle
              FROM beneficiarios b
-             LEFT JOIN identidades i ON i.beneficiario_id = b.id
-            WHERE b.estado = 'activo' AND i.staff_number IS NULL
-            ORDER BY nombre"""
+             LEFT JOIN v_identidades i ON i.beneficiario_id = b.id
+            WHERE b.estado = 'activo'
+              AND (i.staff_number IS NULL OR i.enrolado = 0)
+            UNION ALL
+           -- Los tutores no tienen ámbito ni vínculo: no trabajan aquí. Se
+           -- deja NULL en vez de inventarles uno para que no se cuelen en
+           -- los filtros por área del personal.
+           SELECT 'responsable' AS tipo, r.id, r.nombre,
+                  COALESCE(NULLIF(r.ocupacion,''), 'Responsable') AS detalle,
+                  NULL AS vinculo, NULL AS ambito,
+                  i.staff_number, i.estado, i.metodo, i.detalle
+             FROM responsables r
+             LEFT JOIN v_identidades i ON i.responsable_id = r.id
+            WHERE r.estado = 'activo'
+              AND (i.staff_number IS NULL OR i.enrolado = 0)
+           ) ORDER BY nombre"""
     )
     return filas
 
@@ -1041,14 +2181,20 @@ def siguiente_staff_number(usados_en_yunatt=()):
 
 # ── Marcas ────────────────────────────────────────────────────────────────
 
-def guardar_marca(staff_number, fecha, hora, metodo="facial"):
+def guardar_marca(staff_number, fecha, hora, metodo="facial", canal="terminal"):
+    """
+    'canal' por defecto 'terminal' para no cambiar el comportamiento de la
+    sincronización, que es de donde vienen casi todas las marcas.
+    """
     if not config.en_rango(staff_number):
         return 0
+    if canal not in config.CANALES_MARCA:
+        canal = "terminal"
     return ejecutar(
-        """INSERT OR IGNORE INTO marcas (staff_number, fecha, hora, metodo)
-           SELECT ?, ?, ?, ? WHERE EXISTS
+        """INSERT OR IGNORE INTO marcas (staff_number, fecha, hora, metodo, canal)
+           SELECT ?, ?, ?, ?, ? WHERE EXISTS
            (SELECT 1 FROM identidades WHERE staff_number = ?)""",
-        (int(staff_number), fecha, hora, metodo, int(staff_number)),
+        (int(staff_number), fecha, hora, metodo, canal, int(staff_number)),
     )
 
 
@@ -1070,6 +2216,10 @@ def marcas_de(fecha):
              FROM v_identidades v
              LEFT JOIN marcas m
                ON m.staff_number = v.staff_number AND m.fecha = ?
+            -- Solo quien el terminal confirmó. Un enrolamiento a medias no
+            -- puede marcar, así que enseñarlo aquí sin marcas se leería
+            -- como una falta suya.
+            WHERE v.enrolado = 1
             GROUP BY v.staff_number
             ORDER BY v.staff_number""",
         (fecha,),
@@ -1098,6 +2248,7 @@ def marcas_rango(desde, hasta):
              LEFT JOIN marcas m
                ON m.staff_number = v.staff_number
               AND m.fecha BETWEEN ? AND ?
+            WHERE v.enrolado = 1          -- ver marcas_de()
             GROUP BY v.staff_number, m.fecha
             ORDER BY v.staff_number, m.fecha""",
         (desde, hasta),
@@ -1336,6 +2487,13 @@ def periodos_con_boletas():
 
 _SOL_ESTADOS = ("pendiente", "pendiente_admin", "aprobada", "rechazada", "cancelada")
 
+# Los tipos válidos, en un solo sitio. Estaban escritos a mano dentro de
+# crear_solicitud, y al ampliar la tabla a seis tipos esa copia se quedó
+# atrás y rechazaba lo que la base sí aceptaba. Debe coincidir con el CHECK
+# de la tabla; solicitudes.py lee de aquí en vez de repetirla.
+TIPOS_SOLICITUD = ("vacaciones", "personal", "familiar", "medico",
+                   "licencia", "otro")
+
 
 def _dias_corridos(desde, hasta):
     """Días de calendario que abarca el rango, ambos extremos incluidos."""
@@ -1410,7 +2568,7 @@ def solicitudes_aprobadas_en(desde, hasta):
 
 def crear_solicitud(personal_id, tipo, desde, hasta, motivo="",
                     jefe_id=None, requiere_admin=0, estado="pendiente"):
-    if tipo not in ("vacaciones", "permiso", "licencia"):
+    if tipo not in TIPOS_SOLICITUD:
         raise ValueError(f"Tipo de solicitud no reconocido: {tipo!r}")
     if estado not in _SOL_ESTADOS:
         raise ValueError(f"Estado no reconocido: {estado!r}")
