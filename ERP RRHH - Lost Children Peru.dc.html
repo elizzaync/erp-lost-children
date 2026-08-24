@@ -1832,6 +1832,103 @@
            Adultos a cargo de uno o más beneficiarios. Se registran una vez;
            el vínculo con cada niño se lleva aparte, con su parentesco.
            ═════════════════════════════════════════════════════════════ -->
+
+      <sc-if value="{{ isBandeja }}">
+        <div style="padding:26px 0 44px;">
+
+          <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+            <p style="font-size:14.5px; color:#5b7185; text-wrap:pretty; max-width:66ch; margin:0;">Lo que las familias envían por el formulario espera aquí. Nada entra a una ficha hasta que alguien lo revisa y lo ingresa.</p>
+            <sc-if value="{{ puedeResponsables }}">
+              <button onClick="{{ bjTraer }}" style="display:flex; align-items:center; gap:8px; margin-left:auto; padding:10px 16px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5; white-space:nowrap;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-arrow-clockwise" style="font-size:17px;"></i>{{ bjTraerLabel }}
+              </button>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ bjSinCredencial }}">
+            <div style="margin-top:16px; padding:13px 16px; background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px; font-size:13.5px; color:#8a5c05; text-wrap:pretty;">Todavía no está la llave de Google, así que no se pueden traer respuestas. Se genera en console.cloud.google.com y se guarda en data/credenciales/.</div>
+          </sc-if>
+
+          <sc-if value="{{ bjHayMsg }}">
+            <div style="margin-top:16px; padding:12px 15px; border-left:4px solid {{ bjMsgColor }}; background:{{ bjMsgTint }}; border-radius:2px; font-size:13.5px; color:{{ bjMsgColor }}; text-wrap:pretty;">{{ bjMsg }}</div>
+          </sc-if>
+
+          <div style="display:flex; gap:9px; flex-wrap:wrap; margin:22px 0 0;">
+            <sc-for list="{{ bjFiltros }}" as="bf" hint-placeholder-count="3">
+              <button onClick="{{ bf.go }}" style="{{ bf.estilo }}" style-hover="border-color:#1462a5">
+                {{ bf.label }} <span style="font-variant-numeric:tabular-nums; color:#5b7185;">{{ bf.cuenta }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ bjVacia }}">
+            <div style="margin-top:20px; padding:30px 26px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; text-align:center;">
+              <i class="ph-duotone ph-tray" style="font-size:30px; color:#b0bcc6;"></i>
+              <div style="margin-top:11px; font-size:15px; font-weight:600; color:#3c4a55;">{{ bjVaciaTitulo }}</div>
+              <div style="margin-top:6px; font-size:13.5px; color:#7d8e9c; max-width:460px; margin-left:auto; margin-right:auto; text-wrap:pretty;">{{ bjVaciaNota }}</div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; flex-direction:column; gap:14px; margin-top:18px;">
+            <sc-for list="{{ bjLista }}" as="bx" hint-placeholder-count="3">
+              <div style="background:#ffffff; border:1px solid {{ bx.borde }}; border-left:4px solid {{ bx.acento }}; border-radius:3px; padding:18px 20px;">
+
+                <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+                  <div style="font-size:17px; font-weight:600; color:#0e3d69;">{{ bx.nombre }}</div>
+                  <span style="{{ bx.estiloEstado }}">{{ bx.estadoLabel }}</span>
+                  <span style="font-size:12.5px; color:#7d8e9c;">{{ bx.recibida }}</span>
+                  <span style="font-size:12.5px; color:#7d8e9c; margin-left:auto;">{{ bx.paraQuien }}</span>
+                </div>
+
+                <sc-if value="{{ bx.hayAvisos }}">
+                  <div style="margin-top:12px; padding:11px 14px; background:{{ bx.avisoTint }}; border-radius:2px;">
+                    <sc-for list="{{ bx.avisos }}" as="ba" hint-placeholder-count="2">
+                      <div style="font-size:13.5px; color:{{ bx.avisoColor }}; text-wrap:pretty;">· {{ ba.texto }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:12px; margin-top:14px;">
+                  <sc-for list="{{ bx.campos }}" as="bc" hint-placeholder-count="6">
+                    <div>
+                      <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">{{ bc.rotulo }}</div>
+                      <div style="font-size:14.5px; color:{{ bc.color }}; margin-top:3px; word-break:break-word;">{{ bc.valor }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ bx.crudaAbierta }}">
+                  <div style="margin-top:14px; padding:12px 14px; background:#f7f5f2; border-radius:2px;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:7px;">Tal como lo escribió</div>
+                    <sc-for list="{{ bx.cruda }}" as="bk" hint-placeholder-count="4">
+                      <div style="display:flex; gap:10px; font-size:13px; padding:2px 0;">
+                        <span style="color:#7d8e9c; min-width:190px; flex:none;">{{ bk.pregunta }}</span>
+                        <span style="color:#3c4a55; word-break:break-word;">{{ bk.valor }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <div style="display:flex; gap:9px; flex-wrap:wrap; margin-top:16px; align-items:center;">
+                  <button onClick="{{ bx.verCruda }}" style="font-size:12.5px; color:#5b7185; padding:5px 0;" style-hover="color:#1462a5">{{ bx.crudaLabel }}</button>
+                  <sc-if value="{{ bx.puedeIngresar }}">
+                    <button onClick="{{ bx.ingresar }}" style="margin-left:auto; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#2f8f5b; padding:8px 16px; border-radius:2px;" style-hover="background:#1c5f3a">{{ bx.ingresarLabel }}</button>
+                    <button onClick="{{ bx.editar }}" style="font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; padding:8px 15px; border-radius:2px;" style-hover="background:#e4eef7">Editar e ingresar</button>
+                  </sc-if>
+                  <sc-if value="{{ bx.puedeDescartar }}">
+                    <button onClick="{{ bx.descartar }}" style="{{ bx.estiloDescartar }}" style-hover="background:#fbe7e3">Descartar</button>
+                  </sc-if>
+                </div>
+
+                <sc-if value="{{ bx.motivoHay }}">
+                  <div style="margin-top:11px; font-size:13px; color:#7d8e9c;">Descartada: {{ bx.motivo }}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>
+
       <sc-if value="{{ isResponsables }}">
         <div style="padding:26px 0 0;">
 
@@ -3775,6 +3872,10 @@ class Component extends DCLogic {
     rspFotoOcupado: false, rspFotoMsg: "", rspFotoMal: false,
     /* Los enlaces del formulario. 'invCopiado' guarda el último copiado
        solo para poder decirlo en el botón. */
+    /* La bandeja del formulario. 'bjCruda' guarda de qué respuesta se está
+       mirando el original, que es una a la vez. */
+    bandeja: [], bjFiltro: "por_revisar", bjCruda: null, bjOcupado: false,
+    bjMsg: "", bjMal: false, bjCredencial: true,
     invAbierto: false, invLista: [], invConfig: true, invOcupado: false,
     invErr: "", invPara: "", invEtiqueta: "", invDias: "30", invCopiado: 0,
     /* Vínculo responsable–beneficiario, visto desde la ficha del niño. */
@@ -4263,6 +4364,103 @@ class Component extends DCLogic {
       });
   }
 
+  cargarBandeja() {
+    return this.api("/api/formulario/respuestas")
+      .then((d) => {
+        if (!this._vivo) return;
+        this.setState({ bandeja: d.respuestas || [],
+                        bjCredencial: d.hay_credencial !== false });
+      })
+      .catch(() => {});
+  }
+
+  /* Traer es ir a buscar a la hoja lo que aún no estaba. No ingresa nada:
+     dejarlo en la bandeja es justamente el trato. */
+  traerRespuestas() {
+    if (this.state.bjOcupado) return;
+    this.setState({ bjOcupado: true, bjMsg: "", bjMal: false });
+    this.api("/api/formulario/traer", { method: "POST", body: "{}" })
+      .then((d) => {
+        if (!this._vivo) return;
+        const r = d.resumen || {};
+        this.setState({
+          bjOcupado: false, bandeja: d.respuestas || [], bjMal: false,
+          bjMsg: r.nuevas
+            ? (r.nuevas === 1 ? "Llegó 1 respuesta nueva."
+                              : "Llegaron " + r.nuevas + " respuestas nuevas.")
+            : "No hay respuestas nuevas. " + (r.leidas || 0) + " ya estaban.",
+        });
+      })
+      .catch((e) => {
+        if (this._vivo) this.setState({ bjOcupado: false, bjMal: true,
+                                        bjMsg: String(e.message || e) });
+      });
+  }
+
+  ingresarRespuesta(r) {
+    if (this.state.bjOcupado) return;
+    this.setState({ bjOcupado: true, bjMsg: "", bjMal: false });
+    this.api("/api/formulario/respuestas/" + r.id + "/ingresar",
+             { method: "POST", body: JSON.stringify({ cambios: {} }) })
+      .then((d) => {
+        if (!this._vivo) return;
+        this.setState({
+          bjOcupado: false, bandeja: d.respuestas || [],
+          responsables: d.responsables || this.state.responsables, bjMal: false,
+          bjMsg: (d.creado ? "Ficha creada: " : "Ficha actualizada: ")
+                 + ((d.responsable || {}).nombre || ""),
+        });
+      })
+      .catch((e) => {
+        if (this._vivo) this.setState({ bjOcupado: false, bjMal: true,
+                                        bjMsg: String(e.message || e) });
+      });
+  }
+
+  /* «Editar e ingresar» abre la ficha con lo que llegó ya puesto. Se guarda
+     desde el formulario de siempre, con sus mismas validaciones: una ficha
+     que entra por aquí no puede quedar peor comprobada que una escrita a
+     mano. */
+  editarRespuesta(r) {
+    const v = r.valores || {};
+    this.abrirResponsable(null);
+    this.setState({
+      rspNombre: v.nombre || "", rspDoc: v.documento || "",
+      rspNac: v.fecha_nac || "", rspSexo: v.sexo || "",
+      rspNacionalidad: v.nacionalidad || "", rspTel: v.telefono || "",
+      rspTel2: v.telefono_alt || "", rspCorreo: v.correo || "",
+      rspDepto: v.departamento || "", rspProv: v.provincia || "",
+      rspDistrito: v.distrito || "", rspDireccion: v.direccion || "",
+      rspRef: v.referencia || "", rspOcupacion: v.ocupacion || "",
+      rspSituacion: v.situacion_laboral || "", rspCentro: v.centro_trabajo || "",
+      rspTipoTrabajo: v.tipo_trabajo || "", rspIngresos: v.rango_ingresos || "",
+      rspACargo: String(v.personas_a_cargo || ""), rspNota: v.nota || "",
+      /* Al guardar, la respuesta se marca ingresada: sin esto quedaría en
+         la bandeja para siempre y alguien la ingresaría dos veces. */
+      rspDesdeRespuesta: r.id,
+    });
+  }
+
+  descartarRespuesta(r) {
+    const motivo = window.prompt(
+      "¿Por qué se descarta esta respuesta?\n\nQueda escrito junto a ella.");
+    if (motivo === null) return;
+    if (!String(motivo).trim()) {
+      this.setState({ bjMal: true, bjMsg: "Hay que decir por qué se descarta." });
+      return;
+    }
+    this.api("/api/formulario/respuestas/" + r.id + "/descartar",
+             { method: "POST", body: JSON.stringify({ motivo: motivo }) })
+      .then((d) => {
+        if (!this._vivo) return;
+        this.setState({ bandeja: d.respuestas || [], bjMal: false,
+                        bjMsg: "Respuesta descartada." });
+      })
+      .catch((e) => {
+        if (this._vivo) this.setState({ bjMal: true, bjMsg: String(e.message || e) });
+      });
+  }
+
   cargarInvitaciones() {
     return this.api("/api/invitaciones")
       .then((d) => {
@@ -4364,13 +4562,28 @@ class Component extends DCLogic {
     }
     cuerpo.sin_dato = (this.state.sdMarcados || []).join(",");
 
+    /* Si esta ficha vino de una respuesta del formulario, esa respuesta
+       queda ingresada al guardar. Sin esto seguiría en la bandeja y se
+       ingresaría dos veces. */
+    const desdeRespuesta = this.state.rspDesdeRespuesta || null;
+
     this.setState({ modalOcupado: true, modalError: "" });
     this.api(st.rspId ? "/api/responsables/" + st.rspId : "/api/responsables",
              { method: st.rspId ? "PUT" : "POST", body: JSON.stringify(cuerpo) })
       .then(() => {
         if (!this._vivo) return;
         this.setState({ modalOcupado: false, modal: "",
-                        sdFaltan: [], sdMarcados: [] });
+                        sdFaltan: [], sdMarcados: [], rspDesdeRespuesta: null });
+        if (desdeRespuesta) {
+          /* Se descarta con motivo en vez de ingresarla: la ficha ya la
+             creó el formulario de siempre, y marcarla «ingresada» sin
+             haberla creado aquí dejaría dos caminos que hacen lo mismo. */
+          this.api("/api/formulario/respuestas/" + desdeRespuesta + "/descartar",
+                   { method: "POST", body: JSON.stringify({
+                       motivo: "Ingresada a mano desde el formulario de responsable." }) })
+            .then((d) => { if (this._vivo) this.setState({ bandeja: d.respuestas || [] }); })
+            .catch(() => {});
+        }
         this.cargarResponsables();
         if (this.state.rspVer) this.verResponsable(this.state.rspVer.id);
       })
@@ -4666,6 +4879,7 @@ class Component extends DCLogic {
     this.cargarPlanilla();
     this.cargarBeneficiarios();
     this.cargarCamposRequeridos();
+    if (this.puede("responsables", "vista")) this.cargarBandeja();
     if (this.puede("usuarios", "vista")) this.cargarUsuarios();
     if (this.puede("responsables", "vista")) this.cargarResponsables();
   }
@@ -6557,7 +6771,14 @@ class Component extends DCLogic {
          mods:["responsables"], vista:"responsables"},
         {label:"Beneficiarios", icon:"ph-baby", mods:["beneficiarios"],
          vista:"legajo", tab:"benef", tambien:["benef"],
-         badge:String((this.state.beneficiarios || []).length || "")}
+         badge:String((this.state.beneficiarios || []).length || "")},
+        /* La bandeja va aquí y no en un módulo aparte: lo que llega son
+           fichas de tutores a medio hacer. La cifra cuenta solo lo que
+           espera revisión, que es lo único accionable. */
+        {label:"Respuestas del formulario", icon:"ph-tray",
+         mods:["responsables"], vista:"bandeja",
+         badge:String((this.state.bandeja || [])
+                        .filter((x) => x.estado === "por_revisar").length || "")}
       ]},
 
       {clave:"asistencia", label:"Asistencia", icon:"ph-clock-user",
@@ -7638,6 +7859,93 @@ class Component extends DCLogic {
       rspNuevo: () => this.abrirResponsable(null),
 
       /* Ficha desplegada */
+      /* ── La bandeja del formulario ───────────────────────────────── */
+      isBandeja: v === "bandeja",
+      bjSinCredencial: !st.bjCredencial,
+      bjTraer: () => this.traerRespuestas(),
+      bjTraerLabel: st.bjOcupado ? "Trayendo…" : "Traer respuestas",
+      bjHayMsg: !!st.bjMsg,
+      bjMsg: st.bjMsg || "",
+      bjMsgColor: st.bjMal ? RED_D : GREEN_D,
+      bjMsgTint: st.bjMal ? RED_T : GREEN_T,
+      bjFiltros: [
+        ["por_revisar", "Por revisar"],
+        ["ingresada", "Ingresadas"],
+        ["descartada", "Descartadas"],
+      ].map(([clave, label]) => ({
+        label: label,
+        cuenta: String((st.bandeja || []).filter((x) => x.estado === clave).length),
+        estilo: "padding:7px 14px; border-radius:2px; font-size:13.5px; border:1px solid "
+          + (st.bjFiltro === clave ? "#1462a5; background:#e4eef7; color:#0e3d69; font-weight:600;"
+                                   : "#c9d4de; background:#ffffff; color:#3c4a55;"),
+        go: () => this.setState({ bjFiltro: clave, bjMsg: "" }),
+      })),
+      bjVacia: (st.bandeja || []).filter((x) => x.estado === st.bjFiltro).length === 0,
+      bjVaciaTitulo: st.bjFiltro === "por_revisar" ? "No hay nada por revisar"
+        : st.bjFiltro === "ingresada" ? "Todavía no se ha ingresado ninguna"
+        : "No se ha descartado ninguna",
+      bjVaciaNota: st.bjFiltro === "por_revisar"
+        ? "Cuando una familia envíe el formulario, su respuesta aparecerá aquí. Pulsa «Traer respuestas» para buscar las que haya."
+        : "Las respuestas resueltas se conservan: son el rastro de qué se hizo con lo que cada familia envió.",
+      bjLista: (st.bandeja || [])
+        .filter((x) => x.estado === st.bjFiltro)
+        .map((r) => {
+          const val = r.valores || {};
+          const avisos = r.avisos || [];
+          const negada = !r.consentimiento;
+          /* Tres colores y un solo criterio: rojo lo que no se puede
+             ingresar, ámbar lo que hay que mirar, blanco lo limpio. */
+          const acento = negada ? RED : (avisos.length ? GOLD : "#c9d4de");
+          let cruda = [];
+          try {
+            const c = JSON.parse(r.cruda || "{}");
+            cruda = Object.keys(c).map((k) => ({ pregunta: k, valor: String(c[k] || "—") }));
+          } catch (e) { cruda = []; }
+          return {
+            id: r.id,
+            nombre: val.nombre || "(sin nombre)",
+            recibida: String(r.recibida || "").slice(0, 16),
+            paraQuien: r.para ? ("Enlace de: " + r.para) : "Sin enlace reconocido",
+            borde: negada ? RED_T : "#e2ddd6",
+            acento: acento,
+            estadoLabel: negada ? "No autorizó"
+              : r.estado === "ingresada" ? "Ingresada"
+              : r.estado === "descartada" ? "Descartada" : "Por revisar",
+            estiloEstado: "font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; padding:3px 9px; border-radius:2px; white-space:nowrap; "
+              + (negada ? "background:" + RED_T + "; color:" + RED_D + ";"
+                 : r.estado === "ingresada" ? "background:" + GREEN_T + "; color:" + GREEN_D + ";"
+                 : r.estado === "descartada" ? "background:#f0ede9; color:#5b7185;"
+                 : "background:" + BLUE_T + "; color:" + BLUE_D + ";"),
+            hayAvisos: avisos.length > 0,
+            avisos: avisos.map((a) => ({ texto: a })),
+            avisoTint: negada ? RED_T : GOLD_T,
+            avisoColor: negada ? RED_D : GOLD_D,
+            campos: [
+              ["Documento", val.documento], ["Teléfono", val.telefono],
+              ["Correo", val.correo], ["Fecha de nacimiento", val.fecha_nac],
+              ["Distrito", val.distrito], ["Ocupación", val.ocupacion],
+            ].map(([rotulo, valor]) => ({
+              rotulo: rotulo,
+              valor: (valor && String(valor).trim()) ? String(valor) : "Sin dato",
+              color: (valor && String(valor).trim()) ? "#201e1d" : "#9aa7b2",
+            })),
+            crudaAbierta: st.bjCruda === r.id,
+            crudaLabel: st.bjCruda === r.id ? "Ocultar lo que escribió" : "Ver lo que escribió",
+            cruda: cruda,
+            verCruda: () => this.setState({ bjCruda: st.bjCruda === r.id ? null : r.id }),
+            puedeIngresar: !!r.puede_ingresar,
+            ingresarLabel: st.bjOcupado ? "Ingresando…" : "Ingresar",
+            ingresar: () => this.ingresarRespuesta(r),
+            editar: () => this.editarRespuesta(r),
+            puedeDescartar: r.estado === "por_revisar",
+            estiloDescartar: "font-size:13.5px; color:#a8321f; border:1px solid #e2503c; padding:8px 15px; border-radius:2px;"
+              + (r.puede_ingresar ? "" : " margin-left:auto;"),
+            descartar: () => this.descartarRespuesta(r),
+            motivoHay: !!r.motivo,
+            motivo: r.motivo || "",
+          };
+        }),
+
       /* ── Enlaces del formulario ──────────────────────────────────── */
       invAbierto: !!st.invAbierto,
       invBotonLabel: st.invAbierto ? "Ocultar enlaces" : "Enlaces del formulario",

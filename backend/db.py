@@ -1459,6 +1459,54 @@ def actualizar_invitacion(id_, cambios):
     return invitacion(id_)
 
 
+# ── Respuestas del formulario público ────────────────────────────────────
+
+CAMPOS_RESPUESTA = ("origen", "cruda", "normalizada", "token", "invitacion_id",
+                    "consentimiento", "estado", "motivo", "responsable_id",
+                    "resuelta", "resuelta_por", "huella")
+
+
+def crear_respuesta_formulario(datos):
+    campos = [c for c in CAMPOS_RESPUESTA if c in datos]
+    marcas_ = ", ".join("?" for _ in campos)
+    with _lock, _conectar() as con:
+        cur = con.execute(
+            f"INSERT INTO respuestas_formulario ({', '.join(campos)}) "
+            f"VALUES ({marcas_})",
+            tuple(datos[c] for c in campos))
+        return cur.lastrowid
+
+
+def respuestas_formulario(estado=None):
+    """
+    La bandeja. Con el nombre de la familia a la que se le dio el enlace,
+    que es como se reconoce una respuesta antes de abrirla.
+    """
+    sql = """
+        SELECT rf.*, COALESCE(NULLIF(r.nombre, ''), i.etiqueta) AS para
+          FROM respuestas_formulario rf
+          LEFT JOIN invitaciones  i ON i.id = rf.invitacion_id
+          LEFT JOIN responsables  r ON r.id = rf.responsable_id
+    """
+    if estado:
+        return consultar(sql + " WHERE rf.estado = ? ORDER BY rf.id DESC", (estado,))
+    return consultar(sql + " ORDER BY rf.id DESC")
+
+
+def resolver_respuesta(id_, estado, motivo="", responsable_id=None, usuario_id=None):
+    """Marca una respuesta como ingresada o descartada, con su rastro."""
+    with _lock, _conectar() as con:
+        con.execute(
+            """UPDATE respuestas_formulario
+                  SET estado = ?, motivo = ?,
+                      responsable_id = COALESCE(?, responsable_id),
+                      resuelta = datetime('now','localtime'), resuelta_por = ?
+                WHERE id = ?""",
+            (estado, str(motivo or ""), responsable_id, usuario_id, int(id_)))
+    filas = consultar("SELECT * FROM respuestas_formulario WHERE id = ?", (int(id_),))
+    return filas[0] if filas else None
+
+
 def faltantes_responsable(r):
     """Qué le falta a la ficha de un responsable."""
     return _faltan(r, CAMPOS_RESPONSABLE_COMPLETO)

@@ -37,6 +37,7 @@ for _flujo in (sys.stdout, sys.stderr):
 import archivos
 import fotos
 import invitaciones as invi
+import formulario as form
 import auth
 import config
 import db
@@ -528,6 +529,59 @@ def _cuerpo_documento():
     if request.files:
         return request.form.to_dict(), request.files.get("archivo")
     return (request.get_json(silent=True) or {}), None
+
+
+# ── Las respuestas del formulario ─────────────────────────────────────
+# Traer NO es ingresar. Esto deja las respuestas en la bandeja; llevarlas
+# a una ficha es otra decisión, de una persona, y otro endpoint.
+
+@app.get("/api/formulario/respuestas")
+@auth.requiere("responsables", "vista")
+def bandeja_formulario():
+    return jsonify({"ok": True,
+                    "respuestas": form.bandeja(request.args.get("estado") or None),
+                    "hay_credencial": config.credencial_lista()})
+
+
+@app.post("/api/formulario/traer")
+@auth.requiere("responsables", "edicion")
+def traer_formulario():
+    """Lee la hoja y guarda en la bandeja lo que aún no estaba."""
+    try:
+        r = form.traer()
+    except form.google_hoja.GoogleError as e:
+        # El motivo de Google se enseña tal cual: adivinar la causa manda a
+        # buscar donde no es.
+        return _error(e, 502)
+    return jsonify({"ok": True, "resumen": r, "respuestas": form.bandeja()})
+
+
+@app.post("/api/formulario/respuestas/<int:id_>/ingresar")
+@auth.requiere("responsables", "edicion")
+def ingresar_respuesta(id_):
+    """Lleva una respuesta a la ficha del tutor, con las correcciones que traiga."""
+    d = request.get_json(silent=True) or {}
+    ses = auth.sesion_actual()
+    try:
+        r = form.ingresar(id_, d.get("cambios") or {},
+                          usuario_id=(ses or {}).get("usuario_id"))
+    except form.FormularioError as e:
+        return _error(e, 400)
+    return jsonify({"ok": True, **r, "respuestas": form.bandeja(),
+                    "responsables": db.responsables()})
+
+
+@app.post("/api/formulario/respuestas/<int:id_>/descartar")
+@auth.requiere("responsables", "edicion")
+def descartar_respuesta(id_):
+    d = request.get_json(silent=True) or {}
+    ses = auth.sesion_actual()
+    try:
+        form.descartar(id_, d.get("motivo") or "",
+                       usuario_id=(ses or {}).get("usuario_id"))
+    except form.FormularioError as e:
+        return _error(e, 400)
+    return jsonify({"ok": True, "respuestas": form.bandeja()})
 
 
 # ── Invitaciones al formulario público ────────────────────────────────
