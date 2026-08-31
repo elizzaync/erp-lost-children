@@ -1,0 +1,34 @@
+            <sc-if value="{{ modalHistorial }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Registrar año escolar</h3>
+              <p style="margin:0 0 20px; font-size:14px; color:#5b7185; text-wrap:pretty;">Queda en el expediente de <b>{{ seBenef }}</b>.</p>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Año</div>
+                  <input type="text" value="{{ hiAnio }}" onChange="{{ onHiAnio }}" placeholder="2026" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Institución educativa</div>
+                  <input type="text" value="{{ hiInstitucion }}" onChange="{{ onHiInstitucion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nivel</div>
+                  <input type="text" value="{{ hiNivel }}" onChange="{{ onHiNivel }}" placeholder="Primaria, Secundaria…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Grado</div>
+                  <input type="text" value="{{ hiGrado }}" onChange="{{ onHiGrado }}" placeholder="5.º" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sección</div>
+                  <input type="text" value="{{ hiSeccion }}" onChange="{{ onHiSeccion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Situación</div>
+                  <input type="text" value="{{ hiSituacion }}" onChange="{{ onHiSituacion }}" placeholder="Promovido, repite…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nota</div>
+                <input type="text" value="{{ hiNota }}" onChange="{{ onHiNota }}" placeholder="Opcional" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              </div>
+            </sc-if>

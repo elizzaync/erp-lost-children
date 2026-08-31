@@ -1,0 +1,125 @@
+      <sc-if value="{{ isPermisos }}">
+        <div style="padding:30px 0 44px;">
+
+          <!-- Resumen. Cuatro números que salen de las solicitudes que
+               hay; con la base vacía dicen cero. -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:14px;">
+            <sc-for list="{{ gsTarjetas }}" as="gt" hint-placeholder-count="4">
+              <div style="background:{{ gt.tint }}; border-radius:3px; padding:15px 17px 17px;">
+                <div style="font-size:13.5px; color:{{ gt.dark }};">{{ gt.label }}</div>
+                <div style="font-size:31px; font-weight:600; letter-spacing:-1px; line-height:1; margin:9px 0 4px; font-variant-numeric:tabular-nums; color:{{ gt.dark }};">{{ gt.valor }}</div>
+                <div style="font-size:12.5px; color:#5b7185; text-wrap:pretty;">{{ gt.nota }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- Buscador y filtro por tipo -->
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:24px 0 0;">
+            <div style="position:relative; flex:1; min-width:230px; max-width:380px;">
+              <input type="text" value="{{ gsBusca }}" onChange="{{ onGsBusca }}" placeholder="Buscar por nombre o tipo de permiso…" style="width:100%; padding:9px 12px 9px 34px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+              <i class="ph-duotone ph-magnifying-glass" style="position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:15px; color:#7d8e9c;"></i>
+            </div>
+            <select value="{{ gsTipo }}" onChange="{{ onGsTipo }}" style="padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d;">
+              <sc-for list="{{ gsTipos }}" as="gy" hint-placeholder-count="7">
+                <option value="{{ gy.valor }}">{{ gy.etiqueta }}</option>
+              </sc-for>
+            </select>
+            <button class="lc-accion" onClick="{{ repPermisos }}" title="Imprime lo que se está viendo, con los filtros puestos" style="display:flex; align-items:center; gap:8px; margin-left:auto; padding:9px 15px; border-radius:2px; font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7"><i class="ph-duotone ph-file-arrow-down" style="font-size:17px;"></i>Reporte</button>
+            <span style="font-size:13px; color:#7d8e9c; margin-left:auto;">{{ gsMostrando }}</span>
+          </div>
+
+          <div style="display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin:14px 0 0;">
+            <sc-for list="{{ gpFiltros }}" as="gf" hint-placeholder-count="4">
+              <button onClick="{{ gf.go }}" style="{{ gf.estilo }}" style-hover="border-color:#1462a5">
+                {{ gf.label }}<span style="font-size:12.5px; opacity:0.75; font-variant-numeric:tabular-nums;">{{ gf.cuenta }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ gsAviso }}">
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-top:18px; padding:12px 15px; background:#fbe7e3; border-left:4px solid #a8321f; border-radius:2px; max-width:70ch;">
+              <i class="ph-duotone ph-warning-circle" style="font-size:19px; color:#a8321f; flex:none;"></i>
+              <div style="font-size:13.5px; color:#a8321f; text-wrap:pretty;">{{ gsAviso }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ gsVacio }}">
+            <div style="margin-top:24px; padding:26px 28px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px;">
+              <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">{{ gsVacioTitulo }}</div>
+              <p style="margin:8px 0 0; font-size:14px; color:#5b7185; line-height:1.55; text-wrap:pretty; max-width:640px;">{{ gsVacioNota }}</p>
+            </div>
+          </sc-if>
+
+          <!-- Sin filas no hay tabla: una cabecera sola es una raya con
+               seis palabras debajo del mensaje de que no hay nada. -->
+          <sc-if value="{{ gsHay }}">
+          <div class="om-scroll" style="overflow-x:auto; margin-top:20px;">
+          <div style="display:grid; min-width:900px; grid-template-columns:minmax(180px,1.6fr) minmax(120px,1fr) minmax(120px,1fr) minmax(150px,1.4fr) minmax(110px,0.9fr) 96px; gap:12px; padding:12px 0 9px; font-size:10.5px; letter-spacing:0.13em; text-transform:uppercase; color:#0e3d69; border-bottom:2px solid #1462a5;">
+            <div>Solicitante</div><div>Tipo</div><div>Período</div>
+            <div>Motivo</div><div>Estado</div><div style="text-align:right;">Acción</div>
+          </div>
+          <div style="display:flex; flex-direction:column;">
+            <sc-for list="{{ gsLista }}" as="gs" hint-placeholder-count="4">
+              <div style="display:grid; min-width:900px; grid-template-columns:minmax(180px,1.6fr) minmax(120px,1fr) minmax(120px,1fr) minmax(150px,1.4fr) minmax(110px,0.9fr) 96px; gap:12px; padding:12px 0; border-bottom:1px solid #e7e3de; align-items:center;">
+
+                <div style="display:flex; align-items:center; gap:11px; min-width:0;">
+                  <div style="width:36px; height:36px; border-radius:2px; flex:none; background:{{ gs.iniTint }}; color:{{ gs.iniColor }}; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600;">{{ gs.iniciales }}</div>
+                  <div style="min-width:0; line-height:1.3;">
+                    <div style="font-size:15px; font-weight:600; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ gs.persona }}</div>
+                    <div style="font-size:12.5px; color:#7d8e9c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ gs.cargo }}</div>
+                  </div>
+                </div>
+
+                <div><span style="{{ gs.estiloTipo }}">{{ gs.tipoEtiqueta }}</span></div>
+
+                <div style="font-size:13.5px; color:#4d5b66; font-variant-numeric:tabular-nums; line-height:1.35;">
+                  {{ gs.periodo }}
+                  <div style="font-size:12.5px; color:#7d8e9c;">{{ gs.duracion }}</div>
+                </div>
+
+                <div style="font-size:13.5px; color:#5b7185; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ gs.motivoLargo }}">{{ gs.motivoCorto }}</div>
+
+                <div><span style="{{ gs.estiloEstado }}">{{ gs.estado }}</span></div>
+
+                <div style="text-align:right;">
+                  <button onClick="{{ gs.revisar }}" style="font-size:12.5px; color:#0e3d69; border:1px solid #c9d4de; padding:6px 13px; border-radius:2px; white-space:nowrap;" style-hover="background:#e4eef7">{{ gs.revisarLabel }}</button>
+                </div>
+              </div>
+
+              <!-- El detalle se abre debajo de su fila: no hace falta salir
+                   de la lista para resolver una solicitud. -->
+              <sc-if value="{{ gs.abierta }}">
+                <div style="background:#ffffff; border-left:4px solid {{ gs.color }}; border-radius:2px; padding:16px 20px; margin:2px 0 10px;">
+                  <div style="font-size:15px;">{{ gs.titulo }}</div>
+                  <div style="font-size:13.5px; color:#5b7185; margin-top:3px; text-wrap:pretty;">{{ gs.detalle }}</div>
+
+                <sc-if value="{{ gs.tieneNota }}">
+                  <div style="font-size:13.5px; color:#8a5c05; margin-top:9px; padding:9px 12px; background:#fbf0d9; border-radius:2px; text-wrap:pretty;">{{ gs.nota }}</div>
+                </sc-if>
+
+                <div style="margin-top:13px;">
+                  <button onClick="{{ gs.verDocumento }}" style="display:flex; align-items:center; gap:6px; font-size:13px; color:#0e3d69;" style-hover="text-decoration:underline"><i class="ph-duotone ph-file-pdf" style="font-size:16px;"></i>Descargar la autorización</button>
+                </div>
+
+                <sc-if value="{{ gs.hayAcciones }}">
+                  <div style="display:flex; gap:9px; flex-wrap:wrap; margin-top:13px;">
+                    <sc-if value="{{ gs.puedeAprobar }}">
+                      <button onClick="{{ gs.aprobar }}" style="display:flex; align-items:center; gap:7px; padding:8px 15px; border-radius:2px; font-size:13.5px; font-weight:600; color:#ffffff; background:#2f8f5b;" style-hover="background:#1c5f3a">
+                        <i class="ph-duotone ph-check" style="font-size:16px;"></i>{{ gs.etiquetaAprobar }}
+                      </button>
+                    </sc-if>
+                    <sc-if value="{{ gs.puedeRechazar }}">
+                      <button onClick="{{ gs.rechazar }}" style="display:flex; align-items:center; gap:7px; padding:8px 15px; border:1px solid #e2503c; border-radius:2px; font-size:13.5px; color:#a8321f; background:#ffffff;" style-hover="background:#fbe7e3">
+                        <i class="ph-duotone ph-x" style="font-size:16px;"></i>Rechazar
+                      </button>
+                    </sc-if>
+                  </div>
+                </sc-if>
+                </div>
+              </sc-if>
+            </sc-for>
+          </div>
+          </div>
+          </sc-if>
+        </div>
+      </sc-if>

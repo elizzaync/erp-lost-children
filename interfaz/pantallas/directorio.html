@@ -1,0 +1,43 @@
+      <sc-if value="{{ isDir }}">
+        <div style="padding:30px 0 0;">
+          <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;">
+            <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Personal registrado</h2>
+            <span style="font-size:14px; color:#7d8e9c;">{{ legajoNota }}</span>
+          </div>
+          <!-- Siete columnas no caben en un teléfono. Se arrastra, como
+               el resto de tablas anchas del sistema; comprimirlas hacía que
+               los títulos se escribieran unos encima de otros. -->
+          <div class="om-scroll" style="overflow-x:auto;">
+          <div style="display:grid; min-width:820px; grid-template-columns:minmax(100px,2fr) minmax(90px,1.8fr) minmax(80px,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(96px,120px) 46px; gap:12px; padding:16px 0 9px; font-size:10.5px; letter-spacing:0.13em; text-transform:uppercase; color:#0e3d69; border-bottom:2px solid #1462a5;">
+            <div>Colaborador</div><div>Cargo</div><div>Área</div><div>Sede</div><div>Contrato</div><div style="text-align:right;">Terminal</div><div></div>
+          </div>
+          <sc-for list="{{ directorio }}" as="p" hint-placeholder-count="20">
+            <div style="display:grid; min-width:820px; grid-template-columns:minmax(100px,2fr) minmax(90px,1.8fr) minmax(80px,1.4fr) minmax(0,1fr) minmax(0,1fr) minmax(96px,120px) 46px; gap:12px; padding:11px 0; border-bottom:1px solid #e7e3de; align-items:center; text-align:left; width:100%;">
+              <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                <span style="width:28px; height:28px; border-radius:2px; background:{{ p.tint }}; color:{{ p.dark }}; display:flex; align-items:center; justify-content:center; font-size:11.5px; font-weight:600; flex-shrink:0;">{{ p.ini }}</span>
+                <button onClick="{{ p.abrir }}" style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-align:left; color:#0e3d69;" style-hover="color:#1462a5">{{ p.nombre }}</button>
+              </div>
+              <div style="font-size:14px; color:#4d5b66; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.cargo }}</div>
+              <div style="font-size:14px; color:#4d5b66; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.area }}</div>
+              <div style="font-size:14px; color:#4d5b66; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.sede }}</div>
+              <div style="font-size:14px; color:#4d5b66; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.contrato }}</div>
+              <div style="text-align:right; min-width:0;"><span style="font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; background:{{ p.bioTint }}; color:{{ p.bioColor }}; padding:4px 9px; border-radius:2px; white-space:nowrap;">{{ p.bio }}</span></div>
+              <div style="display:flex; gap:4px; justify-content:flex-end;">
+                <sc-if value="{{ puedeAlta }}">
+                  <button onClick="{{ p.editar }}" title="Editar ficha" style="padding:5px 7px; border-radius:2px; border:1px solid #c9d4de; color:#0e3d69; line-height:0;" style-hover="background:#e4eef7">
+                    <i class="ph-duotone ph-pencil-simple" style="font-size:16px;"></i>
+                  </button>
+                </sc-if>
+              </div>
+            </div>
+          </sc-for>
+          </div>
+          <!-- El alta ya no está aquí: subió junto a las pestañas, para que
+               se pueda crear una persona desde cualquiera de las cuatro. -->
+          <!-- Aquí había un botón «Exportar fichas» de la maqueta original.
+               No tenía acción: era un dibujo. Un botón que no hace nada es
+               peor que no tenerlo, porque quien lo pulsa cree que falló el
+               sistema. Lo que sí exporta está arriba, en «Reporte de
+               personal», que genera el PDF de verdad. -->
+        </div>
+      </sc-if>

@@ -1,0 +1,109 @@
+      <sc-if value="{{ isBandeja }}">
+        <div style="padding:26px 0 44px;">
+
+          <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap;">
+            <p style="font-size:14.5px; color:#5b7185; text-wrap:pretty; max-width:66ch; margin:0;">Lo que las familias envían por el formulario espera aquí. Nada entra a una ficha hasta que alguien lo revisa y lo ingresa.</p>
+            <sc-if value="{{ puedeResponsables }}">
+              <button class="lc-accion" onClick="{{ repRespuestas }}" title="Imprime lo que se está viendo, con los filtros puestos" style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7"><i class="ph-duotone ph-file-arrow-down" style="font-size:17px;"></i>Reporte</button>
+              <button class="lc-accion" onClick="{{ bjTraer }}" style="display:flex; align-items:center; gap:8px; margin-left:auto; padding:10px 16px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5; white-space:nowrap;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-arrow-clockwise" style="font-size:17px;"></i>{{ bjTraerLabel }}
+              </button>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ bjSinCredencial }}">
+            <div style="margin-top:16px; padding:13px 16px; background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px; font-size:13.5px; color:#8a5c05; text-wrap:pretty;">Todavía no está la llave de Google, así que no se pueden traer respuestas. Se genera en console.cloud.google.com y se guarda en data/credenciales/.</div>
+          </sc-if>
+
+          <sc-if value="{{ bjSondeoHay }}">
+            <div style="margin-top:12px; font-size:13px; color:{{ bjSondeoColor }};">{{ bjSondeoTexto }}</div>
+          </sc-if>
+
+          <sc-if value="{{ bjHayMsg }}">
+            <div style="margin-top:16px; padding:12px 15px; border-left:4px solid {{ bjMsgColor }}; background:{{ bjMsgTint }}; border-radius:2px; font-size:13.5px; color:{{ bjMsgColor }}; text-wrap:pretty;">{{ bjMsg }}</div>
+          </sc-if>
+
+          <div style="display:flex; gap:9px; flex-wrap:wrap; margin:22px 0 0;">
+            <sc-for list="{{ bjFiltros }}" as="bf" hint-placeholder-count="3">
+              <button onClick="{{ bf.go }}" style="{{ bf.estilo }}" style-hover="border-color:#1462a5">
+                {{ bf.label }} <span style="font-variant-numeric:tabular-nums; color:#5b7185;">{{ bf.cuenta }}</span>
+              </button>
+            </sc-for>
+          </div>
+            <div style="display:flex; align-items:center; gap:9px; margin-left:auto; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; padding:8px 12px; flex:1 1 240px; max-width:380px; min-width:0;">
+              <i class="ph-duotone ph-magnifying-glass" style="font-size:17px; color:#9aa7b2; flex:none;"></i>
+              <input type="text" value="{{ busBandeja }}" onChange="{{ onBusBandeja }}" placeholder="Buscar por nombre, documento o teléfono..." style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14.5px; color:#201e1d;" />
+              <sc-if value="{{ hayBusBandeja }}">
+                <button onClick="{{ limpiarBusBandeja }}" title="Limpiar" style="line-height:0; color:#9aa7b2; padding:2px;" style-hover="color:#0e3d69">
+                  <i class="ph-duotone ph-x" style="font-size:15px;"></i>
+                </button>
+              </sc-if>
+            </div>
+
+          <sc-if value="{{ bjVacia }}">
+            <div style="margin-top:20px; padding:30px 26px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; text-align:center;">
+              <i class="ph-duotone ph-tray" style="font-size:30px; color:#b0bcc6;"></i>
+              <div style="margin-top:11px; font-size:15px; font-weight:600; color:#3c4a55;">{{ bjVaciaTitulo }}</div>
+              <div style="margin-top:6px; font-size:13.5px; color:#7d8e9c; max-width:460px; margin-left:auto; margin-right:auto; text-wrap:pretty;">{{ bjVaciaNota }}</div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; flex-direction:column; gap:14px; margin-top:18px;">
+            <sc-for list="{{ bjLista }}" as="bx" hint-placeholder-count="3">
+              <div style="background:#ffffff; border:1px solid {{ bx.borde }}; border-left:4px solid {{ bx.acento }}; border-radius:3px; padding:18px 20px;">
+
+                <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+                  <div style="font-size:17px; font-weight:600; color:#0e3d69;">{{ bx.nombre }}</div>
+                  <span style="{{ bx.estiloEstado }}">{{ bx.estadoLabel }}</span>
+                  <span style="font-size:12.5px; color:#7d8e9c;">{{ bx.recibida }}</span>
+                  <span style="font-size:12.5px; color:#7d8e9c; margin-left:auto;">{{ bx.paraQuien }}</span>
+                </div>
+
+                <sc-if value="{{ bx.hayAvisos }}">
+                  <div style="margin-top:12px; padding:11px 14px; background:{{ bx.avisoTint }}; border-radius:2px;">
+                    <sc-for list="{{ bx.avisos }}" as="ba" hint-placeholder-count="2">
+                      <div style="font-size:13.5px; color:{{ bx.avisoColor }}; text-wrap:pretty;">· {{ ba.texto }}</div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(170px,1fr)); gap:12px; margin-top:14px;">
+                  <sc-for list="{{ bx.campos }}" as="bc" hint-placeholder-count="6">
+                    <div>
+                      <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">{{ bc.rotulo }}</div>
+                      <div style="font-size:14.5px; color:{{ bc.color }}; margin-top:3px; word-break:break-word;">{{ bc.valor }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+
+                <sc-if value="{{ bx.crudaAbierta }}">
+                  <div style="margin-top:14px; padding:12px 14px; background:#f7f5f2; border-radius:2px;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:7px;">Tal como lo escribió</div>
+                    <sc-for list="{{ bx.cruda }}" as="bk" hint-placeholder-count="4">
+                      <div style="display:flex; gap:10px; font-size:13px; padding:2px 0;">
+                        <span style="color:#7d8e9c; min-width:190px; flex:none;">{{ bk.pregunta }}</span>
+                        <span style="color:#3c4a55; word-break:break-word;">{{ bk.valor }}</span>
+                      </div>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <div style="display:flex; gap:9px; flex-wrap:wrap; margin-top:16px; align-items:center;">
+                  <button onClick="{{ bx.verCruda }}" style="font-size:12.5px; color:#5b7185; padding:5px 0;" style-hover="color:#1462a5">{{ bx.crudaLabel }}</button>
+                  <sc-if value="{{ bx.puedeIngresar }}">
+                    <button onClick="{{ bx.ingresar }}" style="margin-left:auto; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#2f8f5b; padding:8px 16px; border-radius:2px;" style-hover="background:#1c5f3a">{{ bx.ingresarLabel }}</button>
+                    <button onClick="{{ bx.editar }}" style="font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; padding:8px 15px; border-radius:2px;" style-hover="background:#e4eef7">Editar e ingresar</button>
+                  </sc-if>
+                  <sc-if value="{{ bx.puedeDescartar }}">
+                    <button onClick="{{ bx.descartar }}" style="{{ bx.estiloDescartar }}" style-hover="background:#fbe7e3">Descartar</button>
+                  </sc-if>
+                </div>
+
+                <sc-if value="{{ bx.motivoHay }}">
+                  <div style="margin-top:11px; font-size:13px; color:#7d8e9c;">Descartada: {{ bx.motivo }}</div>
+                </sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>

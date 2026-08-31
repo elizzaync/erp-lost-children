@@ -1,0 +1,59 @@
+            <sc-if value="{{ modalVinculo }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">{{ vinTitulo }}</h3>
+              <p style="margin:0 0 18px; font-size:14px; color:#5b7185; line-height:1.5; text-wrap:pretty;">{{ vinLede }}</p>
+
+              <!-- Al editar un vínculo ya existente no se cambia de persona:
+                   para eso se quita y se vincula a otra. -->
+              <sc-if value="{{ vinEsNuevo }}">
+                <div style="margin-bottom:18px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Buscar responsable ya registrado</div>
+                  <input type="text" value="{{ vinBusca }}" onChange="{{ onVinBusca }}" placeholder="Nombre o documento…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  <div style="margin-top:6px; font-size:12.5px; color:#7d8e9c; text-wrap:pretty;">{{ vinBuscaNota }}</div>
+                </div>
+
+                <sc-if value="{{ vinHayCandidatos }}">
+                  <div style="max-height:190px; overflow-y:auto; border:1px solid #e2ddd6; border-radius:2px; background:#ffffff; margin-bottom:18px;">
+                    <sc-for list="{{ vinCandidatos }}" as="c" hint-placeholder-count="4">
+                      <button onClick="{{ c.elegir }}" style="{{ c.estilo }}">
+                        <div style="min-width:0; flex:1; text-align:left;">
+                          <div style="font-size:14.5px; font-weight:600;">{{ c.nombre }}</div>
+                          <div style="font-size:12.5px; color:#7d8e9c;">{{ c.detalle }}</div>
+                        </div>
+                        <sc-if value="{{ c.elegido }}">
+                          <i class="ph-duotone ph-check-circle" style="font-size:19px; color:#2f8f5b; flex:none;"></i>
+                        </sc-if>
+                      </button>
+                    </sc-for>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ vinSinCandidatos }}">
+                  <div style="padding:15px 16px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px; margin-bottom:18px; font-size:13.5px; color:#8a5c05; line-height:1.55; text-wrap:pretty;">{{ vinSinCandidatosNota }}</div>
+                </sc-if>
+              </sc-if>
+
+              <sc-if value="{{ vinHayElegido }}">
+                <div style="padding:12px 14px; background:#e7eff7; border-radius:2px; margin-bottom:18px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185;">Responsable</div>
+                  <div style="font-size:15.5px; font-weight:600; color:#0e3d69; margin-top:3px;">{{ vinElegidoNombre }}</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Parentesco</div>
+                  <input type="text" value="{{ vinParentesco }}" onChange="{{ onVinParentesco }}" placeholder="Madre, abuela, hermano mayor…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Qué papel cumple</div>
+                <div style="display:flex; flex-direction:column; gap:2px; margin-top:9px;">
+                  <sc-for list="{{ vinBanderas }}" as="f" hint-placeholder-count="4">
+                    <button onClick="{{ f.alternar }}" style="display:flex; align-items:flex-start; gap:11px; padding:9px 10px; border-radius:2px; text-align:left; width:100%;" style-hover="background:#f2efeb">
+                      <span style="{{ f.casilla }}">{{ f.marca }}</span>
+                      <span style="min-width:0;">
+                        <span style="display:block; font-size:14.5px; color:#201e1d;">{{ f.label }}</span>
+                        <span style="display:block; font-size:12.5px; color:#7d8e9c; text-wrap:pretty;">{{ f.nota }}</span>
+                      </span>
+                    </button>
+                  </sc-for>
+                </div>
+              </sc-if>
+            </sc-if>

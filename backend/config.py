@@ -170,7 +170,13 @@ REGIMEN_CON_VACACIONES = "planilla"
 #  ensayo, no una barrera — y no pueden serlo de todas formas mientras no
 #  haya HTTPS, porque las contraseñas viajarían en claro. La barrera
 #  empieza a existir el día del corte.
-LOGIN_ESTRICTO = env("LOGIN_ESTRICTO", "0").strip().lower() in ("1", "true", "si", "sí")
+# Por defecto 1, no 0. Con 0, quien no tiene sesión ATRAVIESA el
+# decorador que protege los endpoints —también los de escritura, y sin
+# comprobar el token CSRF—. Que eso sea lo que pasa cuando nadie configura
+# nada convierte un olvido en una puerta abierta: `.dockerignore` deja
+# fuera backend/.env, así que el contenedor nunca vio el 1 de aquí.
+# Quien quiera de verdad el modo sin login, que lo pida a mano.
+LOGIN_ESTRICTO = env("LOGIN_ESTRICTO", "1").strip().lower() in ("1", "true", "si", "sí")
 
 # Sesión. Pensada para celulares que se prestan y quedan desbloqueados,
 # no para un PC de escritorio con un solo dueño.
@@ -336,29 +342,39 @@ CANALES_MARCA = ("terminal", "web")
 # persona leyó. Si este texto se cambia, hay que subir la versión, y quienes
 # aceptaron la anterior tienen que volver a aceptar — no se les puede dar por
 # consentida una redacción que nunca vieron.
-CONSENTIMIENTO_ROSTRO_VERSION = "v1-2026-08"
+CONSENTIMIENTO_ROSTRO_VERSION = "v2-2026-08"
 CONSENTIMIENTO_ROSTRO_TEXTO = """\
 Para poder marcar tu asistencia desde el celular, el sistema necesita
 registrar una referencia de tu rostro.
 
 Qué se guarda
   · Un código numérico calculado a partir de tu rostro. No es una fotografía
-    y no se puede reconstruir tu cara a partir de él.
-  · La fecha y hora de cada marca, y desde qué canal la hiciste.
+    y no se puede reconstruir tu cara a partir de él. Es lo que permite
+    comprobar que eres tú quien marca.
+  · La foto de cada marca. Cada vez que marques se guarda la foto de ese
+    momento, junto con la fecha, la hora, tus coordenadas y desde qué canal
+    marcaste. Es la constancia de quién fichó.
 
 Qué NO se guarda
-  · Ninguna fotografía tuya. La imagen se procesa en tu propio teléfono y se
-    descarta al instante: no llega al servidor.
+  · La foto con la que registras tu rostro. Esa se procesa en tu propio
+    teléfono, se convierte en el código numérico y se descarta ahí mismo:
+    esa imagen no llega al servidor.
 
 Para qué se usa
-  · Únicamente para confirmar tu identidad al marcar asistencia. No se usa
-    para vigilancia, ni se comparte con terceros.
+  · Únicamente para confirmar tu identidad al marcar asistencia y para dejar
+    constancia del fichaje. No se usa para vigilancia, no se analiza tu cara
+    para ninguna otra cosa, y no se comparte con terceros.
+
+Dónde se guarda
+  · En el servidor de la organización. No se manda a ningún servicio de
+    fuera, y el reconocimiento se calcula en tu propio teléfono.
 
 Tus derechos
   · Puedes retirar este permiso cuando quieras. Al hacerlo se elimina la
     referencia de tu rostro y dejas de poder marcar por el celular; seguirás
     marcando en el terminal con normalidad.
-  · Puedes pedir a RRHH que te muestre o elimine estos datos.
+  · Puedes pedir a RRHH que te muestre, corrija o elimine estos datos,
+    incluidas las fotos de tus marcas.
 
 Marcar por el celular es una alternativa, no una obligación: el terminal
 biométrico sigue funcionando igual.
@@ -371,12 +387,41 @@ biométrico sigue funcionando igual.
 # disco, no dentro de SQLite: un PDF de varios MB por fila haría la base
 # lenta de copiar y de respaldar, y aquí los respaldos se hacen copiando
 # el .db a mano.
-ARCHIVOS_DIR = os.path.join(RAIZ_PROYECTO, "data", "archivos")
+# ── Dónde viven los archivos de datos ────────────────────────────────────
+#
+# Cuelgan del directorio de la BASE, no del proyecto. Suena a detalle y no
+# lo es: las pruebas apuntan DB_PATH a una copia temporal, y con las
+# carpetas clavadas al proyecto cada prueba de marcar dejaba su fotografía
+# en la carpeta real del equipo. Así, una copia de la base se lleva sus
+# archivos y no toca los de nadie.
+#
+# En una instalación normal DB_PATH es data/rrhh.db, así que esto da
+# exactamente el mismo sitio de siempre.
+_DATOS = os.path.dirname(os.path.abspath(DB_PATH))
+
+ARCHIVOS_DIR = os.path.join(_DATOS, "archivos")
 
 # Las fotos de personas van aparte de los adjuntos. Son de otra naturaleza
 # —dato personal de la persona, no papeleo— y separarlas permite respaldar
 # o restringir unas sin las otras.
-FOTOS_DIR = os.path.join(RAIZ_PROYECTO, "data", "fotos")
+FOTOS_DIR = os.path.join(_DATOS, "fotos")
+
+# Las firmas dibujadas, aparte de las fotos. Son de otra naturaleza: una
+# foto identifica, una firma autoriza, y quien pueda ver una cara no tiene
+# por qué poder copiar un trazo que aparece en documentos aprobados.
+FIRMAS_DIR = os.path.join(_DATOS, "firmas")
+
+# Las fotos de cada marca por celular. Aparte de las fotos de ficha: son
+# muchas, se acumulan por día y no significan lo mismo —una identifica a
+# la persona, la otra deja constancia de un momento—.
+MARCAS_DIR = os.path.join(_DATOS, "marcas")
+
+# Hasta cuántos metros de la sede se puede marcar. Es solo el valor por
+# defecto: el de verdad se configura en Parámetros, junto a las
+# coordenadas. Mientras no haya coordenadas puestas NO se rechaza a nadie
+# —ver el endpoint—, porque dejar al equipo sin marcar por un dato que
+# falta sería peor que la trampa que se intenta evitar.
+RADIO_MARCA_M = int(env("RADIO_MARCA_M", "150") or 150)
 
 # ── El formulario público de tutores ─────────────────────────────────────
 # La dirección prerrellenada que da Google, con la palabra de plantilla
@@ -391,6 +436,10 @@ FORM_DIAS_VIGENCIA = int(env("FORM_DIAS_VIGENCIA", "30") or 30)
 
 # La llave de la cuenta de servicio que lee la hoja. Aquí solo va la
 # ruta: el archivo vive fuera del repositorio (ver .gitignore).
+# Cada cuánto mira el sistema la hoja por su cuenta, en minutos. En 0 se
+# desactiva y solo se trae con el botón. Ver sondeo_formulario.py.
+FORM_MINUTOS_SONDEO = int(env("FORM_MINUTOS_SONDEO", "10") or 0)
+
 FORM_CREDENCIAL = env("FORM_CREDENCIAL", "")
 if FORM_CREDENCIAL and not os.path.isabs(FORM_CREDENCIAL):
     FORM_CREDENCIAL = os.path.join(RAIZ_PROYECTO, FORM_CREDENCIAL)

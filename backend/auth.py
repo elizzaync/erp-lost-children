@@ -156,14 +156,47 @@ def anotar_intento(usuario, ip, exito):
 
 # ── Sesiones ──────────────────────────────────────────────────────────────
 
+def _huella(token):
+    """
+    Lo que se guarda de un token: su SHA-256, nunca el token.
+
+    Sin sal y de una sola pasada, a diferencia de las contraseñas. No es un
+    descuido: un token son 256 bits de azar, no una palabra que alguien
+    pueda adivinar, así que no hay diccionario contra el que defenderse.
+    """
+    return hashlib.sha256(str(token or "").encode("utf-8")).hexdigest()
+
+
+def migrar_tokens():
+    """
+    Pasa a huella los tokens que quedaran en claro de antes.
+
+    Se hace en sitio y nadie se queda fuera: la cookie de quien esté dentro
+    sigue valiendo, porque al consultarla se le calcula la misma huella. Se
+    reconocen por la forma —una huella son 64 caracteres hexadecimales y un
+    token son 43 de base64— así que volver a pasarlo no hace nada.
+    """
+    filas = db.consultar("SELECT token FROM sesiones_usuario")
+    cambiados = 0
+    for f in filas:
+        t = f["token"]
+        if len(t) == 64 and all(c in "0123456789abcdef" for c in t):
+            continue
+        db.ejecutar("UPDATE sesiones_usuario SET token = ? WHERE token = ?",
+                    (_huella(t), t))
+        cambiados += 1
+    return cambiados
+
+
 def abrir_sesion(usuario_id, ip="", agente=""):
-    """Crea la sesión y devuelve (token, csrf)."""
+    """Crea la sesión y devuelve (token, csrf). En la base queda la huella."""
     token = secrets.token_urlsafe(32)
     csrf = secrets.token_urlsafe(32)
     db.ejecutar(
         """INSERT INTO sesiones_usuario (token, usuario_id, csrf, ip, agente)
            VALUES (?, ?, ?, ?, ?)""",
-        (token, usuario_id, csrf, str(ip or "")[:60], str(agente or "")[:200]),
+        (_huella(token), usuario_id, csrf,
+         str(ip or "")[:60], str(agente or "")[:200]),
     )
     db.ejecutar(
         "UPDATE usuarios SET ultimo_acceso = datetime('now','localtime') WHERE id = ?",
@@ -173,7 +206,8 @@ def abrir_sesion(usuario_id, ip="", agente=""):
 
 
 def cerrar_sesion(token):
-    return db.ejecutar("DELETE FROM sesiones_usuario WHERE token = ?", (token,))
+    return db.ejecutar("DELETE FROM sesiones_usuario WHERE token = ?",
+                       (_huella(token),))
 
 
 def cerrar_sesiones_de(usuario_id):
@@ -210,7 +244,7 @@ def sesion_de(token):
              JOIN roles r    ON r.id = u.rol_id
              LEFT JOIN personal p ON p.id = u.personal_id
             WHERE s.token = ?""",
-        (token,),
+        (_huella(token),),
     )
     if not filas:
         return None
@@ -220,7 +254,7 @@ def sesion_de(token):
         return None
     db.ejecutar(
         "UPDATE sesiones_usuario SET ultima = datetime('now','localtime') WHERE token = ?",
-        (token,),
+        (_huella(token),),
     )
     ses["permisos"] = permisos_de_rol(ses["rol"])
     return ses

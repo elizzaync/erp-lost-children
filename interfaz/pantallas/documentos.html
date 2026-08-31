@@ -1,0 +1,77 @@
+      <sc-if value="{{ isDocs }}">
+        <div style="padding:26px 0 0;">
+          <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;">
+            <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">{{ vencTitulo }}</h2>
+            <span style="font-size:14px; color:#7d8e9c;">{{ vencNota }}</span>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:8px; margin:18px 0 0;">
+            <sc-for list="{{ vencFiltros }}" as="vf" hint-placeholder-count="4">
+              <button onClick="{{ vf.go }}" style="{{ vf.style }}" style-hover="border-color:#1462a5">
+                <span>{{ vf.label }}</span>
+                <span style="font-variant-numeric:tabular-nums; opacity:.75;">{{ vf.count }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <!-- Una tarjeta por PERSONA, estén o no cargados sus papeles: la
+               lista es el directorio completo, no solo quien ya tiene algo. -->
+          <sc-if value="{{ hayVenc }}">
+            <div style="display:flex; flex-direction:column; gap:10px; margin-top:22px; max-width:920px;">
+              <sc-for list="{{ vencPersonas }}" as="vp" hint-placeholder-count="8">
+                <div style="border:1px solid #dcd9d5; border-radius:2px; background:#ffffff;">
+                  <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:13px 15px; border-bottom:1px solid #eceae6;">
+                    <span style="width:30px; height:30px; border-radius:2px; background:{{ vp.tint }}; color:{{ vp.dark }}; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:600; flex:none;">{{ vp.ini }}</span>
+                    <button onClick="{{ vp.abrir }}" style="text-align:left; min-width:0; flex:1;" style-hover="opacity:0.72">
+                      <div style="font-size:15.5px; font-weight:600; color:#0e3d69; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ vp.nombre }}</div>
+                      <div style="font-size:13px; color:#7d8e9c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ vp.cargo }}</div>
+                    </button>
+                    <span style="{{ vp.resumenStyle }}">{{ vp.resumen }}</span>
+                    <sc-if value="{{ puedeDocs }}">
+                    <button onClick="{{ vp.agregar }}" style="display:flex; align-items:center; gap:7px; font-size:13px; padding:7px 13px; border-radius:2px; border:1px solid #1462a5; color:#0e3d69; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7">
+                      <i class="ph-duotone ph-plus" style="font-size:15px;"></i>{{ vencBotonAgregar }}
+                    </button>
+                    </sc-if>
+                  </div>
+
+                  <sc-if value="{{ vp.tiene }}">
+                    <div style="display:flex; flex-direction:column;">
+                      <sc-for list="{{ vp.papeles }}" as="pp" hint-placeholder-count="2">
+                        <div style="display:grid; grid-template-columns:minmax(150px,2fr) minmax(120px,1.2fr) minmax(0,116px) 78px; gap:12px; align-items:center; padding:10px 15px; border-top:1px solid #f2f0ed;">
+                          <div style="font-size:14.5px; color:#3c4a55; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ pp.nombre }}</div>
+                          <div style="font-size:13px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ pp.vigencia }}</div>
+                          <div style="text-align:right; min-width:0;"><span style="font-size:11px; letter-spacing:0.05em; text-transform:uppercase; background:{{ pp.tint }}; color:{{ pp.color }}; padding:3px 8px; border-radius:2px; white-space:nowrap;">{{ pp.etiqueta }}</span></div>
+                          <div style="display:flex; gap:4px; justify-content:flex-end;">
+                            <sc-if value="{{ pp.tieneArchivo }}">
+                              <button onClick="{{ pp.ver }}" title="{{ pp.archivoTitulo }}" style="padding:5px 7px; border-radius:2px; border:1px solid #2f8f5b; color:#1c5f3a; line-height:0; background:#ffffff;" style-hover="background:#e2f1e8">
+                                <i class="ph-duotone ph-paperclip" style="font-size:14px;"></i>
+                              </button>
+                            </sc-if>
+                            <button onClick="{{ pp.editar }}" title="Corregir" style="padding:5px 7px; border-radius:2px; border:1px solid #c9d4de; color:#0e3d69; line-height:0; background:#ffffff;" style-hover="background:#e4eef7">
+                              <i class="ph-duotone ph-pencil-simple" style="font-size:14px;"></i>
+                            </button>
+                            <button onClick="{{ pp.borrar }}" title="Eliminar" style="padding:5px 7px; border-radius:2px; border:1px solid #e2503c; color:#a8321f; line-height:0; background:#ffffff;" style-hover="background:#fbe7e3">
+                              <i class="ph-duotone ph-trash" style="font-size:14px;"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ vp.vacio }}">
+                    <div style="padding:11px 15px; font-size:13.5px; color:#9aa7b2;">{{ vencVacioPersona }}</div>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ sinVenc }}">
+            <div style="display:flex; align-items:flex-start; gap:11px; margin-top:20px; padding:16px 18px; background:#f0ede9; border-radius:2px; max-width:620px;">
+              <i class="ph-duotone ph-folder-open" style="font-size:20px; color:#9aa7b2; flex-shrink:0;"></i>
+              <div style="font-size:14px; color:#5b7185; text-wrap:pretty;">{{ vencVacio }}</div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>

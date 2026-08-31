@@ -1,0 +1,170 @@
+      <sc-if value="{{ isMarcar }}">
+        <!-- Dos columnas: a la izquierda el acto de marcar, a la derecha lo
+             que ya quedó registrado. En pantalla estrecha se apilan solas y
+             el botón queda arriba, que es a lo que se entra. -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px,1fr)); gap:24px; align-items:start; padding:22px 0 0;">
+
+          <!-- ══ Columna izquierda ══════════════════════════════════════ -->
+          <div style="min-width:0; display:flex; flex-direction:column; gap:16px;">
+
+            <div style="background:#ffffff; border:1px solid #c9d4de; border-radius:3px; padding:22px 24px;">
+
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">{{ mkFechaLarga }}</div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Hora del servidor</div>
+              </div>
+
+              <!-- El reloj sale de la hora del servidor, no del aparato:
+                   un teléfono con la hora cambiada mentiría. -->
+              <div style="display:flex; align-items:baseline; gap:10px; margin-top:10px;">
+                <div style="font-size:46px; font-weight:600; letter-spacing:-1.6px; color:#0e3d69; font-variant-numeric:tabular-nums; line-height:1;">{{ mkReloj }}</div>
+                <div style="font-size:15px; color:#7d8e9c;">{{ mkMeridiano }}</div>
+              </div>
+              <div style="font-size:15px; color:#5b7185; margin-top:8px;">{{ mkQuien }}</div>
+
+              <!-- ── Estado del GPS ──────────────────────────────────── -->
+              <div style="margin-top:20px; padding-top:18px; border-top:1px solid #e7e3de;">
+                <div style="display:flex; align-items:center; gap:9px; flex-wrap:wrap;">
+                  <span style="width:9px; height:9px; border-radius:50%; background:{{ mkGpsColor }}; flex:none;"></span>
+                  <div style="font-size:14px; color:#3c4a55;">{{ mkGpsTexto }}</div>
+                  <span style="margin-left:auto; font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; padding:4px 9px; border-radius:2px; white-space:nowrap; color:{{ mkGpsColor }}; background:{{ mkGpsTint }};">{{ mkGpsTag }}</span>
+                </div>
+
+                <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; margin-top:16px;">
+                  <div style="min-width:0;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Distancia</div>
+                    <div style="font-size:16px; color:#201e1d; margin-top:4px; font-variant-numeric:tabular-nums;">{{ mkDistancia }}</div>
+                  </div>
+                  <div style="min-width:0;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Precisión</div>
+                    <div style="font-size:16px; color:#201e1d; margin-top:4px; font-variant-numeric:tabular-nums;">{{ mkPrecision }}</div>
+                  </div>
+                  <div style="min-width:0;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Coordenadas</div>
+                    <div style="font-size:13.5px; color:#201e1d; margin-top:5px; font-variant-numeric:tabular-nums; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ mkCoords }}</div>
+                  </div>
+                </div>
+              </div>
+
+              <sc-if value="{{ mkPuede }}">
+                <button onClick="{{ mkMarcar }}" style="{{ mkBotonStyle }}" style-hover="background:#1c5f3a">
+                  <i class="ph-duotone {{ mkBotonIcono }}" style="font-size:24px;"></i>{{ mkBotonLabel }}
+                </button>
+              </sc-if>
+
+              <sc-if value="{{ mkSinSede }}">
+                <div style="margin-top:14px; font-size:13px; color:#7d8e9c; text-wrap:pretty;">{{ mkSinSedeNota }}</div>
+              </sc-if>
+
+              <sc-if value="{{ mkSinRostro }}">
+                <div style="margin-top:20px; padding:14px 16px; background:#e4eef7; border-left:4px solid #1462a5; border-radius:2px; font-size:14px; color:#0e3d69; text-wrap:pretty;">{{ mkSinRostroNota }}</div>
+              </sc-if>
+
+              <sc-if value="{{ mkCompleto }}">
+                <div style="margin-top:20px; padding:14px 16px; background:#e2f1e8; border-left:4px solid #2f8f5b; border-radius:2px; font-size:14px; color:#1c5f3a; text-wrap:pretty;">{{ mkCompletoNota }}</div>
+              </sc-if>
+
+              <sc-if value="{{ mkSinFicha }}">
+                <div style="margin-top:20px; padding:14px 16px; background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px; font-size:14px; color:#8a5c05; text-wrap:pretty;">{{ mkSinFichaNota }}</div>
+              </sc-if>
+
+              <!-- ── Tres cifras del día ─────────────────────────────── -->
+              <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:12px; margin-top:18px;">
+                <div style="background:#f0ede9; border-radius:2px; padding:12px 14px; min-width:0;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Entrada</div>
+                  <div style="font-size:19px; font-weight:600; color:#201e1d; margin-top:3px; font-variant-numeric:tabular-nums;">{{ mkEntrada }}</div>
+                </div>
+                <div style="background:#f0ede9; border-radius:2px; padding:12px 14px; min-width:0;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Última marca</div>
+                  <div style="font-size:19px; font-weight:600; color:#201e1d; margin-top:3px; font-variant-numeric:tabular-nums;">{{ mkUltima }}</div>
+                </div>
+                <div style="background:#f0ede9; border-radius:2px; padding:12px 14px; min-width:0;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Trabajado</div>
+                  <div style="font-size:19px; font-weight:600; color:#201e1d; margin-top:3px; font-variant-numeric:tabular-nums;">{{ mkTrabajado }}</div>
+                </div>
+              </div>
+
+              <div style="font-size:13px; color:#7d8e9c; margin-top:14px; text-wrap:pretty;">{{ mkPista }}</div>
+
+              <!-- Poder deshacerlo tiene que estar donde se hizo, no
+                   escondido en un menú: el aviso promete que se puede
+                   retirar cuando se quiera. -->
+              <sc-if value="{{ mkConRostro }}">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:14px; padding-top:14px; border-top:1px solid #e7e3de;">
+                  <div style="display:flex; align-items:center; gap:7px; margin-right:auto;">
+                    <i class="ph-duotone ph-user-focus" style="font-size:17px; color:#2f8f5b; flex:none;"></i>
+                    <span style="font-size:13px; color:#5b7185;">Tu rostro está registrado</span>
+                  </div>
+                  <button onClick="{{ mkRehacerRostro }}" style="font-size:13px; color:#0e3d69;" style-hover="text-decoration:underline">Rehacer la foto</button>
+                  <button onClick="{{ mkRetirarRostro }}" style="font-size:13px; color:#a8321f;" style-hover="text-decoration:underline">Retirar mi rostro</button>
+                </div>
+              </sc-if>
+              <sc-if value="{{ mkGpsDenegado }}">
+                <div style="font-size:13px; color:#8a5c05; margin-top:6px; text-wrap:pretty;">Activa la ubicación en tu navegador: la marca requiere geolocalización.</div>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ mkAvisoHay }}">
+              <div style="display:flex; align-items:flex-start; gap:10px; padding:12px 15px; background:{{ mkAvisoTint }}; border-left:4px solid {{ mkAvisoColor }}; border-radius:2px;">
+                <i class="ph-duotone {{ mkAvisoIcono }}" style="font-size:19px; color:{{ mkAvisoColor }}; flex:none;"></i>
+                <div style="font-size:14px; color:{{ mkAvisoColor }}; text-wrap:pretty;">{{ mkAviso }}</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <!-- ══ Columna derecha ════════════════════════════════════════ -->
+          <div style="min-width:0; display:flex; flex-direction:column; gap:16px;">
+
+            <div style="background:#ffffff; border:1px solid #c9d4de; border-radius:3px;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; padding:18px 20px 12px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tus marcas de hoy</div>
+                <div style="font-size:13px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ mkCuantas }}</div>
+              </div>
+
+              <sc-if value="{{ mkSinMarcas }}">
+                <div style="padding:0 20px 18px; font-size:14px; color:#5b7185; text-wrap:pretty;">Todavía no has marcado hoy. La primera marca del día cuenta como entrada.</div>
+              </sc-if>
+
+              <sc-if value="{{ mkHayMarcas }}">
+                <sc-for list="{{ mkMarcas }}" as="mm" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:13px; padding:12px 20px; border-top:1px solid #f0ede9;">
+                    <i class="ph-duotone {{ mm.icono }}" style="font-size:20px; color:{{ mm.color }}; flex:none;"></i>
+                    <div style="font-size:19px; font-weight:600; color:#201e1d; font-variant-numeric:tabular-nums;">{{ mm.hora }}</div>
+                    <div style="min-width:0; line-height:1.25;">
+                      <div style="font-size:14px; color:#3c4a55;">{{ mm.etiqueta }}</div>
+                      <div style="font-size:10.5px; letter-spacing:0.12em; text-transform:uppercase; color:#9aa7b2;">{{ mm.origen }}</div>
+                    </div>
+                  </div>
+                </sc-for>
+              </sc-if>
+
+              <div style="padding:13px 20px; border-top:1px solid #e7e3de; font-size:12.5px; color:#9aa7b2; text-wrap:pretty;">Cada marca guarda coordenadas y precisión del GPS. Los registros del día se cierran a las 23:59.</div>
+            </div>
+
+            <div style="background:#ffffff; border:1px solid #c9d4de; border-radius:3px; padding:18px 20px;">
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Esta semana</div>
+
+              <div style="display:flex; align-items:flex-end; gap:10px; height:132px; margin-top:16px;">
+                <sc-for list="{{ mkSemana }}" as="sm" hint-placeholder-count="5">
+                  <div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:6px;">
+                    <div style="font-size:12px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ sm.horas }}</div>
+                    <div style="width:100%; max-width:40px; height:{{ sm.alto }}; background:{{ sm.tono }}; border-radius:2px 2px 0 0;"></div>
+                    <div style="border-top:1px solid #e7e3de; width:100%; padding-top:7px; text-align:center; font-size:12px; color:{{ sm.tonoDia }};">{{ sm.dia }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; margin-top:16px; padding-top:14px; border-top:1px solid #e7e3de;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Acumulado</div>
+                  <div style="font-size:18px; font-weight:600; color:#201e1d; margin-top:3px; font-variant-numeric:tabular-nums;">{{ mkAcumulado }}</div>
+                </div>
+                <div style="text-align:right;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Meta semanal</div>
+                  <div style="font-size:18px; font-weight:600; color:#5b7185; margin-top:3px; font-variant-numeric:tabular-nums;">{{ mkMeta }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>

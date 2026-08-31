@@ -1,0 +1,124 @@
+      <sc-if value="{{ isNomina }}">
+        <div style="padding:32px 0 0;">
+
+          <!-- Barra de período y acciones del mes -->
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:24px;">
+            <span style="font-size:13px; color:#7d8e9c;">Período</span>
+            <select value="{{ plaPeriodo }}" onChange="{{ setPlaPeriodo }}" style="padding:8px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-size:14.5px; color:#1e2a33; font-variant-numeric:tabular-nums;">
+              <sc-for list="{{ plaPeriodos }}" as="pp" hint-placeholder-count="12">
+                <option value="{{ pp.valor }}">{{ pp.etiqueta }}</option>
+              </sc-for>
+            </select>
+            <span style="{{ plaEstadoStyle }}">{{ plaEstadoLabel }}</span>
+            <div style="margin-left:auto; display:flex; gap:9px; flex-wrap:wrap;">
+              <sc-if value="{{ plaPuedeCerrar }}">
+                <button onClick="{{ plaCerrar }}" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:2px; font-size:13.5px; background:#1462a5; color:#f4f3f1;" style-hover="background:#0e3d69">
+                  <i class="ph-duotone ph-lock-simple" style="font-size:16px;"></i>{{ plaCerrarLabel }}
+                </button>
+              </sc-if>
+              <sc-if value="{{ plaPuedeReabrir }}">
+                <button onClick="{{ plaReabrir }}" style="display:flex; align-items:center; gap:8px; padding:8px 16px; border-radius:2px; font-size:13.5px; border:1px solid #c9d4de; color:#0e3d69; background:#ffffff;" style-hover="background:#e4eef7">
+                  <i class="ph-duotone ph-lock-simple-open" style="font-size:16px;"></i>Reabrir el mes
+                </button>
+              </sc-if>
+            </div>
+          </div>
+
+          <sc-if value="{{ plaMsgHay }}">
+            <div style="{{ plaMsgStyle }}">{{ plaMsg }}</div>
+          </sc-if>
+
+          <!-- Cifras del mes, calculadas -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:20px; padding-bottom:30px;">
+            <sc-for list="{{ plaKpis }}" as="k" hint-placeholder-count="4">
+              <div style="background:{{ k.tint }}; border-top:4px solid {{ k.color }}; padding:16px 18px 18px; border-radius:2px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:{{ k.dark }};">{{ k.label }}</div>
+                <div style="font-size:34px; font-weight:600; letter-spacing:-1.2px; line-height:1; margin:10px 0 5px; font-variant-numeric:tabular-nums; color:{{ k.dark }};">{{ k.value }}</div>
+                <div style="font-size:13.5px; color:#4d5b66; text-wrap:pretty;">{{ k.note }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- Días con marca incompleta: no bloquean el cierre, pero tienen
+               que verse ANTES de cerrar el mes. -->
+          <sc-if value="{{ plaHayIncompletos }}">
+            <div style="display:flex; align-items:flex-start; gap:9px; margin:0 0 22px; padding:12px 15px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px; max-width:820px;">
+              <i class="ph-duotone ph-info" style="font-size:18px; color:#8a5c05; flex:none;"></i>
+              <div style="font-size:13.5px; color:#8a5c05; text-wrap:pretty;">{{ plaIncompletosMsg }}</div>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; align-items:flex-end; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:14px;">
+            <div style="min-width:0;">
+              <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">{{ plaTitulo }}</h2>
+              <p style="margin:0; font-size:14.5px; color:#7d8e9c; text-wrap:pretty;">{{ plaSubtitulo }}</p>
+            </div>
+          </div>
+
+          <sc-if value="{{ plaHayFilas }}">
+            <div style="overflow-x:auto;">
+              <div style="min-width:720px;">
+                <div style="display:grid; grid-template-columns:minmax(150px,2fr) minmax(90px,1fr) minmax(96px,1fr) minmax(0,104px) minmax(0,104px) minmax(112px,132px); gap:14px; padding:0 4px 9px; border-bottom:2px solid #0e3d69; font-size:11px; letter-spacing:0.1em; text-transform:uppercase; color:#5b7185;">
+                  <div>Persona</div><div>Régimen</div><div>Asistencia</div>
+                  <div style="text-align:right;">Bruto</div><div style="text-align:right;">Neto</div>
+                  <div style="text-align:right;">Estado</div>
+                </div>
+                <sc-for list="{{ plaFilas }}" as="b" hint-placeholder-count="6">
+                  <div style="display:grid; grid-template-columns:minmax(150px,2fr) minmax(90px,1fr) minmax(96px,1fr) minmax(0,104px) minmax(0,104px) minmax(112px,132px); gap:14px; align-items:center; padding:12px 4px; border-bottom:1px solid #e7e3de;">
+                    <button onClick="{{ b.abrir }}" style="text-align:left; min-width:0;" style-hover="opacity:0.72">
+                      <div style="font-size:15px; font-weight:600; color:#0e3d69; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.nombre }}</div>
+                      <div style="font-size:13px; color:#7d8e9c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.cargo }}</div>
+                    </button>
+                    <div style="font-size:14px; color:#4d5b66;">{{ b.régimen }}</div>
+                    <div style="font-size:13.5px; color:{{ b.asistColor }}; text-wrap:pretty;">{{ b.asistencia }}</div>
+                    <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#4d5b66;">{{ b.bruto }}</div>
+                    <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; color:#0e3d69;">{{ b.neto }}</div>
+                    <div style="display:flex; justify-content:flex-end; min-width:0;">
+                      <button onClick="{{ b.accion }}" title="{{ b.accionTitulo }}" style="{{ b.estadoStyle }}">
+                        <i class="ph-duotone {{ b.icon }}" style="font-size:15px;"></i>
+                        <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ b.estado }}</span>
+                      </button>
+                    </div>
+                  </div>
+                </sc-for>
+                <div style="display:grid; grid-template-columns:minmax(150px,2fr) minmax(90px,1fr) minmax(96px,1fr) minmax(0,104px) minmax(0,104px) minmax(112px,132px); gap:14px; padding:15px 4px 0; border-top:2px solid #0e3d69;">
+                  <div style="font-size:15px; font-weight:600; color:#0e3d69;">Total del mes</div>
+                  <div style="font-size:14px; color:#7d8e9c;">{{ plaTotalPersonas }}</div>
+                  <div></div>
+                  <div style="font-size:15px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; color:#0e3d69;">{{ plaTotalBruto }}</div>
+                  <div style="font-size:15px; text-align:right; font-variant-numeric:tabular-nums; font-weight:600; color:#0e3d69;">{{ plaTotalNeto }}</div>
+                  <div></div>
+                </div>
+                <div style="font-size:13px; color:#9aa7b2; margin-top:9px; text-wrap:pretty;">{{ plaNotaDescuentos }}</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ plaSinFilas }}">
+            <div style="display:flex; align-items:flex-start; gap:11px; padding:18px 20px; background:#f0ede9; border-radius:2px; max-width:660px;">
+              <i class="ph-duotone ph-money" style="font-size:22px; color:#9aa7b2; flex-shrink:0;"></i>
+              <div style="font-size:14px; color:#5b7185; text-wrap:pretty;">Todavía no hay nadie con condiciones laborales vigentes en este período. Se registran en la ficha de cada persona, pestaña <b>Condiciones</b>.</div>
+            </div>
+          </sc-if>
+
+          <!-- Igual que "sin jefe asignado" en el organigrama: no se esconden
+               ni se les inventa un sueldo. -->
+          <sc-if value="{{ plaHaySinCondicion }}">
+            <div style="margin-top:40px;">
+              <h3 style="font-size:18px; font-weight:600; margin:0 0 4px; color:#8a5c05;">{{ plaSinCondicionTitulo }}</h3>
+              <p style="margin:0 0 14px; font-size:14px; color:#7d8e9c; text-wrap:pretty;">No se les genera boleta. Para incluirlas, registra su régimen y sueldo en la pestaña Condiciones de su ficha.</p>
+              <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(260px,1fr)); gap:8px; max-width:900px;">
+                <sc-for list="{{ plaSinCondicion }}" as="s" hint-placeholder-count="6">
+                  <button onClick="{{ s.abrir }}" style="display:flex; align-items:center; gap:11px; padding:11px 13px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px; text-align:left;" style-hover="background:#f7e6c4">
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:14.5px; font-weight:600; color:#0e3d69; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.nombre }}</div>
+                      <div style="font-size:13px; color:#7d8e9c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ s.cargo }}</div>
+                    </div>
+                    <i class="ph-duotone ph-arrow-square-out" style="font-size:16px; color:#8a5c05; flex:none;"></i>
+                  </button>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+        </div>
+      </sc-if>

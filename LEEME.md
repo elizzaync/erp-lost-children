@@ -487,6 +487,12 @@ No comparte base de datos, procesos ni archivos con el ERP anterior.
 | `GET` | `/api/invitaciones` | los enlaces del formulario entregados a cada familia |
 | `POST` | `/api/invitaciones` | crea uno; devuelve el enlace listo para entregar |
 | `POST` | `/api/invitaciones/<id>/anular` | lo deja sin efecto, conservando el rastro |
+| `GET` | `/api/formulario/respuestas` | la bandeja, con el estado del sondeo automático |
+| `POST` | `/api/formulario/traer` | lee la hoja y guarda en la bandeja lo que aún no estaba |
+| `POST` | `/api/formulario/respuestas/<id>/ingresar` | la lleva a una ficha; nunca si no autorizó |
+| `POST` | `/api/formulario/respuestas/<id>/descartar` | la deja fuera, con el motivo escrito |
+| `GET` | `/api/permisos/<id>/sustento` | el documento que respalda un permiso |
+| `POST` | `/api/permisos/<id>/sustento` | lo adjunta; solo quien lo pidió y solo sin resolver |
 
 ## Resuelto: el estado de enrolamiento (2026-08-20)
 
@@ -510,3 +516,42 @@ la definición vieja en silencio, que es como esto pasó inadvertido.
 Lo cubren `prueba_enrolado_real` y `prueba_biometria_estado`, y
 `verifica_aplicado` comprueba contra la base REAL que la vista no se haya
 quedado atrás.
+
+## El banco de pruebas arranca vacío (2026-08-24)
+
+Las suites corren contra una COPIA de la base real, y esa copia se
+**vacía** antes de empezar: fuera personas, fichas, solicitudes,
+identidades, cuentas y rastro. Se conservan roles, permisos y parámetros,
+que son configuración y no datos de nadie.
+
+El motivo: cuatro suites fallaron por dar por hecho que la base estaba
+vacía —«deben quedar tres respuestas», «el primer botón Editar es el
+mío»—. Eran ciertas al escribirlas y falsas en cuanto la organización
+tuvo datos, así que la lista de fallos subía a cada ficha nueva.
+
+Se conserva la copia del esquema real (no una base inventada) porque eso
+sí hay que probarlo: es donde aparecen las columnas que faltan y las
+migraciones a medias.
+
+## Las horas de un permiso no tocan el saldo (2026-08-24)
+
+`solicitudes` tiene `hora_desde` y `hora_hasta` para los permisos que no
+ocupan el día entero. Son **información**: no entran en `dias()` ni en
+`saldo_vacaciones()`.
+
+Está así a propósito. La pregunta «¿un permiso de tres horas descuenta
+día de vacaciones, medio día o nada?» no está respondida, y suponerla
+cambiaría los derechos de las personas por una decisión que nadie tomó.
+Cuando se decida, se aplica en `solicitudes.py` y en un solo sitio.
+
+## La dirección recuerda la pantalla (2026-08-24)
+
+La barra lleva `#/personal`, `#/beneficiarios`, etc., y al recargar se
+vuelve ahí en vez de al Dashboard. No se recuerdan: el cambio de
+contraseña obligatorio (guardar esa dirección sería saltarse el flujo),
+las fichas concretas —se vuelve a su lista— y los módulos que el cargo de
+quien entra no alcanza, que caen al Dashboard.
+
+Se eligió esto en vez de partir el `.dc.html` en archivos por módulo: el
+problema real era que la aplicación no recordaba dónde estabas, y separar
+archivos no lo habría resuelto por sí solo.

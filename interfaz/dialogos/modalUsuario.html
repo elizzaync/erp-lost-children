@@ -1,0 +1,50 @@
+            <sc-if value="{{ modalUsuario }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">{{ uxTitulo }}</h3>
+              <p style="margin:0 0 20px; font-size:14px; color:#5b7185; line-height:1.5; text-wrap:pretty;">{{ uxLede }}</p>
+
+              <sc-if value="{{ uxEsAlta }}">
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Persona</div>
+                  <select value="{{ uxPersona }}" onChange="{{ onUxPersona }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <option value="">— Elige a quién le das la cuenta —</option>
+                    <sc-for list="{{ uxPersonas }}" as="o" hint-placeholder-count="6">
+                      <option value="{{ o.id }}">{{ o.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                  <div style="margin-top:6px; font-size:12.5px; color:#7d8e9c; text-wrap:pretty;">{{ uxPersonasNota }}</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nombre de usuario</div>
+                  <input type="text" value="{{ uxUsuario }}" onChange="{{ onUxUsuario }}" placeholder="jramirez" autocapitalize="none" autocorrect="off" spellcheck="false" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  <div style="margin-top:6px; font-size:12.5px; color:#7d8e9c;">Se propone solo a partir del nombre. Puedes cambiarlo.</div>
+                </div>
+
+                <div style="margin-bottom:16px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Cargo en el sistema</div>
+                  <select value="{{ uxRol }}" onChange="{{ onUxRol }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <option value="">— Elige el cargo —</option>
+                    <sc-for list="{{ uxRoles }}" as="o" hint-placeholder-count="4">
+                      <option value="{{ o.id }}">{{ o.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                  <div style="margin-top:6px; font-size:12.5px; color:#5b7185; line-height:1.5;">{{ uxRolResumen }}</div>
+                </div>
+              </sc-if>
+
+              <div style="margin-bottom:6px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Contraseña inicial</div>
+                <input type="text" value="{{ uxClave }}" onChange="{{ onUxClave }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                <div style="display:flex; align-items:center; gap:12px; margin-top:8px; flex-wrap:wrap;">
+                  <button onClick="{{ uxGenerar }}" style="font-size:12.5px; color:#1462a5;" style-hover="text-decoration:underline">Generar una</button>
+                  <span style="font-size:12.5px; color:#7d8e9c;">Mínimo 8 caracteres.</span>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:flex-start; gap:10px; margin-top:16px; padding:12px 14px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px;">
+                <i class="ph-duotone ph-info" style="font-size:17px; color:#8a5c05; flex:none; margin-top:1px;"></i>
+                <div style="font-size:13px; color:#8a5c05; line-height:1.5; text-wrap:pretty;">
+                  Apúntala y dásela en persona: no vuelve a mostrarse. Al entrar, el sistema le obligará a cambiarla, y desde ese momento solo la sabrá esa persona.
+                </div>
+              </div>
+            </sc-if>

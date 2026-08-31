@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;0,8..60,700;1,8..60,400&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="_ds/broadsheet-a562913d-4245-410c-9b96-21779b79fab4/styles.css" />
+<link rel="stylesheet" href="https://unpkg.com/@phosphor-icons/web@2.1.1/src/duotone/style.css" />
+<script src="_ds/broadsheet-a562913d-4245-410c-9b96-21779b79fab4/_ds_bundle.js"></script>
+<script src="./image-slot.js"></script>
+<style>
+  /* El carril de la barra de desplazamiento se reserva siempre: sin
+     esto, el contenido salta 15 px al pasar de una pantalla que hace
+     scroll a otra que no. */
+  html { scrollbar-gutter: stable; }
+  html, body { margin:0; padding:0; background:#f4f3f1; }
+  * { box-sizing:border-box; }
+  body { font-family:"Source Serif 4", Georgia, serif; color:#201e1d; -webkit-font-smoothing:antialiased; }
+  a { color:#1462a5; text-decoration:none; }
+  a:hover { color:#0e3d69; }
+  button { font:inherit; color:inherit; background:none; border:none; padding:0; cursor:pointer; }
+  ::selection { background:#d5e5f3; }
+  :focus-visible { outline:2px solid #1462a5; outline-offset:2px; }
+
+  /* ── Pantallas pequeñas ────────────────────────────────────────────────
+     Por debajo de 900 px la barra lateral deja de ocupar sitio: pasa a ser
+     un cajón. Sin esto, en un teléfono la barra se lleva 250 de 390 px y
+     el contenido queda en una franja que hay que arrastrar. */
+  @media (max-width: 900px) {
+    .lc-app        { grid-template-columns: minmax(0,1fr) !important; }
+
+    .lc-lateral {
+      position: fixed !important;
+      top: 0; left: 0; bottom: 0;
+      width: 268px; max-width: 84vw;
+      z-index: 60;
+      transform: translateX(-100%);
+      transition: transform .22s ease;
+      box-shadow: 0 0 32px rgba(14,61,105,0.28);
+    }
+    .lc-app.abierto .lc-lateral { transform: translateX(0); }
+
+    /* El velo cubre el contenido y cierra al tocarlo. */
+    .lc-velo {
+      display: block;
+      position: fixed; inset: 0; z-index: 55;
+      background: rgba(14,61,105,0.42);
+      opacity: 0; pointer-events: none; transition: opacity .22s ease;
+    }
+    .lc-app.abierto .lc-velo { opacity: 1; pointer-events: auto; }
+
+    /* El botón de menú solo existe aquí: en pantalla grande la barra
+       siempre está a la vista y un botón para abrirla sobraría. */
+    .lc-menu-boton { display: flex !important; }
+
+    /* 48 px de margen a cada lado se comen una cuarta parte de un
+       teléfono. */
+    .lc-cabecera   { padding-left: 16px !important; padding-right: 16px !important; }
+    .lc-cuerpo     { padding-left: 16px !important; padding-right: 16px !important; }
+
+    /* ── Pestañas y botones de acción ──────────────────────────────────
+       Sin esto, en 390 px las pestañas se apilan una por fila y los
+       botones caen entre ellas: seis botones en cinco alturas distintas. */
+    .lc-pestanas {
+      width: 100% !important;
+      flex: 0 0 100% !important;
+      flex-wrap: nowrap !important;
+      overflow-x: auto;
+    }
+    .lc-pestanas > * { flex: 0 0 auto !important; }
+
+    /* Cada acción ocupa media fila: dos por fila, del mismo tamaño y
+       siempre en el mismo sitio. Una sola ocupa el ancho entero. */
+    .lc-accion {
+      flex: 1 1 calc(50% - 6px) !important;
+      justify-content: center !important;
+      margin-left: 0 !important;
+    }
+
+    /* El título de 40 px partía «Dashboard General» en dos líneas y se
+       salía. */
+    .lc-titulo     { font-size: 27px !important; letter-spacing: -0.6px !important; }
+  }
+
+  @media (max-width: 520px) {
+    /* La ciudad y la fecha se van: ocupan más de lo que aportan cuando
+       hay 390 px, y la fecha ya está dentro de cada pantalla que la usa. */
+    .lc-cabecera-extra { display: none !important; }
+  }
+  /* El velo del cajón NO es una celda de la rejilla. Sin esta regla se
+     colaba como un hijo más y empujaba el contenido a la fila siguiente:
+     en una ventana de 1600 px, `main` acababa midiendo 250 px. */
+  .lc-velo { position: fixed; inset: 0; display: none; }
+
+  .om-scroll::-webkit-scrollbar { width:9px; height:9px; }
+  .om-scroll::-webkit-scrollbar-thumb { background:#c9d4de; border-radius:2px; }
+
+  /* ── Pantalla de acceso ─────────────────────────────────────────────
+     La foto ocupa TODO el panel izquierdo, a sangre, con el texto encima
+     sobre un velo oscuro. Antes competía por el alto con el logo, la cita
+     y las cifras, y para que entrase todo había que encoger la tipografía;
+     así no compite con nada: crece cuanto dé la ventana y las letras se
+     quedan a su tamaño natural. */
+  .lc-login {
+    display:grid;
+    grid-template-columns:minmax(400px, 56%) 1fr;
+    height:100vh; height:100dvh;
+    overflow:hidden;
+    background:#f4f3f1;
+  }
+  .lc-login-arte {
+    position:relative; isolation:isolate;
+    background:#0e3d69; color:#ffffff;
+    display:flex; flex-direction:column; justify-content:space-between;
+    padding:clamp(30px, 4.4vh, 60px) clamp(28px, 3.4vw, 58px);
+    min-height:0; overflow:hidden;
+  }
+  .lc-login-foto {
+    position:absolute; inset:0; z-index:-2;
+    width:100%; height:100%;
+    object-fit:cover; object-position:center 28%;
+  }
+  /* Velo: la foto es clara y con mucho color, sin esto el texto no se lee */
+  .lc-login-velo {
+    position:absolute; inset:0; z-index:-1;
+    /* Oscuro solo donde hay texto (arriba el nombre, abajo la cita y las
+       cifras); en la franja central se aclara para que la foto se vea. */
+    background:linear-gradient(180deg,
+      rgba(7,35,62,0.86) 0%,
+      rgba(7,35,62,0.30) 24%,
+      rgba(7,35,62,0.24) 46%,
+      rgba(7,35,62,0.70) 68%,
+      rgba(7,35,62,0.93) 100%);
+  }
+  /* Misma anatomía que el panel de la foto: algo anclado arriba, el peso
+     al centro y una nota al pie. Que las dos columnas compartan estructura
+     es lo que hace que la pantalla se lea como una sola pieza. */
+  .lc-login-form {
+    /* Todo junto y centrado: repartir cabecera arriba y pie abajo dejaba
+       dos huecos grandes en una columna que ya tiene poco contenido. */
+    display:flex; flex-direction:column; justify-content:center;
+    padding:clamp(26px, 4.4vh, 60px) clamp(26px, 2.6vw, 44px);
+    min-height:0; overflow:auto;
+  }
+  .lc-login-form::-webkit-scrollbar { width:0; height:0; }
+  .lc-login-cabecera, .lc-login-centro, .lc-login-pie {
+    width:100%; max-width:430px; margin-left:auto; margin-right:auto;
+  }
+  /* El bloque central se queda centrado aunque sobre espacio arriba y abajo */
+  .lc-login-cabecera { margin-bottom:clamp(22px,3.4vh,38px); }
+  .lc-login-pie { margin-top:clamp(22px,3.4vh,38px);
+                  padding-top:18px; border-top:1px solid #e7e3de; }
+
+  /* Ventanas bajas: se recorta CONTENIDO accesorio, nunca el tamaño de la
+     letra. Primero la cita, después las cifras. */
+  @media (max-height: 780px) { .lc-login-cita { display:none !important; } }
+  /* Ventanas bajas: se retira contenido accesorio por orden de importancia,
+     nunca el tamaño de la letra. */
+  @media (max-height: 700px) {
+    .lc-login-cifras { display:none !important; }
+    .lc-login-centro { padding:20px 0 !important; }
+  }
+  @media (max-height: 620px) {
+    .lc-login-cabecera { display:none !important; }
+    .lc-login-pie { display:none !important; }
+    .lc-login-form .lc-sub { display:none !important; }
+    .lc-login-fecha { display:none !important; }
+  }
+
+  /* Una sola columna: el panel decorativo estorbaría más de lo que aporta */
+  @media (max-width: 880px) {
+    .lc-login { grid-template-columns:1fr; }
+    .lc-login-arte { display:none; }
+  }
+
+  /* ── Captura biométrica ────────────────────────────────────────────── */
+  /* Barrido vertical del recuadro mientras el terminal espera a la persona */
+  @keyframes rrhh-escaneo {
+    0%   { top:6%;  opacity:0.25; }
+    50%  { opacity:1; }
+    100% { top:92%; opacity:0.25; }
+  }
+  .rrhh-escaneo {
+    position:absolute; left:8%; right:8%; height:2px;
+    background:linear-gradient(90deg, transparent, #5aa9d6, transparent);
+    animation:rrhh-escaneo 1.6s ease-in-out infinite alternate;
+  }
+  @keyframes rrhh-latido {
+    0%, 100% { opacity:1; }
+    50%      { opacity:0.35; }
+  }
+  .rrhh-latido { animation:rrhh-latido 1.4s ease-in-out infinite; }
+  @keyframes rrhh-giro { to { transform:rotate(360deg); } }
+  .rrhh-giro {
+    width:15px; height:15px; border-radius:50%; flex:none;
+    border:2px solid #c9d4de; border-top-color:#1462a5;
+    animation:rrhh-giro 0.7s linear infinite;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rrhh-escaneo, .rrhh-latido, .rrhh-giro { animation:none; }
+  }
+</style>
+</helmet>
+
+<!--@PANTALLA:login-->
+
+<!-- ════════════════════════════════════════════════════════════════════════
+     CAMBIO DE CONTRASEÑA OBLIGATORIO
+     A quien le crean la cuenta, RRHH le da una clave inicial: hasta que la
+     cambie, la conocen dos personas. Por eso no se llega a ninguna pantalla
+     del sistema antes de pasar por aquí.
+     ═══════════════════════════════════════════════════════════════════════ -->
+<!--@PANTALLA:clave-->
+
+<sc-if value="{{ notLogin }}" hint-placeholder-val="{{ true }}">
+<div class="lc-app {{ menuClase }}" style="display:grid; grid-template-columns:250px minmax(0,1fr); min-height:100vh; background:#f4f3f1;">
+
+  <!-- El velo del cajón. En pantalla grande no se ve: su regla vive en la
+       consulta de medios. -->
+  <div class="lc-velo" onClick="{{ cerrarMenu }}"></div>
+
+  <aside class="lc-lateral" style="background:#e9eef3; display:flex; flex-direction:column; position:sticky; top:0; height:100vh;">
+    <div style="padding:28px 22px 22px;">
+      <div style="display:flex; gap:6px; margin-bottom:14px;">
+        <span style="width:26px; height:8px; background:#1462a5; display:block;"></span>
+        <span style="width:10px; height:8px; background:#e2503c; display:block;"></span>
+        <span style="width:10px; height:8px; background:#e0a11c; display:block;"></span>
+        <span style="width:10px; height:8px; background:#2f8f5b; display:block;"></span>
+      </div>
+      <div style="font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:#5b7185;">Sistema ERP</div>
+      <div style="font-size:21px; font-weight:700; line-height:1.12; letter-spacing:-0.3px; margin-top:7px; color:#0e3d69;">Lost Children<br />of Peru</div>
+    </div>
+
+    <nav class="om-scroll" style="flex:1; overflow-y:auto; padding:0 12px 20px; display:flex; flex-direction:column; gap:22px;">
+      <div style="display:flex; flex-direction:column; gap:1px;">
+        <div style="font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#5b7185; padding:0 10px 10px;">Recursos Humanos</div>
+        <!-- Los submódulos de Hoja de Vida son entradas de esta misma lista,
+             con sangría en el estilo. Aplanarla evita anidar un sc-for dentro
+             de otro para solo dos hijos. -->
+        <sc-for list="{{ navItems }}" as="item" hint-placeholder-count="11">
+          <button onClick="{{ item.go }}" style="{{ item.style }}" style-hover="background:#dde6ee">
+            <i class="ph-duotone {{ item.icon }}" style="font-size:{{ item.iconoTam }}; line-height:1; flex-shrink:0; color:{{ item.color }};"></i>
+            <span style="flex:1; text-align:left;">{{ item.label }}</span>
+            <span style="font-size:12.5px; color:#7d8e9c; font-variant-numeric:tabular-nums;">{{ item.badge }}</span>
+          </button>
+        </sc-for>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:1px;">
+        <div style="font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#5b7185; padding:0 10px 10px;">Otros módulos</div>
+        <sc-for list="{{ otherModules }}" as="mod" hint-placeholder-count="6">
+          <button onClick="{{ mod.go }}" style="{{ mod.style }}">
+            <span style="width:9px; height:9px; border:1px solid {{ mod.punto }}; display:block; flex-shrink:0; border-radius:1px;"></span>
+            <span style="flex:1; text-align:left;">{{ mod.label }}</span>
+            <span style="font-size:9px; letter-spacing:0.1em; text-transform:uppercase; color:#b0bcc6;">{{ mod.tag }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </nav>
+
+    <div style="padding:16px 22px 22px; display:flex; align-items:center; gap:11px; border-top:1px solid #d9e2ea;">
+      <div style="width:34px; height:34px; border-radius:2px; background:{{ yoFondo }}; color:#f4f3f1; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:600; flex-shrink:0;">{{ yoIniciales }}</div>
+      <div style="line-height:1.25; min-width:0; flex:1;">
+        <div style="font-size:14px; font-weight:600; color:#0e3d69; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ yoNombre }}</div>
+        <div style="font-size:12.5px; color:{{ yoRolColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ yoRol }}</div>
+      </div>
+      <button onClick="{{ doLogout }}" title="{{ yoSalirTitulo }}" style="display:flex; align-items:center; color:#7d8e9c; flex-shrink:0;" style-hover="color:#1462a5">
+        <i class="ph-duotone ph-sign-out" style="font-size:19px;"></i>
+      </button>
+    </div>
+  </aside>
+
+  <main style="min-width:0; padding:0 0 90px;">
+    <header class="lc-cabecera" style="padding:32px 48px 0; background:#f4f3f1; position:sticky; top:0; z-index:20;">
+      <div style="display:flex; align-items:center; gap:14px; padding:11px 0 10px;">
+        <!-- Solo se ve en pantalla pequeña: su regla está en la consulta
+             de medios. En pantalla grande la barra ya está a la vista. -->
+        <button onClick="{{ alternarMenu }}" class="lc-menu-boton" title="Menú" style="display:none; align-items:center; justify-content:center; padding:7px; margin-left:-7px; border-radius:2px; color:#0e3d69; line-height:0;" style-hover="background:#e4eef7">
+          <i class="ph-duotone ph-list" style="font-size:23px;"></i>
+        </button>
+        <div style="font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#1462a5;">Módulo RRHH</div>
+        <div style="flex:1;"></div>
+        <div class="lc-cabecera-extra" style="font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#5b7185;">Lima · Comas</div>
+        <div class="lc-cabecera-extra" style="font-size:11px; letter-spacing:0.16em; text-transform:uppercase; color:#5b7185;">{{ fechaCabecera }}</div>
+      </div>
+      <div style="height:1px; background:#0e3d69;"></div>
+      <div style="display:flex; align-items:flex-start; gap:24px; flex-wrap:wrap; padding:22px 0 20px;">
+        <div style="flex:1 1 320px; min-width:0;">
+          <h1 class="lc-titulo" style="font-size:40px; font-weight:700; letter-spacing:-1.1px; margin:0; line-height:1.02; color:#0e3d69;">{{ pageTitle }}</h1>
+          <p style="margin:9px 0 0; font-size:16.5px; color:#4d5b66; max-width:64ch; text-wrap:pretty;">{{ pageLede }}</p>
+        </div>
+        <!-- La insignia de jornada, junto al título de Marcar asistencia. -->
+        <sc-if value="{{ isMarcar }}">
+          <div style="display:flex; align-items:center; gap:9px; margin:8px 0 0 auto; padding:7px 13px; border-radius:2px; background:{{ mkJornadaTint }}; white-space:nowrap;">
+            <span style="width:8px; height:8px; border-radius:50%; background:{{ mkJornadaColor }}; flex:none;"></span>
+            <span style="font-size:10.5px; letter-spacing:0.13em; text-transform:uppercase; color:{{ mkJornadaColor }};">{{ mkJornada }}</span>
+          </div>
+        </sc-if>
+
+        <sc-if value="{{ isAsistencia }}">
+          <div style="display:flex; align-items:center; gap:8px; margin:6px 0 0 auto;">
+            <span style="font-size:13px; color:#7d8e9c;">Ver</span>
+            <div style="display:flex; gap:2px; padding:3px; background:#e9eef3; border-radius:2px;">
+              <sc-for list="{{ scopeTabs }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.go }}" style="{{ t.style }}" style-hover="color:#0e3d69">{{ t.label }}</button>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <div style="height:1px; background:#dcd9d5;"></div>
+    </header>
+
+    <div class="lc-cuerpo" style="padding:0 48px;">
+
+      <!--@PANTALLA:dashboard-->
+
+      <!--@PANTALLA:legajo-->
+
+      <!--@PANTALLA:directorio-->
+
+      <!--@PANTALLA:organigrama-->
+
+      <!--@PANTALLA:beneficiarios-->
+
+      <!--@PANTALLA:ficha-->
+
+      <!--@PANTALLA:asistencia-->
+
+
+      <!--@PANTALLA:planillas-->
+
+      <!--@PANTALLA:documentos-->
+
+      <!--@PANTALLA:condiciones-->
+
+
+      <!-- ══════════════════════════════════════════════════════════════════
+           USUARIOS Y PERMISOS
+           Tres pestañas: las cuentas, los cargos con su matriz de permisos y
+           el registro de accesos. Solo se llega aquí con permiso 'usuarios'.
+           ═════════════════════════════════════════════════════════════════ -->
+      <!--@PANTALLA:usuarios-->
+
+      <!-- ══════════════════════════════════════════════════════════════
+           RESPONSABLES / TUTORES
+           Adultos a cargo de uno o más beneficiarios. Se registran una vez;
+           el vínculo con cada niño se lleva aparte, con su parentesco.
+           ═════════════════════════════════════════════════════════════ -->
+
+      <!--@PANTALLA:bandeja-->
+
+      <!--@PANTALLA:responsables-->
+
+      <!-- ══════════════════════════════════════════════════════════════
+           EN CONSTRUCCIÓN
+           Las ramas del árbol que todavía no tienen pantalla. Se prefiere
+           decirlo a dejar una página vacía que parezca rota; y decir además
+           por dónde se llega hoy a lo que sí existe.
+           ═════════════════════════════════════════════════════════════ -->
+      <!--@PANTALLA:en-construccion-->
+
+      <!-- ══════════════════════════════════════════════════════════
+           PANEL DE GESTIÓN DE PERSONAS
+           Los seis números salen del servidor de una sola llamada. No hay
+           ninguno escrito a mano: si un dato no se puede calcular todavía,
+           la tarjeta lo dice en lugar de enseñar un cero.
+           ═════════════════════════════════════════════════════════ -->
+
+      <!-- ══════════════════════════════════════════════════════════
+           GESTIÓN BIOMÉTRICA
+           Estaba dentro de Registro de Asistencia, detrás de un botón,
+           mientras el menú prometía una pantalla que enseñaba un cartel de
+           "en construcción". Es la misma pantalla, movida a donde decía el
+           menú. El motor de captura no se tocó.
+           ═════════════════════════════════════════════════════════ -->
+      <!--@PANTALLA:biometria-->
+
+      <!-- ══════════════════════════════════════════════════════════
+           MIS PERMISOS  ·  autoservicio
+           Cada quien ve y pide LO SUYO. El backend saca de la sesión a
+           quién pertenece cada solicitud, así que esta pantalla no puede
+           enseñar ni tocar las de otro aunque se lo pidan.
+           ═════════════════════════════════════════════════════════ -->
+      <!-- ══════════════════════════════════════════════════════════
+           GESTIÓN DE PERMISOS  ·  bandeja de revisión
+           Lo que puede hacerse con cada solicitud lo dice el backend en
+           'acciones'. Aquí no se decide, solo se ofrece lo que ya viene
+           permitido: si las reglas vivieran también en la pantalla,
+           acabarían discrepando de las de verdad.
+           ═════════════════════════════════════════════════════════ -->
+      <!-- ══════════════════════════════════════════════════════════
+           ASISTENCIA  ·  resumen del día
+           Cierra el Paso 3: sus tres submódulos ya funcionaban, faltaba
+           esta pantalla. Los números salen del servidor; lo que no se
+           puede calcular todavía se dice, no se rellena.
+           ═════════════════════════════════════════════════════════ -->
+      <!--@PANTALLA:asistencia-home-->
+
+      <!--@PANTALLA:permisos-->
+
+      <!--@PANTALLA:marcar-->
+      <!--@PANTALLA:mis-permisos-->
+
+      <!--@PANTALLA:personas-->
+
+      <!-- Aquí se montaba una pantalla de Reportes de la maqueta: seis
+           tarjetas escritas a mano («Planilla consolidada», «Ausentismo
+           por área»…) con botones «Generar» sin acción y formatos que el
+           sistema no produce (XLSX). No se llegaba a ella desde ningún
+           sitio. Los reportes de verdad viven en cada módulo, con el
+           filtro de su pantalla. Retirada el 28/08/2026. -->
+
+    </div>
+  </main>
+</div>
+</sc-if>
+
+  <!-- Diálogo compartido: lo abren Asistencia y Hoja de Vida -->
+      <sc-if value="{{ modalAbierto }}">
+        <!-- El fondo cierra al pulsarlo (solo si el clic es en el fondo, no
+             en un hijo). El panel se topa a la altura de la ventana y hace
+             scroll por dentro: antes se desbordaba y la fila de botones
+             quedaba fuera de la pantalla, sin forma de cerrar. -->
+        <div onClick="{{ cerrarPorFondo }}" style="position:fixed; inset:0; background:rgba(14,61,105,0.5); display:flex; align-items:safe center; justify-content:center; padding:24px; overflow:auto; z-index:50;">
+          <div style="position:relative; background:#f7f6f4; border-radius:6px; max-width:{{ modalAncho }}; width:100%; max-height:calc(100vh - 48px); display:flex; flex-direction:column; box-shadow:0 24px 64px rgba(14,61,105,0.34), 0 2px 6px rgba(14,61,105,0.12); margin:auto; overflow:hidden;">
+            <!-- Fuera del contenedor con scroll, así que se ve siempre. -->
+            <button onClick="{{ cerrarModal }}" title="Cerrar (Esc)" style="position:absolute; top:12px; right:12px; z-index:2; padding:7px; border-radius:4px; line-height:0; background:#ffffff; color:#7d8e9c; border:1px solid #dcd9d5;" style-hover="background:#e4eef7; color:#0e3d69; border-color:#9dbcd8">
+              <i class="ph-duotone ph-x" style="font-size:16px;"></i>
+            </button>
+            <!-- min-height:0 no es adorno: sin él, un contenido alto empuja
+                 la barra del pie fuera de la ventana en vez de hacer scroll
+                 aquí dentro. -->
+            <div style="overflow-y:auto; flex:1 1 auto; min-height:0; padding:28px 30px 24px;">
+
+            <!--@DIALOGO:modalCamara-->
+
+            <!--@DIALOGO:modalRetirarRostro-->
+
+            <!--@DIALOGO:modalFirma-->
+
+            <!--@DIALOGO:modalRechazar-->
+
+            <!--@DIALOGO:modalPedirPermiso-->
+
+            <!--@DIALOGO:modalFicha-->
+
+            <!-- Alta de un niño acogido. Campos de la tabla
+                 'beneficiarios': casa, sala y grado. Ni cargo ni área ni
+                 sueldo, que son cosas de un colaborador. -->
+            <!--@DIALOGO:modalPrograma-->
+
+            <!--@DIALOGO:modalHistorial-->
+
+            <!--@DIALOGO:modalSeguimiento-->
+
+            <!--@DIALOGO:modalSesion-->
+
+            <!--@DIALOGO:modalIncidencia-->
+
+            <!--@DIALOGO:modalBenef-->
+
+            <!--@DIALOGO:modalDoc-->
+
+            <!--@DIALOGO:modalBorrarDoc-->
+
+            <!--@DIALOGO:modalBorrar-->
+
+            <!-- ─────────── FORMACIÓN ACADÉMICA ─────────── -->
+            <!--@DIALOGO:modalFormacion-->
+
+            <!-- ─────────── EXPERIENCIA LABORAL ─────────── -->
+            <!--@DIALOGO:modalExperiencia-->
+
+            <!-- ─────────── VINCULAR RESPONSABLE A UN BENEFICIARIO ─────────── -->
+            <!--@DIALOGO:modalVinculo-->
+
+            <!-- ─────────── QUITAR VÍNCULO ─────────── -->
+            <!--@DIALOGO:modalQuitarVinculo-->
+
+            <!-- ───────────── RESPONSABLE / TUTOR ───────────── -->
+            <!--@DIALOGO:modalResponsable-->
+
+            <!-- ───────────── BORRAR RESPONSABLE ───────────── -->
+            <!--@DIALOGO:modalBorrarResp-->
+
+            <!-- ─────────────────── ALTA / RESETEO DE CUENTA ─────────────────── -->
+            <!--@DIALOGO:modalUsuario-->
+
+            <!-- ───────────────────── CARGO Y SUS PERMISOS ───────────────────── -->
+            <!--@DIALOGO:modalCargo-->
+
+            </div>
+
+            <!-- Pie fijo: con formularios largos, el botón de guardar tiene
+                 que estar a mano sin llegar hasta el final del scroll. -->
+            <div style="flex:none; padding:16px 28px 20px; border-top:1px solid #dcd9d5; background:#f4f3f1;">
+            <!--@DIALOGO:sdHayFaltan-->
+
+            </div>
+
+            <!-- El pie va FUERA del scroll: en un diálogo largo, tener que
+                 bajar hasta el final para encontrar el botón de confirmar
+                 es una trampa. -->
+            <div style="flex:none; background:#ffffff; border-top:1px solid #dcd9d5; padding:15px 30px;">
+              <!--@DIALOGO:modalError-->
+              <div style="display:flex; gap:10px; flex-wrap:wrap; justify-content:flex-end; align-items:center;">
+                <button onClick="{{ cerrarModal }}" style="font-size:13.5px; color:#3c4a55; padding:9px 18px; border-radius:3px; border:1px solid #c9d4de; background:#ffffff;" style-hover="background:#f0ede9; border-color:#9aa7b2">Cancelar</button>
+                <button onClick="{{ confirmarModal }}" style="{{ modalConfirmStyle }}">{{ modalConfirmLabel }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <!-- Alta de condiciones laborales. Registrar NO reemplaza: cierra la
+           anterior y la conserva, para que las boletas viejas cuadren. -->
+      <sc-if value="{{ condOpen }}">
+        <div onClick="{{ condCerrarPorFondo }}" style="position:fixed; inset:0; background:rgba(14,61,105,0.45); display:flex; align-items:safe center; justify-content:center; padding:24px; overflow:auto; z-index:60;">
+          <div style="position:relative; background:#f4f3f1; border-radius:3px; max-width:560px; width:100%; max-height:calc(100vh - 48px); display:flex; flex-direction:column; box-shadow:0 18px 48px rgba(14,61,105,0.28); margin:auto;">
+            <button onClick="{{ condCerrar }}" title="Cerrar (Esc)" style="position:absolute; top:10px; right:10px; z-index:2; padding:7px; border-radius:2px; line-height:0; background:#f4f3f1; color:#5b7185; border:1px solid #dcd9d5;" style-hover="background:#ffffff; color:#0e3d69">
+              <i class="ph-duotone ph-x" style="font-size:16px;"></i>
+            </button>
+            <div style="overflow-y:auto; padding:26px 28px;">
+            <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Condiciones laborales</h3>
+            <p style="margin:0 0 20px; font-size:14px; color:#5b7185; text-wrap:pretty;">De aquí sale el monto de su boleta. Cada cambio se guarda con su fecha, no pisa al anterior.</p>
+
+            <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Régimen</div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap; margin-top:9px;">
+              <sc-for list="{{ condRegimenes }}" as="r" hint-placeholder-count="3">
+                <button onClick="{{ r.go }}" style="{{ r.style }}"><i class="ph-duotone {{ r.icon }}" style="font-size:16px;"></i>{{ r.label }}</button>
+              </sc-for>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:20px;">
+              <sc-if value="{{ condNoEsSinPago }}">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sueldo base mensual</div>
+                  <input type="number" value="{{ condSueldo }}" onChange="{{ setCondSueldo }}" placeholder="0.00" min="0" step="50" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-size:14.5px; color:#1e2a33;" />
+                </div>
+              </sc-if>
+              <div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Jornada diaria (horas)</div>
+                <input type="number" value="{{ condJornada }}" onChange="{{ setCondJornada }}" min="1" max="24" step="0.5" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-size:14.5px; color:#1e2a33;" />
+              </div>
+              <div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Rige desde</div>
+                <input type="date" value="{{ condDesde }}" onChange="{{ setCondDesde }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-size:14.5px; color:#1e2a33;" />
+              </div>
+            </div>
+
+            <sc-if value="{{ condEsSinPago }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px; font-size:13.5px; color:#8a5c05; text-wrap:pretty;">Sin pago: aparecerá en Planillas con S/ 0 y sin descuentos. Es lo que corresponde a los voluntarios.</div>
+            </sc-if>
+
+            <div style="margin-top:18px;">
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nota (opcional)</div>
+              <input type="text" value="{{ condNota }}" onChange="{{ setCondNota }}" placeholder="Ej. Aumento aprobado en directorio" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-size:14.5px; color:#1e2a33;" />
+            </div>
+
+            <sc-if value="{{ condHayAvisoCierre }}">
+              <div style="margin-top:16px; display:flex; align-items:flex-start; gap:9px; padding:11px 14px; background:#e4eef7; border-left:3px solid #1462a5; border-radius:2px;">
+                <i class="ph-duotone ph-info" style="font-size:17px; color:#0e3d69; flex:none;"></i>
+                <div style="font-size:13.5px; color:#0e3d69; text-wrap:pretty;">{{ condAvisoCierre }}</div>
+              </div>
+            </sc-if>
+
+            </div>
+
+            <div style="flex:none; padding:16px 28px 20px; border-top:1px solid #dcd9d5; background:#f4f3f1;">
+              <sc-if value="{{ condHayErr }}">
+                <div style="margin-bottom:14px; padding:11px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px; font-size:13.5px; color:#a8321f;">{{ condErr }}</div>
+              </sc-if>
+              <div style="display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end;">
+                <button onClick="{{ condCerrar }}" style="font-size:13.5px; color:#3c4a55; padding:9px 18px; border-radius:2px; border:1px solid #c9d4de;" style-hover="background:#ffffff">Cancelar</button>
+                <button onClick="{{ condGuardar }}" style="font-size:13.5px; background:#1462a5; color:#f4f3f1; padding:9px 18px; border-radius:2px;" style-hover="background:#0e3d69">{{ condGuardarLabel }}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+
+      <sc-if value="{{ condBorrarOpen }}">
+        <div onClick="{{ condBorrarPorFondo }}" style="position:fixed; inset:0; background:rgba(14,61,105,0.45); display:flex; align-items:safe center; justify-content:center; padding:24px; overflow:auto; z-index:60;">
+          <div style="position:relative; background:#f4f3f1; border-radius:3px; max-width:480px; width:100%; max-height:calc(100vh - 48px); overflow-y:auto; padding:26px 28px; box-shadow:0 18px 48px rgba(14,61,105,0.28); margin:auto;">
+            <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">¿Quitar este tramo del historial?</h3>
+            <p style="margin:0 0 6px; font-size:14px; color:#5b7185; text-wrap:pretty;">{{ condBorrarNota }}</p>
+            <p style="margin:0; font-size:13.5px; color:#a8321f; text-wrap:pretty;">Si hay boletas ya cerradas de ese período, dejarán de coincidir con su condición.</p>
+            <div style="display:flex; gap:9px; flex-wrap:wrap; justify-content:flex-end; margin-top:22px;">
+              <button onClick="{{ condBorrarCancelar }}" style="font-size:13.5px; color:#3c4a55; padding:9px 18px; border-radius:2px; border:1px solid #c9d4de;" style-hover="background:#ffffff">Cancelar</button>
+              <button onClick="{{ condBorrarConfirmar }}" style="font-size:13.5px; background:#e2503c; color:#ffffff; padding:9px 18px; border-radius:2px;" style-hover="background:#a8321f">Sí, quitar</button>
+            </div>
+          </div>
+        </div>
+      </sc-if>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:1440,&quot;height&quot;:980}}">
+const BLUE = "#1462a5", BLUE_D = "#0e3d69", BLUE_T = "#e4eef7";
+const MODELO_ROSTRO = "face-api 1.7.15 · tiny+landmark68+recognition";
+const RED = "#e2503c", RED_D = "#a8321f", RED_T = "#fbe7e3";
+const GOLD = "#e0a11c", GOLD_D = "#8a5c05", GOLD_T = "#fbf0d9";
+const GREEN = "#2f8f5b", GREEN_D = "#1c5f3a", GREEN_T = "#e2f1e8";
+
+const PEOPLE = [
+  {id:1, n:"Ps. Josué Ramírez Vega", c:"Director Ejecutivo", area:"Dirección", jefe:null, d:0, br:null, sede:"Lima", ing:"03/02/2014", nac:"12/03/1971", cont:"Indeterminado"},
+  {id:2, n:"Mariela Quispe Ríos", c:"Jefa de Administración y RRHH", area:"Administración y Finanzas", jefe:1, d:0, br:"adm", sede:"Lima", ing:"15/04/2018", nac:"08/08/1985", cont:"Indeterminado"},
+  {id:3, n:"Luis Ferreyra Soto", c:"Contador General", area:"Administración y Finanzas", jefe:2, d:1, br:"adm", sede:"Lima", ing:"02/07/2019", nac:"25/11/1980", cont:"Indeterminado"},
+  {id:4, n:"Ruth Salas Ortiz", c:"Asistente Contable", area:"Administración y Finanzas", jefe:3, d:2, br:"adm", sede:"Lima", ing:"11/01/2023", nac:"17/08/1996", cont:"Plazo fijo"},
+  {id:5, n:"Ana Chávez Melgar", c:"Coordinadora de Logística", area:"Administración y Finanzas", jefe:2, d:1, br:"adm", sede:"Lima", ing:"09/09/2020", nac:"30/05/1988", cont:"Indeterminado"},
+  {id:6, n:"Pedro Cutipa Roque", c:"Mantenimiento y Seguridad", area:"Casa Hogar", jefe:5, d:2, br:"adm", sede:"Lima", ing:"01/03/2021", nac:"14/08/1975", cont:"Indeterminado"},
+  {id:7, n:"Karen Ttito Mamani", c:"Asistente de RRHH", area:"Recursos Humanos", jefe:2, d:1, br:"adm", sede:"Lima", ing:"05/05/2022", nac:"03/12/1997", cont:"Plazo fijo"},
+  {id:8, n:"Diego Mamani Flores", c:"Soporte TI", area:"TI y Comunicaciones", jefe:2, d:1, br:"adm", sede:"Lima", ing:"18/08/2021", nac:"21/06/1994", cont:"Plazo fijo"},
+  {id:9, n:"Camila Zegarra Loayza", c:"Comunicaciones y Donantes", area:"TI y Comunicaciones", jefe:2, d:1, br:"adm", sede:"Lima", ing:"02/02/2024", nac:"09/04/1998", cont:"Plazo fijo"},
+  {id:10, n:"Ps. Elena Huamán Ccama", c:"Directora Ministerial", area:"Ministerio y Voluntariado", jefe:1, d:0, br:"min", sede:"Lima", ing:"03/02/2014", nac:"27/01/1974", cont:"Indeterminado"},
+  {id:11, n:"Marco Ancco Puma", c:"Coordinador de Casa Hogar", area:"Casa Hogar", jefe:10, d:1, br:"min", sede:"Lima", ing:"20/06/2017", nac:"05/08/1983", cont:"Indeterminado"},
+  {id:12, n:"José Puma Quispe", c:"Tutor de Casa Hogar", area:"Casa Hogar", jefe:11, d:2, br:"min", sede:"Lima", ing:"14/03/2022", nac:"19/09/1993", cont:"Indeterminado"},
+  {id:13, n:"Nayeli Condori Vilca", c:"Tutora de Casa Hogar", area:"Casa Hogar", jefe:11, d:2, br:"min", sede:"Lima", ing:"14/03/2022", nac:"02/02/1995", cont:"Indeterminado"},
+  {id:14, n:"Rosa Huillca Ccahua", c:"Encargada de Cocina", area:"Casa Hogar", jefe:11, d:2, br:"min", sede:"Lima", ing:"07/10/2019", nac:"23/08/1970", cont:"Indeterminado"},
+  {id:15, n:"Silvia Paredes León", c:"Coordinadora Educativa", area:"Educación", jefe:10, d:1, br:"min", sede:"Lima", ing:"01/03/2019", nac:"16/07/1986", cont:"Indeterminado"},
+  {id:16, n:"Elvis Quispe Arone", c:"Docente de Refuerzo", area:"Educación", jefe:15, d:2, br:"min", sede:"Lima", ing:"12/04/2023", nac:"28/10/1996", cont:"Plazo fijo"},
+  {id:17, n:"Milagros Apaza Yupanqui", c:"Docente de Refuerzo", area:"Educación", jefe:15, d:2, br:"min", sede:"Comas", ing:"12/04/2023", nac:"11/08/1999", cont:"Plazo fijo"},
+  {id:18, n:"Jhon Ccahuana Rojas", c:"Coordinador de Voluntariado", area:"Ministerio y Voluntariado", jefe:10, d:1, br:"min", sede:"Lima", ing:"23/05/2021", nac:"04/09/1992", cont:"Indeterminado"},
+  {id:19, n:"Fiorella Núñez Bravo", c:"Psicóloga", area:"Bienestar", jefe:10, d:1, br:"min", sede:"Lima", ing:"08/08/2022", nac:"13/01/1991", cont:"Plazo fijo"},
+  {id:20, n:"Wilder Ccorimanya Taipe", c:"Coordinador Sede Comas", area:"Ministerio y Voluntariado", jefe:10, d:1, br:"min", sede:"Comas", ing:"04/11/2020", nac:"07/03/1987", cont:"Indeterminado"}
+];
+
+/* Títulos que el equipo usa delante del nombre. Sin quitarlos, las
+   iniciales de "Ps. Josué Ramírez" salen "PJ" y el saludo, "Hola Ps.". */
+const TITULOS = /^(Ps|Lic|Mg|Dr|Dra|Ing|Abg|Prof|Sr|Sra|Srta|Tec|Tec\.?nl)\.?\s+/i;
+const sinTitulo = (n) => String(n || "").trim().replace(TITULOS, "");
+const ini = (n) => sinTitulo(n).split(/\s+/).slice(0,2).map(w => w[0] || "").join("").toUpperCase();
+const byId = (id) => PEOPLE.find(p => p.id === id);
+const first = (n) => sinTitulo(n).split(/\s+/)[0];
+
+/* ── Las direcciones de cada pantalla ─────────────────────────────────
+   Un nombre por módulo, en castellano y sin tildes: son direcciones que
+   alguien puede escribir o pasar por WhatsApp.
+
+   'legajo' necesita además su pestaña, porque Personal y Beneficiarios
+   son la misma vista con distinto contenido. */
+const RUTAS = [
+  ["dash",           { view: "dash" }],
+  ["personas",       { view: "personas" }],
+  ["personal",       { view: "legajo", legajoTab: "dir" }],
+  ["beneficiarios",  { view: "legajo", legajoTab: "benef" }],
+  ["organigrama",    { view: "legajo", legajoTab: "org" }],
+  ["documentos",     { view: "legajo", legajoTab: "docs" }],
+  ["contratos",      { view: "legajo", legajoTab: "contratos" }],
+  ["responsables",   { view: "responsables" }],
+  ["bandeja",        { view: "bandeja" }],
+  ["asistencia",     { view: "asistenciaHome" }],
+  ["registro",       { view: "asistencia" }],
+  ["biometria",      { view: "biometria" }],
+  ["permisos",       { view: "permisos" }],
+  ["marcar",         { view: "marcar" }],
+  ["mis-permisos",   { view: "misPermisos" }],
+  ["usuarios",       { view: "usuarios" }],
+  ["planillas",      { view: "nomina" }],
+  ["configuracion",  { view: "config" }],
+];
+
+/* De un estado a su dirección. Las pantallas de detalle devuelven la de
+   su lista: es donde se vuelve al recargar. */
+const DETALLE_A_LISTA = { ficha: "personal", benef: "beneficiarios" };
+
+function rutaDe(estado) {
+  if (DETALLE_A_LISTA[estado.view]) return DETALLE_A_LISTA[estado.view];
+  for (const [nombre, donde] of RUTAS) {
+    if (donde.view !== estado.view) continue;
+    if (donde.legajoTab && donde.legajoTab !== estado.legajoTab) continue;
+    return nombre;
+  }
+  return "";
+}
+
+function estadoDe(nombre) {
+  const encontrada = RUTAS.find(([n]) => n === String(nombre || "").toLowerCase());
+  return encontrada ? Object.assign({}, encontrada[1]) : null;
+}
+
+const AREA_COLOR = {
+  "Casa Hogar": BLUE, "Administración y Finanzas": GREEN, "Educación": GOLD,
+  "Ministerio y Voluntariado": RED, "TI y Comunicaciones": BLUE,
+  "Bienestar": GREEN, "Recursos Humanos": GOLD, "Dirección": BLUE
+};
+
+
+
+const DOCS_BASE = [
+  ["Contrato de trabajo firmado", "Vigente", GREEN_D, GREEN_T],
+  ["Certificado de antecedentes penales", "Vigente", GREEN_D, GREEN_T],
+  ["Certificado de salud ocupacional", "Por vencer", GOLD_D, GOLD_T],
+  ["Política de salvaguarda infantil", "Firmada", GREEN_D, GREEN_T],
+  ["Ficha de datos y contacto de emergencia", "Actualizada", BLUE_D, BLUE_T]
+];
+
+/* Aquí vivían doce fichas de relleno de la maqueta original.
+   Se fueron: la lista, el expediente y las dos vistas de Asistencia
+   leen ahora la tabla 'beneficiarios', y cuando está vacía lo dicen.
+   Un marcador de relleno en una pantalla de menores acaba leyéndose
+   como un caso real, que es justo lo que no puede pasar aquí. */
+const MESES_LARGO = ["enero", "febrero", "marzo", "abril", "mayo", "junio",
+                     "julio", "agosto", "septiembre", "octubre", "noviembre",
+                     "diciembre"];
+
+const MESES_CORTO = ["ene", "feb", "mar", "abr", "may", "jun",
+                     "jul", "ago", "sep", "oct", "nov", "dic"];
+
+const SIN_BENEFICIARIO = { n: "Sin beneficiario seleccionado",
+                           casa: "", grado: "" };
+
+
+class Component extends DCLogic {
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:firma*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:bandeja*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:responsables*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:usuarios*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:dashboard*/
+  /*@LOGICA:condiciones*/
+  /*@LOGICA:condiciones*/
+  /*@LOGICA:directorio*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:personas*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:directorio*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:directorio*/
+  /*@LOGICA:organigrama*/
+  /*@LOGICA:organigrama*/
+  /*@LOGICA:biometria*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:asistencia*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:permisos*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:ficha*/
+  /*@LOGICA:personas*/
+  /*@LOGICA:beneficiarios*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:documentos*/
+  /*@LOGICA:nucleo*/
+  /*@LOGICA:condiciones*/
+  /*@LOGICA:condiciones*/
+  /*@LOGICA:condiciones*/
+  /*@LOGICA:condiciones*/
+  /*@LOGICA:planillas*/
+  /*@LOGICA:planillas*/
+  /*@LOGICA:planillas*/
+  /*@LOGICA:planillas*/
+  /*@LOGICA:planillas*/
+  /*@LOGICA:planillas*/
+  /*@LOGICA:nucleo*/
+      /*@LOGICA:documentos*/
+      /*@LOGICA:documentos*/
+      /*@LOGICA:ficha*/
+      /*@LOGICA:asistencia*/
+      /*@LOGICA:bandeja*/
+      /*@LOGICA:bandeja*/
+      /*@LOGICA:permisos*/
+      /*@LOGICA:permisos*/
+      /*@LOGICA:permisos*/
+      /*@LOGICA:permisos*/
+      /*@LOGICA:permisos*/
+      /*@LOGICA:personas*/
+      /*@LOGICA:usuarios*/
+      /*@LOGICA:usuarios*/
+      /*@LOGICA:usuarios*/
+      /*@LOGICA:nucleo*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:responsables*/
+      /*@LOGICA:bandeja*/
+      /*@LOGICA:bandeja*/
+      /*@LOGICA:responsables*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:ficha*/
+      /*@LOGICA:ficha*/
+      /*@LOGICA:beneficiarios*/
+      /*@LOGICA:biometria*/
+      /*@LOGICA:directorio*/
+      /*@LOGICA:responsables*/
+      /*@LOGICA:responsables*/
+      /*@LOGICA:asistencia*/
+      /*@LOGICA:biometria*/
+      /*@LOGICA:biometria*/
+      /*@LOGICA:asistencia*/
+      /*@LOGICA:asistencia*/
+      /*@LOGICA:asistencia*/
+      /*@LOGICA:asistencia*/
+      /*@LOGICA:planillas*/
+}
+
+</script>
+</body>
+</html>

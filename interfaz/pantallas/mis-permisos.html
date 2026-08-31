@@ -1,0 +1,69 @@
+      <sc-if value="{{ isMisPermisos }}">
+        <div style="padding:30px 0 44px;">
+
+          <div style="display:flex; align-items:flex-start; gap:20px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+              <sc-if value="{{ miSaldoAplica }}">
+                <div style="display:inline-flex; align-items:baseline; gap:12px; padding:16px 22px; background:{{ miSaldoTint }}; border-top:4px solid {{ miSaldoColor }}; border-radius:2px;">
+                  <div style="font-size:40px; font-weight:600; letter-spacing:-1.5px; line-height:1; font-variant-numeric:tabular-nums; color:{{ miSaldoDark }};">{{ miSaldo }}</div>
+                  <div style="line-height:1.35;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:{{ miSaldoDark }};">Días de vacaciones</div>
+                    <div style="font-size:13.5px; color:#5b7185;">{{ miSaldoNota }}</div>
+                  </div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ miSaldoNoAplica }}">
+                <div style="padding:14px 18px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; max-width:56ch;">
+                  <div style="font-size:14px; color:#5b7185; line-height:1.55; text-wrap:pretty;">{{ miSaldoNota }}</div>
+                </div>
+              </sc-if>
+            </div>
+            <sc-if value="{{ miPuedePedir }}">
+              <button onClick="{{ firmaAbrir }}" style="display:flex; align-items:center; gap:7px; padding:10px 16px; border:1px solid #c9d4de; border-radius:2px; font-size:14px; color:#0e3d69; flex:none;" style-hover="background:#e4eef7">
+                <i class="ph-duotone ph-signature" style="font-size:17px;"></i>{{ firmaBoton }}
+              </button>
+              <button onClick="{{ mpAbrir }}" style="display:flex; align-items:center; gap:8px; padding:10px 18px; border-radius:2px; font-size:14px; font-weight:600; color:#f4f3f1; background:#1462a5; flex:none;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-plus" style="font-size:17px;"></i>Pedir permiso
+              </button>
+            </sc-if>
+          </div>
+
+          <sc-if value="{{ avisoPermiso }}">
+            <div style="display:flex; align-items:flex-start; gap:10px; margin-top:18px; padding:12px 15px; background:#fbe7e3; border-left:4px solid #a8321f; border-radius:2px; max-width:70ch;">
+              <i class="ph-duotone ph-warning-circle" style="font-size:19px; color:#a8321f; flex:none;"></i>
+              <div style="font-size:13.5px; color:#a8321f; text-wrap:pretty;">{{ avisoPermiso }}</div>
+            </div>
+          </sc-if>
+
+          <div style="height:1px; background:#dcd9d5; margin:26px 0 22px;"></div>
+
+          <sc-if value="{{ misVacio }}">
+            <div style="padding:26px 28px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px;">
+              <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">Todavía no has pedido ningún permiso</div>
+              <p style="margin:8px 0 0; font-size:14px; color:#5b7185; line-height:1.55; text-wrap:pretty; max-width:640px;">{{ misVacioNota }}</p>
+            </div>
+          </sc-if>
+
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <sc-for list="{{ misSolicitudes }}" as="sp" hint-placeholder-count="3">
+              <div style="background:#ffffff; border-left:4px solid {{ sp.color }}; border-radius:2px; padding:15px 18px;">
+                <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+                  <div style="font-size:16px; font-weight:600; color:#0e3d69;">{{ sp.tipo }}</div>
+                  <span style="{{ sp.estiloEstado }}">{{ sp.estado }}</span>
+                  <div style="font-size:13.5px; color:#7d8e9c; margin-left:auto;">{{ sp.periodo }}</div>
+                </div>
+                <div style="font-size:14px; color:#4d5b66; margin-top:6px; text-wrap:pretty;">{{ sp.detalle }}</div>
+                <sc-if value="{{ sp.tieneNota }}">
+                  <div style="font-size:13.5px; color:#8a5c05; margin-top:8px; padding:9px 12px; background:#fbf0d9; border-radius:2px; text-wrap:pretty;">{{ sp.nota }}</div>
+                </sc-if>
+                <div style="display:flex; align-items:center; gap:18px; margin-top:11px; flex-wrap:wrap;">
+                  <button onClick="{{ sp.verDocumento }}" style="font-size:13px; color:#0e3d69; display:flex; align-items:center; gap:6px;" style-hover="text-decoration:underline"><i class="ph-duotone ph-file-pdf" style="font-size:16px;"></i>Descargar el documento</button>
+                  <sc-if value="{{ sp.puedeCancelar }}">
+                    <button onClick="{{ sp.cancelar }}" style="font-size:13px; color:#a8321f;" style-hover="text-decoration:underline">Cancelar esta solicitud</button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </sc-if>

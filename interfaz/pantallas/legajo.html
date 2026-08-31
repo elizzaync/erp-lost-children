@@ -1,0 +1,41 @@
+      <sc-if value="{{ isLegajo }}">
+        <!-- El alta vive aquí, junto a las pestañas y no dentro de una de
+             ellas: hay UN solo formulario de alta y una sola tabla
+             ('personal'); Directorio, Organigrama, Documentos y Contratos
+             son cuatro vistas de lo mismo, no cuatro registros distintos. -->
+        <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:26px 0 0;">
+          <sc-if value="{{ hvHayPestanas }}">
+            <div class="lc-pestanas" style="display:flex; flex-wrap:wrap; gap:6px; flex:1; min-width:0; padding:5px; background:#e9eef3; border-radius:2px;">
+              <sc-for list="{{ legajoTabs }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.go }}" style="{{ t.style }}" style-hover="color:#0e3d69">
+                  <i class="ph-duotone {{ t.icon }}" style="font-size:17px;"></i>
+                  <span>{{ t.label }}</span>
+                  <span style="font-size:12.5px; opacity:0.7; font-variant-numeric:tabular-nums;">{{ t.count }}</span>
+                </button>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <!-- En Beneficiarios el alta es OTRA: un niño va a la tabla
+               'beneficiarios' con casa, sala y grado, no a 'personal' con
+               cargo y área. Mismo sitio, formulario distinto. -->
+          <button class="lc-accion" onClick="{{ repPersonal }}" style="display:flex; align-items:center; gap:7px; font-size:13px; color:#0e3d69; padding:8px 14px; border-radius:2px; border:1px solid #c9d4de; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7"><i class="ph-duotone ph-file-arrow-down" style="font-size:16px;"></i>{{ repPersonalLabel }}</button>
+
+          <sc-if value="{{ puedeAlta }}">
+          <button class="lc-accion" onClick="{{ altaGo }}" title="{{ altaTitulo }}" style="display:flex; align-items:center; gap:8px; margin-left:auto; font-size:13.5px; background:#1462a5; color:#f4f3f1; padding:9px 17px; border-radius:2px; white-space:nowrap;" style-hover="background:#0e3d69">
+            <i class="ph-duotone {{ altaIcono }}" style="font-size:17px;"></i>{{ altaLabel }}
+          </button>
+          </sc-if>
+        </div>
+
+          <!-- Un buscador para las cuatro vistas: son la misma tabla. -->
+          <div style="display:flex; align-items:center; gap:9px; margin:14px 0 0; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; padding:8px 12px; max-width:460px;">
+            <i class="ph-duotone ph-magnifying-glass" style="font-size:17px; color:#9aa7b2; flex:none;"></i>
+            <input type="text" value="{{ busLegajo }}" onChange="{{ onBusLegajo }}" placeholder="{{ busLegajoPista }}" style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14.5px; color:#201e1d;" />
+            <sc-if value="{{ hayBusLegajo }}">
+              <button onClick="{{ limpiarBusLegajo }}" title="Limpiar" style="line-height:0; color:#9aa7b2; padding:2px;" style-hover="color:#0e3d69">
+                <i class="ph-duotone ph-x" style="font-size:15px;"></i>
+              </button>
+            </sc-if>
+          </div>
+        </sc-if>

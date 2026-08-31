@@ -1,0 +1,311 @@
+            <sc-if value="{{ modalBenef }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">{{ beTitulo }}</h3>
+              <p style="margin:0 0 20px; font-size:14px; color:#5b7185; text-wrap:pretty;">{{ beSubtitulo }}</p>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nombre completo</div>
+                  <input type="text" value="{{ beNombre }}" onChange="{{ onBeNombre }}" placeholder="Apellidos y nombres" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Documento</div>
+                  <input type="text" value="{{ beDoc }}" onChange="{{ onBeDoc }}" placeholder="DNI o código interno" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha de nacimiento</div>
+                  <input type="date" value="{{ beNac }}" onChange="{{ onBeNac }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  <sc-if value="{{ beTieneEdad }}">
+                    <p style="margin:6px 0 0; font-size:13px; color:#5b7185;">Edad: {{ beEdad }}</p>
+                  </sc-if>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Año de ingreso</div>
+                  <input type="number" value="{{ beAnio }}" onChange="{{ onBeAnio }}" min="1900" max="2100" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Casa</div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:9px;">
+                  <sc-for list="{{ beCasas }}" as="bc" hint-placeholder-count="2">
+                    <button onClick="{{ bc.go }}" style="{{ bc.style }}" style-hover="border-color:#1462a5">
+                      <i class="ph-duotone ph-house" style="font-size:16px;"></i>{{ bc.label }}
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:18px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sala</div>
+                  <input type="text" value="{{ beSala }}" onChange="{{ onBeSala }}" placeholder="Ej. Sala A" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Grado</div>
+                  <input type="text" value="{{ beGrado }}" onChange="{{ onBeGrado }}" placeholder="Ej. 3.º primaria" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+
+
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#0e3d69; font-weight:600;">Datos personales y de ingreso</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Procedencia</div>
+                    <input type="text" value="{{ beProcedencia }}" onChange="{{ onBeProcedencia }}" placeholder="Región o distrito" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Lengua materna</div>
+                    <input type="text" value="{{ beLengua }}" onChange="{{ onBeLengua }}" placeholder="Castellano, quechua…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Vía de ingreso</div>
+                    <input type="text" value="{{ beViaIngreso }}" onChange="{{ onBeViaIngreso }}" placeholder="Derivación judicial, UPE/MIMP…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Situación legal</div>
+                    <input type="text" value="{{ beSituacion }}" onChange="{{ onBeSituacion }}" placeholder="Medida de protección…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Expediente judicial</div>
+                    <input type="text" value="{{ beExpediente }}" onChange="{{ onBeExpediente }}" placeholder="Si aplica" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Referente familiar</div>
+                    <input type="text" value="{{ beReferente }}" onChange="{{ onBeReferente }}" placeholder="Familiar responsable" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Régimen de visitas</div>
+                    <input type="text" value="{{ beVisitas }}" onChange="{{ onBeVisitas }}" placeholder="Frecuencia y condiciones" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#1462a5; font-weight:600;">Educación</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Institución educativa</div>
+                    <input type="text" value="{{ beInstitucion }}" onChange="{{ onBeInstitucion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Rendimiento</div>
+                    <input type="text" value="{{ beRendimiento }}" onChange="{{ onBeRendimiento }}" placeholder="En proceso, logro esperado…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Refuerzo escolar</div>
+                    <input type="text" value="{{ beRefuerzo }}" onChange="{{ onBeRefuerzo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#1c5f3a; font-weight:600;">Salud</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Seguro</div>
+                    <input type="text" value="{{ beSeguro }}" onChange="{{ onBeSeguro }}" placeholder="SIS, EsSalud, ninguno" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Alergias</div>
+                    <input type="text" value="{{ beAlergias }}" onChange="{{ onBeAlergias }}" placeholder="Ninguna conocida" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Control médico</div>
+                    <input type="text" value="{{ beControl }}" onChange="{{ onBeControl }}" placeholder="Último y próximo" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tratamiento</div>
+                    <input type="text" value="{{ beTratamiento }}" onChange="{{ onBeTratamiento }}" placeholder="En curso, si hay" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  </div>
+                </div>
+              </div>
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#8a5c05; font-weight:600;">Acompañamiento</div>
+                <p style="margin:5px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">El tutor y la psicóloga se eligen del personal ya registrado, no se escriben a mano.</p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tutor asignado</div>
+                    <select value="{{ beTutor }}" onChange="{{ onBeTutor }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                      <sc-for list="{{ bePersonas }}" as="bp" hint-placeholder-count="6">
+                        <option value="{{ bp.valor }}">{{ bp.etiqueta }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Psicólogo/a</div>
+                    <select value="{{ bePsicologo }}" onChange="{{ onBePsicologo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                      <sc-for list="{{ bePersonas2 }}" as="bp2" hint-placeholder-count="6">
+                        <option value="{{ bp2.valor }}">{{ bp2.etiqueta }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                </div>
+                <div style="margin-top:16px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Plan de vida</div>
+                  <input type="text" value="{{ bePlanVida }}" onChange="{{ onBePlanVida }}" placeholder="Estado o última revisión" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:24px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Identidad</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Código</div>
+                  <input type="text" value="{{ beCodigo }}" onChange="{{ onBeCodigo }}" placeholder="BEN-0001" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sexo</div>
+                  <input type="text" value="{{ beSexo }}" onChange="{{ onBeSexo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nacionalidad</div>
+                  <input type="text" value="{{ beNacionalidad }}" onChange="{{ onBeNacionalidad }}" placeholder="Peruana" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Lugar de nacimiento</div>
+                  <input type="text" value="{{ beLugarNac }}" onChange="{{ onBeLugarNac }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:24px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Domicilio</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Departamento</div>
+                  <input type="text" value="{{ beDepto }}" onChange="{{ onBeDepto }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Provincia</div>
+                  <input type="text" value="{{ beProv }}" onChange="{{ onBeProv }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Distrito</div>
+                  <input type="text" value="{{ beDistrito }}" onChange="{{ onBeDistrito }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dirección</div>
+                  <input type="text" value="{{ beDireccion }}" onChange="{{ onBeDireccion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Referencia</div>
+                  <input type="text" value="{{ beReferencia }}" onChange="{{ onBeReferencia }}" placeholder="Frente al mercado" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tipo de vivienda</div>
+                  <input type="text" value="{{ beTipoVivienda }}" onChange="{{ onBeTipoVivienda }}" placeholder="Propia, alquilada…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Servicios básicos</div>
+                  <input type="text" value="{{ beServicios }}" onChange="{{ onBeServicios }}" placeholder="Agua, luz, desagüe" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:24px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Información educativa</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nivel</div>
+                  <input type="text" value="{{ beNivel }}" onChange="{{ onBeNivel }}" placeholder="Inicial, primaria, secundaria" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sección</div>
+                  <input type="text" value="{{ beSeccion }}" onChange="{{ onBeSeccion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Turno</div>
+                  <input type="text" value="{{ beTurno }}" onChange="{{ onBeTurno }}" placeholder="Mañana / tarde" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Año académico</div>
+                  <input type="text" value="{{ beAnioAcad }}" onChange="{{ onBeAnioAcad }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Situación académica</div>
+                  <input type="text" value="{{ beSitAcad }}" onChange="{{ onBeSitAcad }}" placeholder="Regular, en riesgo…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Asistencia escolar</div>
+                  <input type="text" value="{{ beAsisEscolar }}" onChange="{{ onBeAsisEscolar }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dificultades de aprendizaje</div>
+                  <input type="text" value="{{ beDificultades }}" onChange="{{ onBeDificultades }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Observaciones educativas</div>
+                  <input type="text" value="{{ beNotaEdu }}" onChange="{{ onBeNotaEdu }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:24px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Información de salud</div>
+              <div style="display:flex; align-items:flex-start; gap:9px; margin:10px 0 4px; padding:10px 12px; background:#fbe7e3; border-left:3px solid #e2503c; border-radius:2px;">
+                <i class="ph-duotone ph-first-aid-kit" style="font-size:16px; color:#a8321f; flex:none; margin-top:1px;"></i>
+                <div style="font-size:12.5px; color:#7a2417; line-height:1.5; text-wrap:pretty;">Datos de salud de un menor. Hoy los ve cualquiera con permiso sobre Beneficiarios: el permiso por sección está pendiente.</div>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tipo de seguro</div>
+                  <input type="text" value="{{ beTipoSeguro }}" onChange="{{ onBeTipoSeguro }}" placeholder="SIS, EsSalud…" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Centro de salud</div>
+                  <input type="text" value="{{ beCentroSalud }}" onChange="{{ onBeCentroSalud }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Discapacidad</div>
+                  <input type="text" value="{{ beDiscapacidad }}" onChange="{{ onBeDiscapacidad }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Necesidades especiales</div>
+                  <input type="text" value="{{ beNecesidades }}" onChange="{{ onBeNecesidades }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Información médica relevante</div>
+                  <input type="text" value="{{ beInfoMedica }}" onChange="{{ onBeInfoMedica }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Contacto de emergencia</div>
+                  <input type="text" value="{{ beEmergNombre }}" onChange="{{ onBeEmergNombre }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Teléfono de emergencia</div>
+                  <input type="text" value="{{ beEmergTel }}" onChange="{{ onBeEmergTel }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Observaciones de salud</div>
+                  <input type="text" value="{{ beNotaSalud }}" onChange="{{ onBeNotaSalud }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:24px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Situación familiar y socioeconómica</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Integrantes del hogar</div>
+                  <input type="number" value="{{ beIntegrantes }}" onChange="{{ onBeIntegrantes }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Hermanos</div>
+                  <input type="number" value="{{ beHermanos }}" onChange="{{ onBeHermanos }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Con quién vive</div>
+                  <input type="text" value="{{ beConQuienVive }}" onChange="{{ onBeConQuienVive }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Responsable económico</div>
+                  <input type="text" value="{{ beRespEconomico }}" onChange="{{ onBeRespEconomico }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tenencia de la vivienda</div>
+                  <input type="text" value="{{ beTenencia }}" onChange="{{ onBeTenencia }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Rango de ingresos</div>
+                  <input type="text" value="{{ beIngresos }}" onChange="{{ onBeIngresos }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Personas dependientes</div>
+                  <input type="number" value="{{ beDependientes }}" onChange="{{ onBeDependientes }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Observaciones</div>
+                  <input type="text" value="{{ beNotaSocio }}" onChange="{{ onBeNotaSocio }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="display:flex; align-items:flex-start; gap:10px; margin-top:18px; padding:12px 14px; background:#fbf0d9; border-left:4px solid #d8a13a; border-radius:2px;">
+                <i class="ph-duotone ph-shield-check" style="font-size:18px; color:#8a5c05; flex-shrink:0;"></i>
+                <div style="font-size:13.5px; color:#8a5c05; text-wrap:pretty;">Son datos de un menor. Se guardan solo en esta base local y no se envían al terminal biométrico ni a yunatt.</div>
+              </div>
+            </sc-if>

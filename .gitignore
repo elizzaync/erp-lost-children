@@ -16,6 +16,24 @@ data/*.db-journal
 data/*.db-wal
 data/*.db.*
 
+# Fotos de cada marca de asistencia. Son CARAS de personas, una por
+# fichaje. Estaban sin ignorar y el repositorio es público: se habrían
+# subido 80 fotografías de gente al abrir el repositorio a cualquiera.
+data/marcas/
+
+# Firmas dibujadas. Una firma es de quien la hizo, no del proyecto.
+data/firmas/
+
+# PDFs generados durante las pruebas: llevan nombres reales, fechas y
+# motivos de permiso. El formato en blanco de la ONG sí puede versionarse,
+# pero se añade a mano cuando se decida, no por descuido.
+/*.pdf
+
+# Carpetas de respaldo hechas antes de una reorganización. Son copias de
+# trabajo de esta máquina: no son historia del proyecto —para eso está
+# git— y una de ellas guarda una copia entera de backend/.
+respaldo-*/
+
 # Documentos y contratos que sube el personal.
 data/archivos/
 

@@ -1,0 +1,224 @@
+      <sc-if value="{{ isAsistencia }}">
+        <div style="padding:28px 0 0;">
+
+          <!-- ── Resumen ─────────────────────────────────────────────────
+               Las cuatro cifras salen de las mismas filas que la tabla de
+               abajo, así que no pueden discrepar de lo que se ve. -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(210px,1fr)); gap:16px;">
+            <sc-for list="{{ attResumen }}" as="rs" hint-placeholder-count="4">
+              <div style="display:flex; align-items:center; gap:14px; background:#ffffff; border:1px solid #c9d4de; border-top:3px solid {{ rs.color }}; border-radius:3px; padding:15px 18px;">
+                <div style="flex:none; width:42px; height:42px; border-radius:2px; background:{{ rs.tint }}; display:flex; align-items:center; justify-content:center;">
+                  <i class="ph-duotone {{ rs.icono }}" style="font-size:23px; color:{{ rs.color }};"></i>
+                </div>
+                <div style="min-width:0;">
+                  <div style="font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:#8697a5; white-space:nowrap;">{{ rs.rotulo }}</div>
+                  <div style="font-size:27px; font-weight:600; line-height:1.15; color:#201e1d; font-variant-numeric:tabular-nums;">{{ rs.valor }}</div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- ── Pestañas ───────────────────────────────────────────── -->
+          <div style="display:flex; flex-wrap:wrap; align-items:flex-end; gap:16px 24px; margin-top:26px; border-bottom:1px solid #dcd9d5;">
+            <div style="display:flex; flex-wrap:wrap; gap:18px; flex:1 1 auto; min-width:0;">
+              <sc-for list="{{ attTabs }}" as="t" hint-placeholder-count="4">
+                <button onClick="{{ t.go }}" style="{{ t.style }}" style-hover="color:#0e3d69">
+                  <i class="ph-duotone {{ t.icon }}" style="font-size:17px;"></i>
+                  <span>{{ t.label }}</span>
+                </button>
+              </sc-for>
+            </div>
+            <div style="display:flex; gap:8px; flex:0 0 auto; margin-left:auto; padding-bottom:9px;">
+              <button class="lc-accion" onClick="{{ repAsistencia }}" title="Imprime la pestaña que estás viendo" style="display:flex; align-items:center; gap:7px; font-size:13px; color:#0e3d69; padding:6px 12px; border-radius:2px; border:1px solid #c9d4de;" style-hover="background:#e4eef7">
+                <i class="ph-duotone ph-file-arrow-down" style="font-size:16px;"></i>{{ repAsistenciaLabel }}
+              </button>
+              <button class="lc-accion" onClick="{{ repAsistPersona }}" title="Elige una o varias personas" style="display:flex; align-items:center; gap:7px; font-size:13px; color:#0e3d69; padding:6px 12px; border-radius:2px; border:1px solid #c9d4de;" style-hover="background:#e4eef7">
+                <i class="ph-duotone ph-user-focus" style="font-size:16px;"></i>Por persona
+              </button>
+            </div>
+          </div>
+
+          <!-- ── Filtros ─────────────────────────────────────────────── -->
+          <div style="display:flex; flex-wrap:wrap; align-items:center; gap:12px; margin:18px 0 0;">
+            <div style="display:flex; align-items:center; gap:2px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; padding:2px;">
+              <button onClick="{{ diaAnterior }}" title="Día anterior" style="padding:6px 9px; border-radius:2px; color:#5b7185; line-height:0;" style-hover="background:#e4eef7; color:#0e3d69">
+                <i class="ph-duotone ph-caret-left" style="font-size:16px;"></i>
+              </button>
+              <input type="date" value="{{ fecha }}" onChange="{{ onFecha }}" style="padding:6px 8px; font-family:inherit; font-size:14px; color:#201e1d; background:transparent; border:none; outline:none;" />
+              <button onClick="{{ diaSiguiente }}" title="Día siguiente" style="padding:6px 9px; border-radius:2px; color:#5b7185; line-height:0;" style-hover="background:#e4eef7; color:#0e3d69">
+                <i class="ph-duotone ph-caret-right" style="font-size:16px;"></i>
+              </button>
+            </div>
+
+            <div style="display:flex; align-items:center; gap:9px; flex:1 1 260px; min-width:0; max-width:420px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; padding:8px 12px;">
+              <i class="ph-duotone ph-magnifying-glass" style="font-size:17px; color:#9aa7b2; flex:none;"></i>
+              <input type="text" value="{{ attBusca }}" onChange="{{ onAttBusca }}" placeholder="Buscar persona o cargo..." style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14.5px; color:#201e1d;" />
+            </div>
+
+            <!-- Dice lo que el sistema sabe. Una meta de horas necesitaría
+                 el horario de cada persona, que no existe. -->
+            <div style="margin-left:auto; font-size:13px; color:#5b7185; background:#f0ede9; border-radius:2px; padding:7px 13px; white-space:nowrap;">{{ attInsignia }}</div>
+
+            <sc-if value="{{ puedeAsistencia }}">
+            <button class="lc-accion" onClick="{{ sincronizarMarcas }}" style="{{ syncBotonStyle }}" style-hover="background:#e4eef7">
+              <i class="ph-duotone {{ syncIcono }}" style="font-size:17px;"></i>{{ syncLabel }}
+            </button>
+            </sc-if>
+          </div>
+
+            <sc-if value="{{ syncMsg }}">
+              <div style="display:flex; align-items:center; gap:9px; margin:12px 0 0; padding:10px 14px; background:{{ syncTint }}; border-left:4px solid {{ syncColor }}; border-radius:2px;">
+                <i class="ph-duotone {{ syncMsgIcono }}" style="font-size:18px; color:{{ syncColor }}; flex-shrink:0;"></i>
+                <div style="font-size:13.5px; color:{{ syncColor }}; text-wrap:pretty;">{{ syncMsg }}</div>
+              </div>
+            </sc-if>
+
+          <sc-if value="{{ attDiaria }}" hint-placeholder-val="{{ true }}">
+
+            <!-- El recado para cocina. Una línea, no una tarjeta: es un
+                 encargo del día, no un indicador que se siga en el tiempo. -->
+            <div style="margin-top:24px; padding:13px 16px; border-radius:2px; background:{{ almuerzoTint }}; border-left:4px solid {{ almuerzoColor }};">
+              <div style="font-size:14.5px; color:{{ almuerzoDark }}; text-wrap:pretty;">{{ almuerzoLinea }}</div>
+              <sc-if value="{{ almuerzoIncompleto }}">
+                <div style="font-size:13px; color:#8a5c05; margin-top:4px; text-wrap:pretty;">{{ almuerzoAviso }}</div>
+              </sc-if>
+            </div>
+
+            <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-top:26px;">
+              <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Asistencia del día</h2>
+              <span style="font-size:14px; color:#7d8e9c;">{{ diaNota }}</span>
+              <a href="#" onClick="{{ irAlPanel }}" style="margin-left:auto; font-size:13.5px; color:#1462a5;" style-hover="text-decoration:underline">Ver el resumen del día en el panel</a>
+            </div>
+
+            <sc-if value="{{ diaVacio }}">
+              <div style="margin-top:18px; padding:20px 22px; background:#ffffff; border:1px dashed #c9d4de; border-radius:3px;">
+                <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">Todavía no hay a quién mostrar</div>
+                <p style="margin:7px 0 0; font-size:14px; color:#5b7185; text-wrap:pretty; max-width:640px;">En cuanto haya fichas en Gestión de Personas aparecerán aquí, y las que estén enroladas en el terminal mostrarán sus marcas.</p>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ diaHay }}">
+              <div class="om-scroll" style="overflow-x:auto; margin-top:16px;">
+                <div style="display:grid; min-width:800px; grid-template-columns:minmax(200px,1.8fr) minmax(96px,1fr) 68px 68px 60px minmax(96px,124px) 82px; gap:12px; padding:14px 0 9px; font-size:10.5px; letter-spacing:0.13em; text-transform:uppercase; color:#0e3d69; border-bottom:2px solid #1462a5;">
+                  <div>Persona</div><div>Registro</div>
+                  <div style="text-align:right;">Entrada</div><div style="text-align:right;">Salida</div>
+                  <div style="text-align:right;">Horas</div><div style="text-align:right;">Estado</div>
+                  <div style="text-align:right;">Acciones</div>
+                </div>
+
+                <sc-for list="{{ diaFilas }}" as="df" hint-placeholder-count="6">
+                  <div style="display:grid; min-width:800px; grid-template-columns:minmax(200px,1.8fr) minmax(96px,1fr) 68px 68px 60px minmax(96px,124px) 82px; gap:12px; padding:11px 8px; border-bottom:1px solid #e7e3de; align-items:center; background:{{ df.filaFondo }};">
+                    <div style="display:flex; align-items:center; gap:10px; min-width:0;">
+                      <div style="flex:none; width:34px; height:34px; border-radius:2px; background:{{ df.iniTint }}; color:{{ df.iniColor }}; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600;">{{ df.iniciales }}</div>
+                      <div style="min-width:0; line-height:1.3;">
+                        <div style="font-size:14.5px; font-weight:600; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ df.nombre }}</div>
+                        <div style="font-size:12.5px; color:#7d8e9c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ df.subtitulo }}</div>
+                      </div>
+                    </div>
+                    <div style="display:flex; align-items:center; gap:7px; min-width:0;">
+                      <i class="ph-duotone {{ df.metodoIcon }}" style="font-size:16px; color:{{ df.metodoColor }}; flex-shrink:0;"></i>
+                      <span style="font-size:13px; color:#5b7185; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ df.metodo }}</span>
+                    </div>
+                    <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#3c4a55;">{{ df.entrada }}</div>
+                    <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#4d5b66;">{{ df.salida }}</div>
+                    <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums;">{{ df.horas }}</div>
+                    <div style="text-align:right; min-width:0;"><span style="font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; background:{{ df.tint }}; color:{{ df.color }}; padding:4px 9px; border-radius:2px; display:inline-block; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ df.estado }}</span></div>
+                    <div style="display:flex; gap:4px; justify-content:flex-end;">
+                      <sc-if value="{{ df.puedeAcciones }}">
+                        <button onClick="{{ df.editar }}" title="Editar datos" style="padding:5px 7px; border-radius:2px; border:1px solid #c9d4de; color:#0e3d69; line-height:0;" style-hover="background:#e4eef7">
+                          <i class="ph-duotone ph-pencil-simple" style="font-size:16px;"></i>
+                        </button>
+                        <button onClick="{{ df.borrar }}" title="Quitar del terminal" style="padding:5px 7px; border-radius:2px; border:1px solid #e2503c; color:#a8321f; line-height:0;" style-hover="background:#fbe7e3">
+                          <i class="ph-duotone ph-trash" style="font-size:16px;"></i>
+                        </button>
+                      </sc-if>
+                      <sc-if value="{{ df.puedeEnrolar }}">
+                        <button onClick="{{ df.enrolar }}" title="Ir a enrolar a esta persona" style="padding:5px 9px; border-radius:2px; border:1px solid #c9d4de; color:#0e3d69; font-size:12px; white-space:nowrap;" style-hover="background:#e4eef7">Enrolar</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+              <p style="margin:12px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">{{ diaPie }}</p>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ attSemanal }}">
+            <sc-if value="{{ sinSemanaReal }}">
+              <div style="margin-top:28px; padding:20px 22px; background:#ffffff; border:1px dashed #c9d4de; border-radius:3px;">
+                <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">Todavía no hay semana que mostrar</div>
+                <p style="margin:7px 0 0; font-size:14px; color:#5b7185; text-wrap:pretty; max-width:640px;">Aquí saldrán las horas de cada persona enrolada, día por día, en cuanto el terminal tenga marcas sincronizadas de estas fechas. Hasta entonces la tabla queda vacía a propósito: antes se rellenaba con veinte personas y unos horarios que nadie había marcado.</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ haySemanaReal }}">
+              <div style="margin-top:28px; padding:18px 20px 20px; background:#ffffff; border:1px solid #c9d4de; border-radius:3px;">
+                <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+                  <h2 style="font-size:20px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Personas enroladas en este sistema</h2>
+                  <span style="font-size:13.5px; color:#7d8e9c;">{{ semanaRotulo }} · datos reales del terminal</span>
+                </div>
+                <div class="om-scroll" style="overflow-x:auto;">
+                  <div style="display:grid; min-width:720px; grid-template-columns:minmax(120px,2fr) repeat(7, minmax(0,1fr)) minmax(0,74px); gap:10px; padding:14px 0 9px; font-size:10.5px; letter-spacing:0.13em; text-transform:uppercase; color:#0e3d69; border-bottom:2px solid #1462a5;">
+                    <div>Persona</div>
+                    <sc-for list="{{ semanaDias }}" as="sd" hint-placeholder-count="7">
+                      <div style="text-align:center;">{{ sd.etiqueta }}</div>
+                    </sc-for>
+                    <div style="text-align:right;">Total</div>
+                  </div>
+                  <sc-for list="{{ semanaReales }}" as="sr" hint-placeholder-count="3">
+                    <div style="display:grid; min-width:720px; grid-template-columns:minmax(120px,2fr) repeat(7, minmax(0,1fr)) minmax(0,74px); gap:10px; padding:10px 0; border-bottom:1px solid #e7e3de; align-items:center;">
+                      <div style="font-size:15px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ sr.nombre }}</div>
+                      <sc-for list="{{ sr.dias }}" as="sc2" hint-placeholder-count="7">
+                        <div style="text-align:center; font-size:13.5px; font-variant-numeric:tabular-nums; padding:4px 0; border-radius:2px; background:{{ sc2.bg }}; color:{{ sc2.fg }};">{{ sc2.v }}</div>
+                      </sc-for>
+                      <div style="text-align:right; font-size:15px; font-weight:600; font-variant-numeric:tabular-nums; color:#0e3d69;">{{ sr.total }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <p style="margin:12px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">En verde, horas trabajadas (primera y última marca del día). En azul, la hora de entrada cuando solo hay una marca y no se puede calcular la jornada.</p>
+              </div>
+            </sc-if>
+
+          </sc-if>
+
+          <sc-if value="{{ attJust }}">
+            <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap; margin-top:28px;">
+              <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Justificaciones</h2>
+              <span style="font-size:14px; color:#7d8e9c;">Tardanzas y faltas por revisar.</span>
+            </div>
+            <div style="margin-top:20px; padding:20px 22px; background:#ffffff; border:1px dashed #c9d4de; border-radius:3px; max-width:820px;">
+              <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">No hay ninguna justificación registrada</div>
+              <p style="margin:7px 0 0; font-size:14px; color:#5b7185; text-wrap:pretty;">Aquí vivían cinco casos de ejemplo —con adjuntos y comentarios que no existían— y sus botones de aceptar o rechazar no resolvían nada. Se fueron. Esta pantalla volverá a tener contenido cuando el sistema sepa comparar la hora marcada contra el horario de cada persona, que es lo que todavía no está construido.</p>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ attCal }}">
+            <sc-if value="{{ sinMesReal }}">
+              <div style="margin-top:28px; padding:20px 22px; background:#ffffff; border:1px dashed #c9d4de; border-radius:3px;">
+                <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">El mes todavía no tiene marcas</div>
+                <p style="margin:7px 0 0; font-size:14px; color:#5b7185; text-wrap:pretty; max-width:640px;">Cada casilla contará cuántas personas enroladas marcaron ese día, con lo que el terminal haya sincronizado. Los porcentajes que salían antes (63 %, 100 %, 50 %…) no medían nada: los calculaba una fórmula a partir del número del día.</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ hayMesReal }}">
+              <div style="margin-top:28px; padding:18px 20px 20px; background:#ffffff; border:1px solid #c9d4de; border-radius:3px;">
+                <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap;">
+                  <h2 style="font-size:20px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Marcas reales del terminal</h2>
+                  <span style="font-size:13.5px; color:#7d8e9c;">{{ mesRotulo }}</span>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(7, minmax(0,1fr)); gap:6px; margin-top:16px;">
+                  <sc-for list="{{ weekDays }}" as="wd2" hint-placeholder-count="7">
+                    <div style="font-size:10.5px; letter-spacing:0.13em; text-transform:uppercase; color:#7d8e9c; text-align:center; padding-bottom:4px;">{{ wd2 }}</div>
+                  </sc-for>
+                  <sc-for list="{{ mesDias }}" as="md" hint-placeholder-count="35">
+                    <div style="min-height:56px; border-radius:2px; padding:6px 7px; background:{{ md.bg }}; border:2px solid {{ md.borde }}; display:flex; flex-direction:column; justify-content:space-between;">
+                      <div style="font-size:12.5px; color:{{ md.fg }}; font-variant-numeric:tabular-nums;">{{ md.num }}</div>
+                      <div style="font-size:19px; font-weight:600; color:{{ md.fg }}; font-variant-numeric:tabular-nums; text-align:right; line-height:1;">{{ md.presentes }}</div>
+                    </div>
+                  </sc-for>
+                </div>
+                <p style="margin:14px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">Cuántas personas enroladas marcaron cada día. Los días en blanco no tienen ninguna marca sincronizada. El día con borde azul es el seleccionado arriba.</p>
+              </div>
+            </sc-if>
+
+          </sc-if>
+        </div>
+      </sc-if>

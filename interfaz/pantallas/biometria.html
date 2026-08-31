@@ -1,0 +1,252 @@
+      <sc-if value="{{ isBiometria }}">
+        <div style="padding:30px 0 44px;">
+
+
+            <!-- Cómo está la conexión con el terminal. Va arriba del todo:
+                 cuando un enrolamiento falla, esto es lo primero que hay
+                 que mirar, y antes solo se veía en el registro del
+                 servidor. -->
+            <sc-if value="{{ ytHay }}">
+              <div style="display:flex; align-items:flex-start; gap:11px; margin:22px 0 0; padding:13px 16px; background:{{ ytTint }}; border-left:4px solid {{ ytColor }}; border-radius:2px;">
+                <i class="ph-duotone ph-plug" style="font-size:19px; color:{{ ytColor }}; flex:none;"></i>
+                <div style="min-width:0;">
+                  <div style="font-size:14.5px; font-weight:600; color:{{ ytColor }};">{{ ytTitulo }}</div>
+                  <div style="font-size:13.5px; color:#3c4a55; margin-top:3px; text-wrap:pretty;">{{ ytDetalle }}</div>
+                  <sc-if value="{{ ytHayEquipo }}">
+                    <div style="font-size:12.5px; color:#7d8e9c; margin-top:5px; font-variant-numeric:tabular-nums;">{{ ytEquipo }}</div>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-if>
+
+            <div style="display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:26px 0 0;">
+              <span style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Personas enroladas</span>
+              <sc-for list="{{ metodos }}" as="mt" hint-placeholder-count="3">
+                <button onClick="{{ mt.go }}" style="{{ mt.style }}" style-hover="border-color:#1462a5">
+                  <i class="ph-duotone {{ mt.icon }}" style="font-size:19px; color:{{ mt.iconColor }};"></i>
+                  <span style="font-weight:600;">{{ mt.label }}</span>
+                  <span style="font-size:12.5px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ mt.count }}</span>
+                </button>
+              </sc-for>
+            </div>
+
+              <sc-if value="{{ bioSinEnrolados }}">
+              <div style="margin:14px 0 0; padding:16px 18px; background:#ffffff; border:1px dashed #c9d4de; border-radius:3px;">
+                <div style="font-size:14.5px; color:#5b7185; text-wrap:pretty;">Todavía no hay nadie enrolado en el terminal. Enrolar a alguien es lo que le permite marcar asistencia.</div>
+              </div>
+            </sc-if>
+            <!-- Dos columnas: a la izquierda quién falta por enrolar,
+                 que es lo accionable, y a la derecha quién ya está.
+                 En pantalla estrecha se apilan solas. -->
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(380px,1fr)); gap:24px; align-items:start; margin-top:18px;">
+            <sc-if value="{{ bioHayEnrolados }}">
+            <div style="min-width:0; order:2;">
+
+            <sc-if value="{{ bioHayEnrolados }}">
+              <div style="margin:14px 0 0; display:flex; flex-direction:column; gap:7px;">
+                <sc-for list="{{ bioEnrolados }}" as="be" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:13px; flex-wrap:wrap; padding:11px 14px; background:#ffffff; border:1px solid #e2ddd6; border-radius:2px;">
+                    <div style="width:34px; height:34px; border-radius:2px; background:{{ be.tint }}; color:{{ be.dark }}; display:flex; align-items:center; justify-content:center; flex:none;">
+                      <i class="ph-duotone {{ be.icono }}" style="font-size:17px;"></i>
+                    </div>
+                    <div style="min-width:0; flex:1; line-height:1.35;">
+                      <div style="font-size:15px; font-weight:600; color:#201e1d;">{{ be.nombre }}</div>
+                      <div style="font-size:12.5px; color:#7d8e9c;">{{ be.detalle }}</div>
+                    </div>
+                    <span style="{{ be.estiloTipo }}">{{ be.tipo }}</span>
+                    <span style="font-size:12.5px; color:#5b7185; font-variant-numeric:tabular-nums; flex:none;">ID {{ be.sn }}</span>
+                    <button onClick="{{ be.quitar }}" style="font-size:12.5px; color:#a8321f; padding:5px 11px; border-radius:2px; border:1px solid #e2503c; flex:none;" style-hover="background:#fbe7e3">Quitar</button>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            </div>
+            </sc-if>
+
+            <div style="min-width:0; order:1;">
+            <div style="margin:18px 0 0; padding:20px 22px; background:#e9eef3; border-radius:3px;">
+                <h3 style="font-size:18px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Enrolar en el terminal</h3>
+                <p style="margin:0 0 20px; font-size:14px; color:#5b7185; text-wrap:pretty;">Trabajadores, responsables y beneficiarios registrados en Gestión de Personas aparecen aquí solos, sin darlos de alta otra vez. Su ficha es la fuente de los datos: esto solo le añade su identidad biométrica.</p>
+
+                <div style="display:flex; align-items:center; gap:9px; margin-top:14px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; padding:8px 12px;">
+                  <i class="ph-duotone ph-magnifying-glass" style="font-size:17px; color:#9aa7b2; flex:none;"></i>
+                  <input type="text" value="{{ bioBusca }}" onChange="{{ onBioBusca }}" placeholder="Buscar a quién enrolar..." style="flex:1; min-width:0; border:none; outline:none; background:transparent; font-family:inherit; font-size:14.5px; color:#201e1d;" />
+                </div>
+
+                <sc-if value="{{ hayCandidatos }}">
+                  <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Pendientes de enrolar</div>
+                    <span style="font-size:13px; color:#7d8e9c;">{{ candidatosNota }}</span>
+                  </div>
+
+                  <!-- Una fila por persona. Aparecen solas: cualquier ficha
+                       creada en Gestión de Personas entra aquí, y sale en
+                       cuanto queda enrolada. Nadie se da de alta a mano. -->
+                  <!-- Sin cajón con scroll: un scroll dentro de otro se
+                       arrastra cuando no toca, y debajo la página estaba
+                       medio vacía. La lista fluye con la página. -->
+                  <div style="margin-top:12px; display:flex; flex-direction:column; gap:8px;">
+                    <sc-for list="{{ candLista }}" as="cd" hint-placeholder-count="6">
+                      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; padding:12px 14px; background:#ffffff; border:1px solid #e2ddd6; border-radius:3px;">
+                        <div style="width:38px; height:38px; border-radius:2px; background:{{ cd.tint }}; color:{{ cd.dark }}; display:flex; align-items:center; justify-content:center; flex:none;">
+                          <i class="ph-duotone {{ cd.icono }}" style="font-size:19px;"></i>
+                        </div>
+                        <div style="min-width:0; flex:1; line-height:1.35;">
+                          <div style="font-size:15px; font-weight:600; color:#201e1d;">{{ cd.nombre }}</div>
+                          <div style="font-size:13px; color:#7d8e9c;">{{ cd.detalle }}</div>
+                          <sc-if value="{{ cd.hayIntento }}">
+                            <div style="font-size:12.5px; color:#8a5c05; margin-top:2px;">{{ cd.intento }}</div>
+                          </sc-if>
+                        </div>
+                        <span style="{{ cd.estiloTipo }}">{{ cd.tipo }}</span>
+                        <div style="display:flex; gap:8px; flex:none;">
+                          <button onClick="{{ cd.rostro }}" style="{{ cd.estiloBoton }}" style-hover="border-color:#1462a5; color:#0e3d69">
+                            <i class="ph-duotone ph-scan-smiley" style="font-size:16px;"></i>Rostro
+                          </button>
+                          <sc-if value="{{ hayHuella }}">
+                            <button onClick="{{ cd.huella }}" style="{{ cd.estiloBoton }}" style-hover="border-color:#1462a5; color:#0e3d69">
+                              <i class="ph-duotone ph-fingerprint" style="font-size:16px;"></i>Huella
+                            </button>
+                          </sc-if>
+                        </div>
+                      </div>
+                    </sc-for>
+                  </div>
+                  <p style="margin:12px 0 0; font-size:13.5px; color:#5b7185; text-wrap:pretty;">{{ addNota }}</p>
+                </sc-if>
+
+                <sc-if value="{{ sinCandidatos }}">
+                  <div style="display:flex; align-items:flex-start; gap:10px; padding:13px 15px; background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px;">
+                    <i class="ph-duotone ph-info" style="font-size:19px; color:#8a5c05; flex-shrink:0;"></i>
+                    <div style="font-size:13.5px; color:#8a5c05; text-wrap:pretty;">Todas las personas registradas ya están enroladas. Para enrolar a alguien nuevo, primero crea su ficha en <b>Gestión de Personas</b> — aparecerá aquí sola.</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ capAviso }}">
+                  <div style="display:flex; align-items:flex-start; gap:10px; margin-top:20px; padding:12px 14px; background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px;">
+                    <i class="ph-duotone ph-warning-circle" style="font-size:19px; color:#8a5c05; flex-shrink:0;"></i>
+                    <div style="font-size:13.5px; color:#8a5c05; text-wrap:pretty;">{{ capAviso }}</div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ capActivo }}">
+                  <div style="display:flex; flex-wrap:wrap; gap:24px; align-items:flex-start; margin-top:22px; padding:20px; background:#ffffff; border:1px solid #c9d4de; border-radius:3px;">
+
+                    <div style="position:relative; width:264px; height:198px; flex:0 0 auto; background:{{ capCamFondo }}; border:1px solid {{ capCamBorde }}; border-radius:3px; overflow:hidden; display:flex; align-items:center; justify-content:center;">
+                      <i class="{{ capCamClase }}" style="font-size:66px; color:{{ capCamColor }};"></i>
+                      <sc-if value="{{ capEscaneando }}">
+                        <div class="rrhh-escaneo"></div>
+                      </sc-if>
+                      <span style="position:absolute; top:10px; left:10px; width:18px; height:18px; border-top:2px solid {{ capCamColor }}; border-left:2px solid {{ capCamColor }};"></span>
+                      <span style="position:absolute; top:10px; right:10px; width:18px; height:18px; border-top:2px solid {{ capCamColor }}; border-right:2px solid {{ capCamColor }};"></span>
+                      <span style="position:absolute; bottom:10px; left:10px; width:18px; height:18px; border-bottom:2px solid {{ capCamColor }}; border-left:2px solid {{ capCamColor }};"></span>
+                      <span style="position:absolute; bottom:10px; right:10px; width:18px; height:18px; border-bottom:2px solid {{ capCamColor }}; border-right:2px solid {{ capCamColor }};"></span>
+                      <div style="position:absolute; left:0; right:0; bottom:0; padding:6px 10px; background:{{ capCamPieFondo }}; color:#eef4f9; font-size:11px; letter-spacing:0.12em; text-transform:uppercase;">{{ capCamPie }}</div>
+                    </div>
+
+                    <div style="flex:1 1 260px; min-width:0;">
+                      <div style="display:flex; align-items:center; gap:9px;">
+                        <sc-if value="{{ capEscaneando }}">
+                          <div class="rrhh-giro"></div>
+                        </sc-if>
+                        <div style="font-size:18px; font-weight:600; color:{{ capTituloColor }};">{{ capTitulo }}</div>
+                      </div>
+
+                      <p style="margin:8px 0 0; font-size:14.5px; color:#4d5b66; text-wrap:pretty;">{{ capMensaje }}</p>
+
+                      <sc-if value="{{ capMultipaso }}">
+                        <div style="margin-top:14px; display:flex; align-items:center; gap:9px;">
+                          <span style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Paso {{ capPaso }} de {{ capTotalPasos }}</span>
+                          <sc-for list="{{ capPasos }}" as="p" hint-placeholder-count="2">
+                            <span style="height:4px; width:40px; border-radius:2px; background:{{ p.color }}; display:inline-block;"></span>
+                          </sc-for>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ capEsperando }}">
+                        <div style="margin-top:14px; font-size:13.5px; color:#5b7185;">
+                          Tiempo restante <span style="font-variant-numeric:tabular-nums; font-weight:600; color:#0e3d69;">{{ capRestante }}</span>
+                        </div>
+                      </sc-if>
+
+                      <sc-if value="{{ capStaffNumber }}">
+                        <div style="margin-top:10px; font-size:12.5px; color:#7d8e9c; font-variant-numeric:tabular-nums;">ID asignado en el terminal · {{ capStaffNumber }}</div>
+                      </sc-if>
+
+                      <div style="display:flex; gap:9px; flex-wrap:wrap; margin-top:18px;">
+                        <sc-if value="{{ capEsperando }}">
+                          <button onClick="{{ cancelarCaptura }}" style="font-size:13.5px; color:#a8321f; padding:8px 16px; border-radius:2px; border:1px solid #e2503c;" style-hover="background:#fbe7e3">Cancelar captura</button>
+                        </sc-if>
+                        <sc-if value="{{ capFallo }}">
+                          <button onClick="{{ reintentarCaptura }}" style="font-size:13.5px; background:#1462a5; color:#f4f3f1; padding:8px 16px; border-radius:2px;" style-hover="background:#0e3d69">Reintentar captura</button>
+                        </sc-if>
+                        <sc-if value="{{ capExito }}">
+                          <button onClick="{{ cerrarCaptura }}" style="font-size:13.5px; background:#2f8f5b; color:#f4f3f1; padding:8px 16px; border-radius:2px;" style-hover="background:#1c5f3a">Listo, cerrar</button>
+                        </sc-if>
+                      </div>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <!-- Aquí había "Cancelar" e "Iniciar captura biométrica":
+                     eran el pie del formulario viejo, donde primero se
+                     elegía persona y método y luego se confirmaba. Ahora
+                     cada fila enrola con su propio botón, así que estos dos
+                     no llevaban a ninguna parte. -->
+              </div>
+          </div>
+          </div>
+
+            <!-- ══ Rostro para marcar por el celular ═══════════════════
+                 Es un enrolamiento distinto del terminal: aquí la persona
+                 se registra sola, desde su teléfono. RRHH no puede hacerlo
+                 por ella —haría falta su cara y su consentimiento—, así que
+                 esta lista sirve para saber a quién hay que avisar. -->
+            <div style="margin-top:34px; padding-top:26px; border-top:1px solid #e7e3de;">
+              <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+                <span style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Rostro para marcar por el celular</span>
+                <span style="font-size:13px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ rwConRostro }} de {{ rwTotal }}</span>
+              </div>
+              <div style="font-size:14px; color:#5b7185; margin-top:8px; text-wrap:pretty;">{{ rwResumen }} Cada persona lo registra desde su propio celular: hace falta su cara y su permiso, así que RRHH no puede hacerlo por ella.</div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:20px; align-items:start; margin-top:16px;">
+                <sc-if value="{{ rwHayFaltan }}">
+                  <div style="min-width:0;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#8a5c05;">Falta que lo registren · {{ rwFaltan }}</div>
+                    <div style="display:flex; flex-direction:column; gap:7px; margin-top:10px;">
+                      <sc-for list="{{ rwListaFaltan }}" as="rf" hint-placeholder-count="4">
+                        <div style="display:flex; align-items:center; gap:11px; padding:10px 13px; background:#ffffff; border:1px solid #e2ddd6; border-radius:2px;">
+                          <i class="ph-duotone ph-user-circle-dashed" style="font-size:19px; color:{{ rf.tono }}; flex:none;"></i>
+                          <div style="min-width:0; line-height:1.3;">
+                            <div style="font-size:14.5px; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ rf.nombre }}</div>
+                            <div style="font-size:12.5px; color:{{ rf.tono }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ rf.detalle }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+
+                <sc-if value="{{ rwHayPuestos }}">
+                  <div style="min-width:0;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#1c5f3a;">Ya pueden marcar · {{ rwConRostro }}</div>
+                    <div style="display:flex; flex-direction:column; gap:7px; margin-top:10px;">
+                      <sc-for list="{{ rwListaPuestos }}" as="rp" hint-placeholder-count="3">
+                        <div style="display:flex; align-items:center; gap:11px; padding:10px 13px; background:#ffffff; border:1px solid #e2ddd6; border-radius:2px;">
+                          <i class="ph-duotone ph-user-focus" style="font-size:19px; color:#2f8f5b; flex:none;"></i>
+                          <div style="min-width:0; line-height:1.3;">
+                            <div style="font-size:14.5px; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ rp.nombre }}</div>
+                            <div style="font-size:12.5px; color:#7d8e9c; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ rp.detalle }}</div>
+                          </div>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                </sc-if>
+              </div>
+
+              <div style="font-size:12.5px; color:#9aa7b2; margin-top:14px; text-wrap:pretty;">De cada rostro se guarda un código de 128 números, nunca la fotografía. Quien retire su permiso desaparece de la lista de la derecha y vuelve a la de la izquierda.</div>
+            </div>
+        </div>
+      </sc-if>

@@ -1,0 +1,94 @@
+      <sc-if value="{{ isConfig }}">
+        <!-- El tope estaba en 720 y dejaba media pantalla en blanco. Ahora
+             cabe la tarjeta al lado de su explicación; el ancho de lectura
+             lo sigue acotando cada columna, no el contenedor. -->
+        <div style="padding:28px 0 0; max-width:1120px;">
+          <div style="display:flex; align-items:baseline; gap:16px; flex-wrap:wrap;">
+            <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Parámetros del sistema</h2>
+            <span style="font-size:14px; color:#7d8e9c;">Datos institucionales que usan el resto de módulos</span>
+          </div>
+
+          <!-- Dos columnas: los campos con ancho de formulario, y al lado
+               para qué sirve cada uno. La tarjeta sola dejaba medio ancho
+               vacío, y estirarla habría dado campos de 600 px que nadie
+               necesita para escribir el nombre de una ONG. -->
+          <!-- 440 y no 330: con el mínimo bajo, auto-fit cabía tres veces
+               en la pantalla y dejaba una tercera columna vacía a la
+               derecha. Con 440 caben dos y se reparten el ancho. -->
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(440px,1fr)); gap:24px; align-items:start; margin-top:20px;">
+
+          <div style="background:#ffffff; border:1px solid #c9d4de; border-radius:3px; padding:22px 24px 24px;">
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:18px;">
+              <div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nombre de la organización</div>
+                <input type="text" value="{{ cfgOrg }}" onChange="{{ onCfgOrg }}" placeholder="Lost Children of Peru" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              </div>
+              <div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Ciudad principal</div>
+                <input type="text" value="{{ cfgCiudad }}" onChange="{{ onCfgCiudad }}" placeholder="Lima" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              </div>
+            </div>
+
+            <div style="margin-top:24px; padding-top:22px; border-top:1px solid #e7e3de;">
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha de fundación</div>
+
+              <sc-if value="{{ cfgFundacionFijada }}">
+                <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-top:10px;">
+                  <div style="display:flex; align-items:center; gap:10px; padding:10px 14px; background:#e8f3ec; border-left:4px solid #2f8f5b; border-radius:2px;">
+                    <i class="ph-duotone ph-lock-simple" style="font-size:18px; color:#1c5f3a;"></i>
+                    <span style="font-size:16px; font-weight:600; color:#1c5f3a;">{{ cfgFundacionTexto }}</span>
+                  </div>
+                  <button onClick="{{ cfgDesbloquear }}" style="font-size:13.5px; color:#8a5c05; padding:8px 14px; border-radius:2px; border:1px solid #e0a11c;" style-hover="background:#fbf0d9">Corregir fecha</button>
+                </div>
+                <p style="margin:12px 0 0; font-size:13.5px; color:#7d8e9c; text-wrap:pretty;">Queda fijada porque no es un dato que cambie: solo se corrige si se registró mal. De aquí sale el conteo de años del Dashboard.</p>
+              </sc-if>
+
+              <sc-if value="{{ cfgFundacionEditable }}">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-top:10px;">
+                  <input type="date" value="{{ cfgFundacion }}" onChange="{{ onCfgFundacion }}" style="padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                  <sc-if value="{{ cfgTeniaFecha }}">
+                    <button onClick="{{ cfgCancelarFecha }}" style="font-size:13.5px; color:#3c4a55; padding:9px 14px; border-radius:2px; border:1px solid #c9d4de;" style-hover="background:#f4f3f1">Cancelar</button>
+                  </sc-if>
+                </div>
+                <p style="margin:12px 0 0; font-size:13.5px; color:#7d8e9c; text-wrap:pretty;">Se registra una sola vez. Es el día en que la organización empezó a operar, y de ahí sale el conteo de años que muestra el Dashboard.</p>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ cfgError }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px; font-size:13.5px; color:#a8321f;">{{ cfgError }}</div>
+            </sc-if>
+            <sc-if value="{{ cfgOk }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#e8f3ec; border-left:4px solid #2f8f5b; border-radius:2px; font-size:13.5px; color:#1c5f3a;">{{ cfgOk }}</div>
+            </sc-if>
+
+            <div style="display:flex; gap:9px; justify-content:flex-end; margin-top:22px;">
+              <sc-if value="{{ puedeConfig }}">
+                <button onClick="{{ cfgGuardar }}" style="{{ cfgBotonStyle }}" style-hover="background:#1c5f3a">{{ cfgBotonLabel }}</button>
+              </sc-if>
+            </div>
+          </div>
+
+          <!-- Para qué sirve cada parámetro. No es relleno: hoy no está
+               dicho en ninguna parte y se descubre cambiándolo. -->
+          <div style="background:#f0ede9; border:1px solid #dcd9d5; border-radius:3px; padding:20px 22px;">
+            <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dónde se usa</div>
+            <div style="display:grid; gap:14px; margin-top:14px;">
+              <div style="display:flex; gap:11px; align-items:flex-start;">
+                <i class="ph-duotone ph-file-text" style="font-size:18px; color:#1462a5; flex:none; margin-top:1px;"></i>
+                <div style="font-size:13.5px; color:#3c4a55; line-height:1.5; text-wrap:pretty;"><b>El nombre</b> va al pie de cada autorización de permiso y encabeza los documentos que genera el sistema.</div>
+              </div>
+              <div style="display:flex; gap:11px; align-items:flex-start;">
+                <i class="ph-duotone ph-map-pin" style="font-size:18px; color:#1462a5; flex:none; margin-top:1px;"></i>
+                <div style="font-size:13.5px; color:#3c4a55; line-height:1.5; text-wrap:pretty;"><b>La ciudad</b> aparece en la cabecera de todas las pantallas, junto a la fecha del día.</div>
+              </div>
+              <div style="display:flex; gap:11px; align-items:flex-start;">
+                <i class="ph-duotone ph-calendar-check" style="font-size:18px; color:#1462a5; flex:none; margin-top:1px;"></i>
+                <div style="font-size:13.5px; color:#3c4a55; line-height:1.5; text-wrap:pretty;"><b>La fundación</b> es de donde sale el «años de labor» del Dashboard. Por eso queda fijada: si cambia, cambia esa cifra.</div>
+              </div>
+            </div>
+          </div>
+
+          </div>
+        </div>
+      </sc-if>

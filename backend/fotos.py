@@ -92,7 +92,7 @@ def _extension(nombre):
     return ext
 
 
-def aceptar(datos, nombre_original=""):
+def aceptar(datos, nombre_original="", carpeta=None):
     """
     Comprueba, endereza, reduce y guarda. Devuelve los metadatos para la
     ficha, o levanta FotoError con un motivo que se puede enseñar.
@@ -144,7 +144,11 @@ def aceptar(datos, nombre_original=""):
     limpio = salida.getvalue()
 
     interno = uuid.uuid4().hex + ".jpg"
-    with open(os.path.join(_carpeta(), interno), "wb") as fh:
+    # `carpeta` la usan las fotos de marca de asistencia: son muchas, se
+    # acumulan por dia y no significan lo mismo que la foto de una ficha.
+    destino = carpeta or _carpeta()
+    os.makedirs(destino, exist_ok=True)
+    with open(os.path.join(destino, interno), "wb") as fh:
         fh.write(limpio)
 
     return {

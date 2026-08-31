@@ -1,0 +1,101 @@
+      <sc-if value="{{ isPersonas }}">
+        <!-- Sin título propio: la cabecera de la página ya nombra la
+             pantalla y la explica. Repetirlo la presentaba dos veces. -->
+        <!-- 300px de mínimo, no 200: con seis tarjetas, un mínimo pequeño
+             las reparte 5+1 y la última queda suelta. Así van de tres en
+             tres, o de dos en dos si la ventana es estrecha. -->
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(300px,1fr)); gap:18px; padding:30px 0 34px;">
+          <sc-for list="{{ gpKpis }}" as="g" hint-placeholder-count="6">
+            <div style="background:{{ g.tint }}; border-top:4px solid {{ g.color }}; padding:18px 20px 20px; border-radius:2px;">
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:{{ g.dark }};">{{ g.label }}</div>
+              <div style="font-size:46px; font-weight:600; letter-spacing:-2px; line-height:1; margin:12px 0 6px; font-variant-numeric:tabular-nums; color:{{ g.dark }};">{{ g.value }}</div>
+              <div style="font-size:13.5px; color:#4d5b66; text-wrap:pretty;">{{ g.note }}</div>
+              <sc-if value="{{ g.hint }}">
+                <div style="display:flex; align-items:flex-start; gap:7px; margin-top:11px; padding-top:10px; border-top:1px solid rgba(0,0,0,0.09);">
+                  <i class="ph-duotone ph-info" style="font-size:15px; line-height:1.2; color:{{ g.dark }}; flex:none;"></i>
+                  <div style="font-size:12.5px; color:{{ g.dark }}; text-wrap:pretty;">{{ g.hint }}</div>
+                </div>
+              </sc-if>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="height:1px; background:#dcd9d5;"></div>
+
+        <div style="padding:26px 0 44px;">
+          <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:14px;">Ir a</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px;">
+            <sc-for list="{{ gpAtajos }}" as="a" hint-placeholder-count="3">
+              <button onClick="{{ a.ir }}" style="display:flex; align-items:flex-start; gap:14px; padding:18px 20px; background:#ffffff; border-left:4px solid {{ a.color }}; border-radius:2px; text-align:left; width:100%;" style-hover="background:#f4f3f1">
+                <div style="width:42px; height:42px; border-radius:2px; background:{{ a.tint }}; color:{{ a.dark }}; display:flex; align-items:center; justify-content:center; flex:none;">
+                  <i class="ph-duotone {{ a.icono }}" style="font-size:21px;"></i>
+                </div>
+                <div style="min-width:0; line-height:1.4;">
+                  <div style="font-size:16.5px; font-weight:600; color:#0e3d69;">{{ a.titulo }}</div>
+                  <div style="font-size:13.5px; color:#7d8e9c; margin-top:3px; text-wrap:pretty;">{{ a.detalle }}</div>
+                  <div style="font-size:13.5px; color:{{ a.dark }}; margin-top:8px; font-weight:600;">{{ a.cuenta }}</div>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+
+        <div style="height:1px; background:#dcd9d5;"></div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(360px,1fr)); gap:44px; padding:34px 0 20px;">
+
+          <!-- Barras horizontales y no verticales: los nombres de área son
+               largos, y en vertical habría que girarlos o cortarlos. -->
+          <div style="min-width:0;">
+            <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">Personal por área</h2>
+            <p style="margin:0 0 20px; font-size:14.5px; color:#7d8e9c; text-wrap:pretty;">{{ gpAreasNota }}</p>
+
+            <sc-if value="{{ gpHayAreas }}">
+              <div style="display:flex; flex-direction:column; gap:13px;">
+                <sc-for list="{{ gpAreas }}" as="ga" hint-placeholder-count="5">
+                  <div style="min-width:0;">
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+                      <div style="font-size:14px; color:#3c4a55; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ ga.nombre }}</div>
+                      <div style="font-size:14px; font-weight:600; color:#201e1d; font-variant-numeric:tabular-nums; flex:none;">{{ ga.n }}</div>
+                    </div>
+                    <div style="height:10px; background:#e7e3de; border-radius:1px; margin-top:6px;">
+                      <div style="height:100%; width:{{ ga.ancho }}; background:{{ ga.tono }}; border-radius:1px;"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ gpSinAreas }}">
+              <div style="padding:20px 22px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; max-width:52ch;">
+                <div style="font-size:14px; color:#5b7185; line-height:1.55; text-wrap:pretty;">Cuando haya fichas de personal registradas, aquí se verá cómo se reparte el equipo por área.</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="min-width:0;">
+            <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">Dónde está el equipo</h2>
+            <p style="margin:0 0 20px; font-size:14.5px; color:#7d8e9c; text-wrap:pretty;">Reparto por sede, sobre las fichas registradas</p>
+
+            <sc-if value="{{ gpHayAreas }}">
+              <div style="display:flex; flex-direction:column; gap:14px;">
+                <sc-for list="{{ gpSedes }}" as="gs" hint-placeholder-count="3">
+                  <div style="min-width:0;">
+                    <div style="display:flex; align-items:baseline; justify-content:space-between; gap:12px;">
+                      <div style="font-size:14px; color:#3c4a55; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ gs.nombre }}</div>
+                      <div style="display:flex; align-items:baseline; gap:9px; flex:none;">
+                        <span style="font-size:14px; font-weight:600; color:#201e1d; font-variant-numeric:tabular-nums;">{{ gs.n }}</span>
+                        <span style="font-size:12.5px; color:#7d8e9c; font-variant-numeric:tabular-nums;">{{ gs.pct }}</span>
+                      </div>
+                    </div>
+                    <div style="height:10px; background:#e7e3de; border-radius:1px; margin-top:6px;">
+                      <div style="height:100%; width:{{ gs.ancho }}; background:{{ gs.tono }}; border-radius:1px;"></div>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+          </div>
+
+        </div>
+        </div>
+      </sc-if>

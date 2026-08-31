@@ -476,12 +476,19 @@ CREATE TABLE IF NOT EXISTS solicitudes (
         -- pendiente | pendiente_admin | aprobada | rechazada | cancelada
     requiere_admin INTEGER NOT NULL DEFAULT 0,
     jefe_id        INTEGER REFERENCES personal(id) ON DELETE SET NULL,
+    -- Quién aprobó o rechazó. De aquí sale la firma de jefatura del
+    -- documento impreso. NO se deduce de 'jefe_id': ese se copia de la
+    -- ficha al crear la solicitud y está vacío mientras nadie tenga jefe
+    -- asignado, que es justo lo que dejaba el papel a medio firmar.
+    resuelta_por   INTEGER REFERENCES personal(id) ON DELETE SET NULL,
     aprob_jefe_el  TEXT DEFAULT '',
     aprob_admin_el TEXT DEFAULT '',
     resuelto_el    TEXT DEFAULT '',
     nota           TEXT DEFAULT '',        -- motivo del rechazo o comentario
     creado         TEXT DEFAULT (datetime('now','localtime')),
-    CHECK (tipo IN ('vacaciones','personal','familiar','medico','licencia','otro')),
+    CHECK (tipo IN ('personal','comision','medico','capacitacion',
+                   'permanencia','recuperacion','vacaciones','libres',
+                   'transferencia','otro')),
     CHECK (estado IN ('pendiente','pendiente_admin','aprobada','rechazada','cancelada')),
     CHECK (hasta >= desde)
 );
@@ -801,6 +808,37 @@ _COLUMNAS_NUEVAS = {
         # el canal web no existía. El valor por defecto es correcto, no una
         # suposición cómoda.
         "canal": "TEXT DEFAULT 'terminal'",
+        # Lo que acompaña a una marca hecha desde el celular. Nulo en las
+        # del terminal, que no tienen ni foto ni ubicación.
+        "foto":       "TEXT DEFAULT NULL",
+        "lat":        "REAL DEFAULT NULL",
+        "lon":        "REAL DEFAULT NULL",
+        "precision_m": "REAL DEFAULT NULL",
+        "distancia_m": "REAL DEFAULT NULL",
+    },
+    "solicitudes": {
+        # Horas de un permiso que no ocupa el día entero. Son INFORMACIÓN:
+        # no cambian el cálculo de días ni el saldo de vacaciones, porque
+        # esa regla no está decidida. Ver solicitudes.py.
+        # A qué periodo se cargan los días. En el formato de papel va
+        # aparte de las fechas, porque no es lo mismo: unas vacaciones
+        # tomadas en 2027 pueden corresponder al periodo 2025-2026.
+        # Quién resolvió: de aquí sale la firma de jefatura del papel.
+        "resuelta_por":   "INTEGER",
+        "periodo":        "TEXT DEFAULT ''",
+        "hora_desde":     "TEXT DEFAULT ''",
+        "hora_hasta":     "TEXT DEFAULT ''",
+        # El documento de sustento (constancia médica, citación...). Se
+        # guarda como cualquier otro adjunto: ver archivos.py.
+        "archivo":        "TEXT DEFAULT NULL",
+        "archivo_nombre": "TEXT DEFAULT NULL",
+        "archivo_mime":   "TEXT DEFAULT NULL",
+        "archivo_tam":    "INTEGER DEFAULT NULL",
+    },
+    "personal": {
+        # La firma dibujada de la persona. Solo el nombre interno del
+        # archivo; el trazo vive en disco, como las fotos. Ver firmas.py.
+        "firma": "TEXT DEFAULT NULL",
     },
     "responsables": {
         "sin_dato": "TEXT DEFAULT ''",   # ver _sin_dato()
@@ -1154,7 +1192,15 @@ CLAVES_PARAMETRO = ("organizacion", "fecha_fundacion", "ciudad",
                     # Quién da el visto bueno de Administración en las
                     # solicitudes largas. Es un personal_id, no un rol: no
                     # hay sistema de permisos y no vale la pena inventarlo.
-                    "aprobador_admin")
+                    "aprobador_admin",
+                    # Dónde está la sede y hasta cuántos metros vale marcar
+                    # desde el celular. Sin coordenadas puestas no se
+                    # rechaza a nadie: ver el endpoint de marcar.
+                    "lat", "lon", "radio_marca",
+                    # Horas que se esperan por semana. Es un valor PUESTO A
+                    # MANO: el sistema no conoce el horario de nadie, así que
+                    # no puede deducirlo. Sirve de referencia, no de verdad.
+                    "meta_semanal")
 
 # Placeholders hasta que un contador confirme las cifras reales. Se editan
 # desde Configuración, no hace falta tocar código.
@@ -1271,6 +1317,16 @@ def actualizar_personal(id_, datos):
     )
 
 
+def guardar_firma(personal_id, interno):
+    """Pone o quita la firma dibujada de una persona.
+
+    Función propia y no actualizar_personal(): «firma» queda fuera de
+    CAMPOS_PERSONAL para que el editor de fichas no pueda tocarla.
+    """
+    return ejecutar("UPDATE personal SET firma = ? WHERE id = ?",
+                    (interno, int(personal_id)))
+
+
 def borrar_personal(id_):
     """Borra la ficha; identidad y marcas caen por cascada."""
     return ejecutar("DELETE FROM personal WHERE id = ?", (int(id_),))
@@ -1383,6 +1439,17 @@ def faltantes_personal(p):
 # Las columnas que escribe una foto. En una sola lista para que guardar y
 # quitar no puedan desincronizarse.
 CAMPOS_FOTO = ("foto", "foto_mime", "foto_tam", "foto_ancho", "foto_alto")
+
+
+def adjuntar_a_solicitud(id_, adjunto):
+    """El documento de sustento de una solicitud. Devuelve nada: quien
+    llama ya tiene los metadatos."""
+    with _lock, _conectar() as con:
+        con.execute(
+            """UPDATE solicitudes SET archivo = ?, archivo_nombre = ?,
+                   archivo_mime = ?, archivo_tam = ? WHERE id = ?""",
+            (adjunto.get("archivo"), adjunto.get("archivo_nombre"),
+             adjunto.get("archivo_mime"), adjunto.get("archivo_tam"), int(id_)))
 
 
 def actualizar_foto_responsable(id_, datos):
@@ -2229,7 +2296,17 @@ def siguiente_staff_number(usados_en_yunatt=()):
 
 # ── Marcas ────────────────────────────────────────────────────────────────
 
-def guardar_marca(staff_number, fecha, hora, metodo="facial", canal="terminal"):
+def marcas_del_staff(staff_number, fecha):
+    """Las marcas de una persona en un día, en orden. Para su propia
+    pantalla: quien marca quiere ver que su marca quedó."""
+    return consultar(
+        "SELECT hora, metodo, canal, foto, lat, lon, distancia_m FROM marcas "
+        "WHERE staff_number = ? AND fecha = ? ORDER BY hora",
+        (int(staff_number), fecha))
+
+
+def guardar_marca(staff_number, fecha, hora, metodo="facial", canal="terminal",
+                  **extra):
     """
     'canal' por defecto 'terminal' para no cambiar el comportamiento de la
     sincronización, que es de donde vienen casi todas las marcas.
@@ -2239,10 +2316,15 @@ def guardar_marca(staff_number, fecha, hora, metodo="facial", canal="terminal"):
     if canal not in config.CANALES_MARCA:
         canal = "terminal"
     return ejecutar(
-        """INSERT OR IGNORE INTO marcas (staff_number, fecha, hora, metodo, canal)
-           SELECT ?, ?, ?, ?, ? WHERE EXISTS
+        """INSERT OR IGNORE INTO marcas
+               (staff_number, fecha, hora, metodo, canal,
+                foto, lat, lon, precision_m, distancia_m)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS
            (SELECT 1 FROM identidades WHERE staff_number = ?)""",
-        (int(staff_number), fecha, hora, metodo, canal, int(staff_number)),
+        (int(staff_number), fecha, hora, metodo, canal,
+         extra.get("foto"), extra.get("lat"), extra.get("lon"),
+         extra.get("precision_m"), extra.get("distancia_m"),
+         int(staff_number)),
     )
 
 
@@ -2264,10 +2346,14 @@ def marcas_de(fecha):
              FROM v_identidades v
              LEFT JOIN marcas m
                ON m.staff_number = v.staff_number AND m.fecha = ?
-            -- Solo quien el terminal confirmó. Un enrolamiento a medias no
-            -- puede marcar, así que enseñarlo aquí sin marcas se leería
-            -- como una falta suya.
-            WHERE v.enrolado = 1
+            -- Quien PUEDE marcar por algún canal: el terminal (enrolado)
+            -- o el celular (marcas propias de ese día). Antes solo entraba
+            -- el terminal, y las marcas web quedaban guardadas sin que las
+            -- viera nadie. Quien no está enrolado y tampoco marcó sigue
+            -- fuera: enseñarlo sin marcas se leería como una falta suya,
+            -- y aparece en la lista de «sin enrolar», que es su sitio.
+            -- Mismo criterio que marcas_de: los dos canales.
+            WHERE v.enrolado = 1 OR m.id IS NOT NULL OR m.id IS NOT NULL
             GROUP BY v.staff_number
             ORDER BY v.staff_number""",
         (fecha,),
@@ -2296,7 +2382,8 @@ def marcas_rango(desde, hasta):
              LEFT JOIN marcas m
                ON m.staff_number = v.staff_number
               AND m.fecha BETWEEN ? AND ?
-            WHERE v.enrolado = 1          -- ver marcas_de()
+            -- Mismo criterio que marcas_de: los dos canales.
+            WHERE v.enrolado = 1 OR m.id IS NOT NULL          -- ver marcas_de()
             GROUP BY v.staff_number, m.fecha
             ORDER BY v.staff_number, m.fecha""",
         (desde, hasta),
@@ -2539,8 +2626,12 @@ _SOL_ESTADOS = ("pendiente", "pendiente_admin", "aprobada", "rechazada", "cancel
 # crear_solicitud, y al ampliar la tabla a seis tipos esa copia se quedó
 # atrás y rechazaba lo que la base sí aceptaba. Debe coincidir con el CHECK
 # de la tabla; solicitudes.py lee de aquí en vez de repetirla.
-TIPOS_SOLICITUD = ("vacaciones", "personal", "familiar", "medico",
-                   "licencia", "otro")
+# Los diez del formato en papel de la ONG, en su mismo orden. Antes eran
+# seis y al imprimir había que marcar «Otros» y escribir al lado; desde el
+# 27/08/2026 manda el papel. Ver backend/migrar_diez_tipos.py.
+TIPOS_SOLICITUD = ("personal", "comision", "medico", "capacitacion",
+                   "permanencia", "recuperacion", "vacaciones", "libres",
+                   "transferencia", "otro")
 
 
 def _dias_corridos(desde, hasta):
@@ -2579,10 +2670,12 @@ def solicitudes(estado=None, desde=None, hasta=None, personal_id=None):
         donde.append("s.desde <= ? AND s.hasta >= ?")
         params.extend([hasta, desde])
     sql = """SELECT s.*, p.nombre, p.cargo, p.area, p.vinculo,
-                    j.nombre AS jefe_nombre
+                    j.nombre AS jefe_nombre,
+                    r.nombre AS resuelta_por_nombre
                FROM solicitudes s
                JOIN personal p ON p.id = s.personal_id
-               LEFT JOIN personal j ON j.id = s.jefe_id"""
+               LEFT JOIN personal j ON j.id = s.jefe_id
+               LEFT JOIN personal r ON r.id = s.resuelta_por"""
     if donde:
         sql += "\n WHERE " + " AND ".join(donde)
     sql += "\n ORDER BY s.desde DESC, s.id DESC"
@@ -2592,10 +2685,12 @@ def solicitudes(estado=None, desde=None, hasta=None, personal_id=None):
 def solicitud(id_):
     filas = consultar(
         """SELECT s.*, p.nombre, p.cargo, p.area, p.vinculo,
-                  j.nombre AS jefe_nombre
+                  j.nombre AS jefe_nombre,
+                  r.nombre AS resuelta_por_nombre
              FROM solicitudes s
              JOIN personal p ON p.id = s.personal_id
              LEFT JOIN personal j ON j.id = s.jefe_id
+             LEFT JOIN personal r ON r.id = s.resuelta_por
             WHERE s.id = ?""",
         (id_,),
     )
@@ -2615,7 +2710,8 @@ def solicitudes_aprobadas_en(desde, hasta):
 
 
 def crear_solicitud(personal_id, tipo, desde, hasta, motivo="",
-                    jefe_id=None, requiere_admin=0, estado="pendiente"):
+                    jefe_id=None, requiere_admin=0, estado="pendiente",
+                    hora_desde="", hora_hasta="", periodo=""):
     if tipo not in TIPOS_SOLICITUD:
         raise ValueError(f"Tipo de solicitud no reconocido: {tipo!r}")
     if estado not in _SOL_ESTADOS:
@@ -2626,19 +2722,26 @@ def crear_solicitud(personal_id, tipo, desde, hasta, motivo="",
         cur = con.execute(
             """INSERT INTO solicitudes
                    (personal_id, tipo, desde, hasta, motivo, estado,
-                    requiere_admin, jefe_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                    requiere_admin, jefe_id, hora_desde, hora_hasta, periodo)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (personal_id, tipo, desde, hasta, motivo or "", estado,
-             1 if requiere_admin else 0, jefe_id),
+             1 if requiere_admin else 0, jefe_id,
+             str(hora_desde or ""), str(hora_hasta or ""),
+             str(periodo or "")),
         )
         con.commit()
         return cur.lastrowid
 
 
-def actualizar_estado_solicitud(id_, estado, nota=None, sello=None):
+def actualizar_estado_solicitud(id_, estado, nota=None, sello=None,
+                                resuelta_por=None):
     """
     Cambia el estado y, si corresponde, deja el sello de fecha del nivel
     que acaba de resolver. 'sello' es el nombre de la columna de fecha.
+
+    'resuelta_por' es la ficha de quien resolvió. De ahí sale la firma de
+    jefatura del documento impreso: sin guardarlo, aprobar no dejaba
+    constancia de quién aprobaba y el papel salía a medio firmar.
     """
     if estado not in _SOL_ESTADOS:
         raise ValueError(f"Estado no reconocido: {estado!r}")
@@ -2651,6 +2754,9 @@ def actualizar_estado_solicitud(id_, estado, nota=None, sello=None):
     if nota is not None:
         campos.append("nota = ?")
         params.append(nota)
+    if resuelta_por:
+        campos.append("resuelta_por = ?")
+        params.append(int(resuelta_por))
     params.append(id_)
     return ejecutar(
         f"UPDATE solicitudes SET {', '.join(campos)} WHERE id = ?", tuple(params))
@@ -2707,6 +2813,23 @@ def crear_sesion(beneficiario_id, fecha, tipo="individual",
         return cur.lastrowid
 
 
+# Lo que se puede corregir de una sesión. No incluye el beneficiario: una
+# sesión anotada en el expediente equivocado se borra y se vuelve a crear,
+# porque moverla de niño sin dejar rastro sería peor que rehacerla.
+CAMPOS_SESION = ("fecha", "tipo", "realizada_por", "notas")
+
+
+def editar_sesion(id_, datos):
+    campos = {c: datos[c] for c in CAMPOS_SESION if c in datos}
+    if "tipo" in campos and campos["tipo"] not in TIPOS_SESION:
+        raise ValueError(f"Tipo de sesión no reconocido: {campos['tipo']!r}")
+    if not campos:
+        return 0
+    sets = ", ".join(f"{c} = ?" for c in campos)
+    return ejecutar(f"UPDATE sesiones_acompanamiento SET {sets} WHERE id = ?",
+                    tuple(campos.values()) + (int(id_),))
+
+
 def borrar_sesion(id_):
     return ejecutar("DELETE FROM sesiones_acompanamiento WHERE id = ?", (id_,))
 
@@ -2752,6 +2875,23 @@ def crear_incidencia(beneficiario_id, fecha, descripcion, gravedad="leve",
         )
         con.commit()
         return cur.lastrowid
+
+
+CAMPOS_INCIDENCIA = ("fecha", "gravedad", "descripcion", "reportada_por",
+                     "seguimiento")
+
+
+def editar_incidencia(id_, datos):
+    campos = {c: datos[c] for c in CAMPOS_INCIDENCIA if c in datos}
+    if "gravedad" in campos and campos["gravedad"] not in GRAVEDADES:
+        raise ValueError(f"Gravedad no reconocida: {campos['gravedad']!r}")
+    if "descripcion" in campos and not str(campos["descripcion"] or "").strip():
+        raise ValueError("La descripción es obligatoria")
+    if not campos:
+        return 0
+    sets = ", ".join(f"{c} = ?" for c in campos)
+    return ejecutar(f"UPDATE incidencias SET {sets} WHERE id = ?",
+                    tuple(campos.values()) + (int(id_),))
 
 
 def borrar_incidencia(id_):

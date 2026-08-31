@@ -40,9 +40,15 @@ services:
       # con login real y sin TLS, las contraseñas viajarían en claro. Una vez
       # el dominio tenga certificado, ponerlo en 1 desde el panel — no hace
       # falta tocar el código ni reconstruir la imagen.
-      LOGIN_ESTRICTO: ${LOGIN_ESTRICTO:-0}
-      # Marca la cookie de sesión como Secure. Activarlo junto al anterior.
-      COOKIE_SECURE: ${COOKIE_SECURE:-0}
+      # 1 por defecto: el contenedor no recibe backend/.env (ver
+      # .dockerignore), así que aquí es donde se decide de verdad.
+      LOGIN_ESTRICTO: ${LOGIN_ESTRICTO:-1}
+      # Marca la cookie de sesión como Secure: el navegador solo la manda
+      # por HTTPS. Por defecto 1 —falla cerrado— porque una cookie de sesión
+      # viajando en claro por la red de la casa es exactamente lo que no
+      # puede pasar. Si alguna vez hace falta probar por IP sin certificado,
+      # se pone a 0 EN EL PANEL y se vuelve a 1 al terminar.
+      COOKIE_SECURE: ${COOKIE_SECURE:-1}
 
       PUERTO: "7801"
 

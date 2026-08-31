@@ -1,0 +1,35 @@
+      <sc-if value="{{ enConstruccion }}">
+        <div style="padding:34px 0 0; max-width:640px;">
+          <div style="background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; padding:28px 30px;">
+            <div style="display:flex; align-items:center; gap:13px;">
+              <div style="width:42px; height:42px; border-radius:2px; background:#e7eff7; display:flex; align-items:center; justify-content:center; flex:none;">
+                <i class="ph-duotone {{ ecIcono }}" style="font-size:22px; color:#1462a5;"></i>
+              </div>
+              <div style="min-width:0;">
+                <div style="font-size:17px; font-weight:600; color:#0e3d69;">{{ ecTitulo }}</div>
+                <div style="font-size:13px; color:#7d8e9c; margin-top:2px;">{{ ecEtapa }}</div>
+              </div>
+            </div>
+
+            <p style="margin:18px 0 0; font-size:14.5px; line-height:1.6; color:#3c4a55; text-wrap:pretty;">{{ ecTexto }}</p>
+
+            <sc-if value="{{ ecHayLista }}">
+              <div style="margin-top:18px; padding-top:16px; border-top:1px solid #efece8;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:11px;">{{ ecListaTitulo }}</div>
+                <sc-for list="{{ ecLista }}" as="li" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:flex-start; gap:10px; padding:5px 0; font-size:14px; color:#3c4a55;">
+                    <i class="ph-duotone {{ li.icono }}" style="font-size:16px; color:{{ li.color }}; flex:none; margin-top:2px;"></i>
+                    <span>{{ li.texto }}</span>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ ecHayAtajo }}">
+              <button onClick="{{ ecAtajoIr }}" style="margin-top:20px; display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-arrow-right" style="font-size:16px;"></i>{{ ecAtajo }}
+              </button>
+            </sc-if>
+          </div>
+        </div>
+      </sc-if>

@@ -14,6 +14,7 @@ http://127.0.0.1:7801/ y no haciendo doble click en el .dc.html.
 Arranque:  python backend/app.py      (o iniciar.bat)
 """
 import datetime
+import io
 import json
 import logging
 import os
@@ -35,6 +36,9 @@ for _flujo in (sys.stdout, sys.stderr):
         pass
 
 import archivos
+import documento_permiso
+import firmas
+import reportes
 import fotos
 import invitaciones as invi
 import formulario as form
@@ -57,6 +61,16 @@ log = logging.getLogger("rrhh")
 RAIZ = config.RAIZ_PROYECTO
 INTERFAZ = "ERP RRHH - Lost Children Peru.dc.html"
 
+# El .dc.html es un archivo GENERADO desde interfaz/ (ver construir_interfaz.py
+# y PLAN-MANANA.md). Se reconstruye a cada arranque para que editar una pieza
+# y recargar el navegador baste — sin acordarse de ningún paso extra. Si
+# falta una pieza o un módulo, esto revienta el arranque a propósito: servir
+# la versión vieja en silencio sería peor que no arrancar.
+sys.path.insert(0, RAIZ)
+import construir_interfaz
+construir_interfaz.escribir()
+log.info("interfaz reconstruida desde interfaz/")
+
 app = Flask(__name__, static_folder=None)
 
 
@@ -69,16 +83,54 @@ def interfaz():
     return send_from_directory(RAIZ, INTERFAZ)
 
 
+# Lo único que la página pide del disco, aparte de ella misma. Es una
+# lista de lo PERMITIDO, no de lo prohibido: una lista de prohibidos nunca
+# está completa, y lo que se olvide se publica. Aquí lo que se olvide
+# simplemente no se sirve, que es el fallo correcto.
+PUBLICABLES = ("support.js", "image-slot.js")
+PREFIJOS_PUBLICABLES = ("_ds/", "web/")
+
+
+def _servible(ruta):
+    """¿Es este uno de los pocos archivos que la página necesita?"""
+    limpia = ruta.replace("\\", "/").lstrip("/")
+    if ".." in limpia.split("/"):
+        return False
+    if limpia in PUBLICABLES or limpia == INTERFAZ:
+        return True
+    if limpia.startswith(PREFIJOS_PUBLICABLES):
+        return True
+    # La imagen de la portada vive suelta en la raíz.
+    if "/" not in limpia and limpia.lower().endswith((".png", ".jpg", ".ico")):
+        return True
+    return False
+
+
 @app.get("/<path:ruta>")
 def estatico(ruta):
     """
     Sirve support.js, image-slot.js y _ds/** como rutas hermanas del HTML,
     igual que cuando el archivo se abría desde el disco.
 
-    Las rutas /api/... están declaradas explícitamente y tienen prioridad
-    sobre este comodín, así que no se lo come.
+    Y sirve la interfaz para las rutas de pantalla —/bandeja, /personal—,
+    que no son archivos: así se puede recargar estando en una de ellas sin
+    llevarse un «no encontrado». El enrutado del navegador decide qué
+    pintar cuando la página ya está cargada.
+
+    Las rutas /api/... se excluyen a mano. Flask ya da prioridad a lo
+    declarado, pero si un endpoint mal escrito recibiera la página entera
+    en vez de un error en JSON, quien la llamó creería que fue bien.
     """
-    return send_from_directory(RAIZ, ruta)
+    if ruta.startswith("api/"):
+        return _error(f"No existe {request.path}", 404)
+    if _servible(ruta):
+        return send_from_directory(RAIZ, ruta)
+    if os.path.isfile(os.path.join(RAIZ, ruta)):
+        # Existe, pero no es de los que se publican. Se responde igual que
+        # si no existiera: decir «prohibido» confirmaría que está ahí.
+        log.warning("se pidió un archivo no publicable: %s", ruta)
+        return _error(f"No existe {request.path}", 404)
+    return send_from_directory(RAIZ, INTERFAZ)
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -486,6 +538,12 @@ def crear_documento_persona(id_):
     negado = _sin_permiso_doc(cuerpo.get("tipo"), "edicion")
     if negado:
         return negado
+    # El resto de escrituras pasan por _yo(), que comprueba el token; esta
+    # no, porque va por _sin_permiso_doc. Hoy lo salva que la cookie sea
+    # SameSite=Lax, pero eso es una defensa del navegador, no nuestra.
+    ses = auth.sesion_actual()
+    if ses is not None and not auth.csrf_valido(ses):
+        return _error("Petición sin token de seguridad válido", 403)
     nombre = str(cuerpo.get("nombre") or "").strip()
     if not nombre:
         return _error("El nombre del documento es obligatorio", 400)
@@ -538,9 +596,13 @@ def _cuerpo_documento():
 @app.get("/api/formulario/respuestas")
 @auth.requiere("responsables", "vista")
 def bandeja_formulario():
+    import sondeo_formulario
     return jsonify({"ok": True,
                     "respuestas": form.bandeja(request.args.get("estado") or None),
-                    "hay_credencial": config.credencial_lista()})
+                    "hay_credencial": config.credencial_lista(),
+                    # Para que la pantalla pueda decir si el sondeo está vivo
+                    # y cuándo miró por última vez.
+                    "sondeo": dict(sondeo_formulario.ultimo)})
 
 
 @app.post("/api/formulario/traer")
@@ -1131,6 +1193,12 @@ def acompanamiento_de(id_):
         "sesiones_anio": db.sesiones_del_anio(id_) if ve_ses else 0,
         "puede_sesiones": ve_ses,
         "puede_incidencias": ve_inc,
+        # Las tres series del expediente. Van aquí y no en peticiones
+        # aparte porque se miran a la vez que lo demás, y porque el
+        # permiso que las cubre es el mismo: quien ve el expediente.
+        "programas": db.programas_de(id_),
+        "historial": db.historial_de(id_),
+        "seguimiento": db.seguimiento_de(id_),
     })
 
 
@@ -1181,6 +1249,33 @@ def crear_sesion_(id_):
         return _error(e, 500)
 
 
+@app.put("/api/sesiones/<int:id_>")
+@auth.requiere("sesiones", "edicion")
+def editar_sesion_(id_):
+    """
+    Corrige una sesión ya registrada.
+
+    Existía el alta y el borrado, pero no esto: una fecha o una nota mal
+    escritas solo se arreglaban borrando la sesión entera, y con ella se
+    iba la constancia de que ese acompañamiento ocurrió.
+    """
+    filas = db.consultar(
+        "SELECT beneficiario_id FROM sesiones_acompanamiento WHERE id = ?", (id_,))
+    if not filas:
+        return _error(f"No existe la sesión {id_}", 404)
+    bid = filas[0]["beneficiario_id"]
+    cuerpo = request.get_json(silent=True) or {}
+    try:
+        cambiadas = db.editar_sesion(id_, cuerpo)
+    except ValueError as e:
+        return _error(e, 400)
+    if not cambiadas:
+        return _error("No llegó ningún cambio", 400)
+    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
+                    "incidencias": db.incidencias_de(bid),
+                    "sesiones_anio": db.sesiones_del_anio(bid)})
+
+
 @app.delete("/api/sesiones/<int:id_>")
 @auth.requiere("sesiones", "edicion")
 def borrar_sesion_(id_):
@@ -1229,6 +1324,30 @@ def crear_incidencia_(id_):
     except Exception as e:
         log.exception("fallo al crear incidencia")
         return _error(e, 500)
+
+
+@app.put("/api/incidencias/<int:id_>")
+@auth.requiere("incidencias", "edicion")
+def editar_incidencia_(id_):
+    """
+    Corrige una incidencia ya registrada. Misma razón que las sesiones: lo
+    que se escribió mal se arregla, no se borra.
+    """
+    filas = db.consultar(
+        "SELECT beneficiario_id FROM incidencias WHERE id = ?", (id_,))
+    if not filas:
+        return _error(f"No existe la incidencia {id_}", 404)
+    bid = filas[0]["beneficiario_id"]
+    cuerpo = request.get_json(silent=True) or {}
+    try:
+        cambiadas = db.editar_incidencia(id_, cuerpo)
+    except ValueError as e:
+        return _error(e, 400)
+    if not cambiadas:
+        return _error("No llegó ningún cambio", 400)
+    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
+                    "incidencias": db.incidencias_de(bid),
+                    "sesiones_anio": db.sesiones_del_anio(bid)})
 
 
 @app.delete("/api/incidencias/<int:id_>")
@@ -1405,6 +1524,126 @@ def _sol_visible(s):
     return d
 
 
+@app.get("/api/mi-firma")
+def mi_firma():
+    """Si quien está conectado tiene firma guardada, y cuál."""
+    pid, error = _yo()
+    if error:
+        return error
+    p = db.persona_personal(pid)
+    return jsonify({"ok": True, "tiene": bool(p and p.get("firma")),
+                    "url": f"/api/personal/{pid}/firma" if (p and p.get("firma"))
+                           else None})
+
+
+@app.post("/api/mi-firma")
+def guardar_mi_firma():
+    """
+    Guarda el trazo que la persona acaba de dibujar.
+
+    Solo la propia: nadie puede subir la firma de otro, ni siquiera quien
+    administra. Una firma que alguien más puede poner no vale como firma.
+    """
+    pid, error = _yo()
+    if error:
+        return error
+    ses = auth.sesion_actual()
+    if not auth.csrf_valido(ses):
+        return _error("Petición sin token de seguridad válido", 403)
+    cuerpo = request.get_json(silent=True) or {}
+    try:
+        interno = firmas.aceptar(cuerpo.get("imagen"))
+    except firmas.FirmaError as e:
+        return _error(e, 400)
+    p = db.persona_personal(pid)
+    anterior = p.get("firma") if p else None
+    db.guardar_firma(pid, interno)
+    if anterior and anterior != interno:
+        firmas.borrar(anterior)
+    return jsonify({"ok": True, "url": f"/api/personal/{pid}/firma"})
+
+
+@app.delete("/api/mi-firma")
+def borrar_mi_firma():
+    """Quita la firma propia. Los documentos ya firmados no se tocan."""
+    pid, error = _yo()
+    if error:
+        return error
+    ses = auth.sesion_actual()
+    if not auth.csrf_valido(ses):
+        return _error("Petición sin token de seguridad válido", 403)
+    p = db.persona_personal(pid)
+    anterior = p.get("firma") if p else None
+    db.guardar_firma(pid, None)
+    if anterior:
+        firmas.borrar(anterior)
+    return jsonify({"ok": True})
+
+
+@app.get("/api/personal/<int:id_>/firma")
+def ver_firma(id_):
+    """
+    El trazo, para pintarlo en la vista previa.
+
+    Lo ve la propia persona y quien pueda ver permisos: son quienes ya ven
+    esa firma estampada en el documento. Para el resto no existe.
+    """
+    ses = auth.sesion_actual()
+    mia = bool(ses) and ses.get("personal_id") == id_
+    if not mia and not auth.puede(ses, "permisos", "vista"):
+        return _error("No tienes permiso para ver esa firma.", 403)
+    p = db.persona_personal(id_)
+    ruta = firmas.ruta_de(p.get("firma") if p else None)
+    if not ruta:
+        return _error("Esa persona no tiene firma registrada", 404)
+    return send_file(ruta, mimetype="image/jpeg")
+
+
+@app.get("/api/reportes/<modulo>.pdf")
+def reporte_pdf(modulo):
+    """
+    El listado de un módulo, en PDF, con los filtros que traiga la
+    dirección. Ver reportes.py.
+    """
+    if modulo not in reportes.MODULOS:
+        return _error(f"No hay reporte para «{modulo}»", 404)
+    _, permiso = reportes.MODULOS[modulo]
+    ses = auth.sesion_actual()
+    if not auth.puede(ses, permiso, "vista"):
+        auth.anotar_acceso(ses, permiso, "vista", 403)
+        return _error("No tienes permiso para ver este módulo.", 403)
+
+    par = db.parametros() or {}
+    try:
+        datos = reportes.armar(
+            modulo,
+            {k: v for k, v in request.args.items()},
+            quien=(ses or {}).get("nombre") or "",
+            organizacion=par.get("organizacion") or "Lost Children Perú")
+    except KeyError as e:
+        return _error(e, 404)
+    auth.anotar_acceso(ses, permiso, "vista", 200)
+    hoy = date.today().isoformat()
+    return send_file(io.BytesIO(datos), mimetype="application/pdf",
+                     as_attachment=False,
+                     download_name=f"{modulo}-{hoy}.pdf")
+
+
+@app.get("/api/marca/<nombre>")
+def marca(nombre):
+    """El logo y la filigrana del formato, para la vista previa.
+
+    Lista cerrada: es una carpeta del servidor y aceptar cualquier nombre
+    sería dejar leer lo que haya alrededor.
+    """
+    if nombre not in ("logo.jpg", "filigrana.jpg"):
+        return _error("No existe esa imagen", 404)
+    ruta = os.path.join(documento_permiso.MARCA, nombre)
+    if not os.path.exists(ruta):
+        return _error("No existe esa imagen", 404)
+    return send_file(ruta, mimetype="image/jpeg")
+
+
 @app.get("/api/permisos/tipos")
 @auth.requiere("permisos", "vista")
 def tipos_permiso():
@@ -1412,10 +1651,20 @@ def tipos_permiso():
     Los tipos y sus etiquetas, para que la pantalla no los tenga escritos.
     Si mañana cambia la lista, cambia en un sitio.
     """
-    return jsonify({"ok": True,
-                    "tipos": [{"valor": t, "etiqueta": reglas_permisos.ETIQUETAS[t]}
-                              for t in reglas_permisos.TIPOS],
-                    "dias_visto_bueno_admin": config.DIAS_VISTO_BUENO_ADMIN})
+    return jsonify({
+        "ok": True,
+        "tipos": [{"valor": t, "etiqueta": reglas_permisos.ETIQUETAS[t]}
+                  for t in reglas_permisos.TIPOS],
+        "dias_visto_bueno_admin": config.DIAS_VISTO_BUENO_ADMIN,
+        # El formato de papel, para que la vista previa enseñe exactamente
+        # lo que se va a imprimir. Sale de quien imprime el PDF: una copia
+        # escrita en el HTML acabaría diciendo otra cosa.
+        "formato": {
+            "casillas": [{"numero": n, "etiqueta": e}
+                         for n, e in documento_permiso.TIPOS],
+            "casilla_de": documento_permiso.CASILLA,
+        },
+    })
 
 
 @app.get("/api/permisos")
@@ -1456,6 +1705,25 @@ def mis_permisos():
         "dias_visto_bueno_admin": config.DIAS_VISTO_BUENO_ADMIN,
         "tipos": [{"valor": t, "etiqueta": reglas_permisos.ETIQUETAS[t]}
                   for t in reglas_permisos.TIPOS],
+        # Los datos de la persona que el formato imprime en su cabecera.
+        # La pantalla los necesita para la vista previa; sacarlos del rol
+        # de usuario sería enseñar «Director» donde el papel pide el
+        # puesto, que no es lo mismo.
+        # Los periodos a los que se pueden cargar días, calculados sobre
+        # la fecha de ingreso de esta persona. Ver solicitudes.periodos().
+        "periodos": reglas_permisos.periodos(pid),
+        "yo": (lambda p: {
+            "nombre": p.get("nombre") or "",
+            "cargo": p.get("cargo") or "",
+            "area": p.get("area") or "",
+            "jefe": p.get("jefe_nombre") or "",
+        } if p else {})(db.persona_personal(pid)),
+        # El formato de papel, para que la vista previa sea el documento.
+        "formato": {
+            "casillas": [{"numero": n, "etiqueta": e}
+                         for n, e in documento_permiso.TIPOS],
+            "casilla_de": documento_permiso.CASILLA,
+        },
     })
 
 
@@ -1475,6 +1743,9 @@ def crear_permiso():
             (cuerpo.get("desde") or "").strip(),
             (cuerpo.get("hasta") or "").strip(),
             (cuerpo.get("motivo") or "").strip(),
+            hora_desde=(cuerpo.get("hora_desde") or "").strip(),
+            hora_hasta=(cuerpo.get("hora_hasta") or "").strip(),
+            periodo=(cuerpo.get("periodo") or "").strip(),
         )
     except reglas_permisos.ReglaRota as e:
         return _error(e, 400)
@@ -1484,11 +1755,106 @@ def crear_permiso():
                     "solicitud": _sol_visible(db.solicitud(sid))})
 
 
+@app.post("/api/permisos/<int:id_>/sustento")
+def adjuntar_sustento(id_):
+    """
+    El documento que respalda un permiso: una constancia médica, una
+    citación. Solo puede adjuntarlo quien pidió la solicitud, y solo
+    mientras esté sin resolver — después ya no cambiaría nada y sí podría
+    alterar lo que alguien firmó.
+    """
+    pid, error = _yo()
+    if error:
+        return error
+    sol = db.solicitud(id_)
+    if not sol:
+        return _error(f"No existe la solicitud {id_}", 404)
+    if sol["personal_id"] != pid:
+        return _error("Esa solicitud no es tuya.", 403)
+    if not str(sol["estado"]).startswith("pendiente"):
+        return _error("Esa solicitud ya está resuelta; su sustento no se puede cambiar.", 409)
+
+    fichero = request.files.get("archivo")
+    if fichero is None or not fichero.filename:
+        return _error("No llegó ningún archivo", 400)
+    try:
+        adjunto = archivos.guardar(fichero, fichero.filename)
+    except archivos.ArchivoError as e:
+        return _error(e, 400)
+    anterior = sol.get("archivo")
+    db.adjuntar_a_solicitud(id_, adjunto)
+    if anterior and anterior != adjunto["archivo"]:
+        archivos.borrar(anterior)
+    return jsonify({"ok": True, "solicitud": _sol_visible(db.solicitud(id_))})
+
+
+def _firma_de(personal_id):
+    """Los bytes de la firma de una persona, o None si no tiene."""
+    if not personal_id:
+        return None
+    p = db.persona_personal(personal_id)
+    return firmas.datos_de(p.get("firma")) if p else None
+
+
+@app.get("/api/permisos/<int:id_>/documento.pdf")
+def documento_pdf(id_):
+    """
+    El permiso en papel. Lo baja quien lo pidió o quien revisa permisos:
+    para el primero es su comprobante, para el segundo es lo que archiva.
+    """
+    sol = db.solicitud(id_)
+    if not sol:
+        return _error(f"No existe la solicitud {id_}", 404)
+    ses = auth.sesion_actual()
+    mio = bool(ses) and ses.get("personal_id") == sol["personal_id"]
+    if not mio and not auth.puede(ses, "permisos", "vista"):
+        return _error("No tienes permiso para ver este documento.", 403)
+
+    par = db.parametros() or {}
+    datos = documento_permiso.armar(
+        reglas_permisos.con_etiquetas(sol),
+        organizacion=par.get("organizacion") or "Lost Children Perú",
+        firma_colaborador=_firma_de(sol.get("personal_id")),
+        # La de jefatura solo si aprobó: estamparla en una pendiente o en
+        # una rechazada sería firmar algo que nadie firmó. Y sale de QUIEN
+        # RESOLVIÓ, no de 'jefe_id': ese se copia de la ficha al crear y
+        # está vacío mientras nadie tenga jefe asignado, así que el papel
+        # salía con la firma del colaborador y la otra línea en blanco.
+        firma_jefe=(_firma_de(sol.get("resuelta_por") or sol.get("jefe_id"))
+                    if sol.get("estado") == "aprobada" else None))
+    limpio = "".join(c for c in str(sol.get("nombre") or "permiso")
+                     if c.isalnum() or c in " -_").strip() or "permiso"
+    return send_file(io.BytesIO(datos), mimetype="application/pdf",
+                     as_attachment=False,
+                     download_name=f"Permiso {id_} - {limpio}.pdf")
+
+
+@app.get("/api/permisos/<int:id_>/sustento")
+@auth.requiere("permisos", "vista")
+def ver_sustento(id_):
+    """El documento, para quien revisa la solicitud."""
+    sol = db.solicitud(id_)
+    if not sol:
+        return _error(f"No existe la solicitud {id_}", 404)
+    ruta = archivos.ruta_de(sol.get("archivo"))
+    if not ruta:
+        return _error("Esa solicitud no tiene documento de sustento", 404)
+    return send_file(ruta, mimetype=sol.get("archivo_mime") or None,
+                     as_attachment=False,
+                     download_name=sol.get("archivo_nombre") or "sustento")
+
+
 def _resolver(id_, accion):
     cuerpo = request.get_json(silent=True) or {}
+    # Quién resuelve sale de la SESIÓN, no del cuerpo de la petición: si
+    # viniera de fuera, cualquiera podría firmar como otro. De aquí sale la
+    # firma de jefatura del documento.
+    ses = auth.sesion_actual()
+    quien = (ses or {}).get("personal_id")
     try:
         sol = reglas_permisos.resolver(id_, accion,
-                                       (cuerpo.get("nota") or "").strip())
+                                       (cuerpo.get("nota") or "").strip(),
+                                       resuelta_por=quien)
     except KeyError as e:
         return _error(e, 404)
     except reglas_permisos.ReglaRota as e:
@@ -1882,87 +2248,274 @@ def _distancia(a, b):
     return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
 
 
-@app.post("/api/asistencia/web")
-def marcar_por_web():
+def _metros_entre(lat1, lon1, lat2, lon2):
     """
-    Marca desde el navegador del propio trabajador.
+    Distancia en metros entre dos coordenadas.
 
-    El navegador manda el descriptor que acaba de calcular; la comparación se
-    hace AQUÍ. Si la decidiera el navegador, cualquiera podría mandar
-    {"coincide": true} desde la consola y el servidor no tendría forma de
-    saberlo.
+    Fórmula del semiverseno sobre una Tierra esférica. Para decidir si
+    alguien está en la casa o a diez cuadras, el error de suponerla
+    esférica es de centímetros: no hace falta más.
+    """
+    import math
+    r = 6371000.0
+    f1, f2 = math.radians(lat1), math.radians(lat2)
+    df = math.radians(lat2 - lat1)
+    dl = math.radians(lon2 - lon1)
+    a = (math.sin(df / 2) ** 2
+         + math.cos(f1) * math.cos(f2) * math.sin(dl / 2) ** 2)
+    return 2 * r * math.asin(min(1.0, math.sqrt(a)))
 
-    La marca cae en la misma tabla que las del terminal, con canal='web': un
-    solo historial, como se acordó.
+
+def _sede_configurada():
+    """(lat, lon, radio) de la sede, o None si todavía no se ha puesto."""
+    par = db.parametros() or {}
+    try:
+        lat = float(par.get("lat"))
+        lon = float(par.get("lon"))
+    except (TypeError, ValueError):
+        return None
+    try:
+        radio = int(par.get("radio_marca") or config.RADIO_MARCA_M)
+    except (TypeError, ValueError):
+        radio = config.RADIO_MARCA_M
+    return lat, lon, radio
+
+
+@app.get("/api/asistencia/mias")
+def mis_marcas_de_hoy():
+    """Lo que esta persona ha marcado hoy, para su propia pantalla."""
+    pid, err = _yo()
+    if err:
+        return err
+    hoy = date.today().isoformat()
+    ident = db.identidad_de("personal", pid)
+    marcas = []
+    if ident:
+        marcas = [dict(m) for m in db.marcas_del_staff(ident["staff_number"], hoy)]
+    sede = _sede_configurada()
+    par = db.parametros() or {}
+    try:
+        # 48 h: la jornada máxima en Perú. Es el valor que la ONG fijó el
+        # 27/08/2026 como referencia; sigue siendo un dato PUESTO A MANO, no
+        # algo que el sistema deduzca del horario de nadie.
+        meta = float(par.get("meta_semanal") or 48)
+    except (TypeError, ValueError):
+        meta = 40.0
+
+    # ── La semana, de lunes a viernes ────────────────────────────────────
+    hoy_d = date.today()
+    lunes = hoy_d.fromordinal(hoy_d.toordinal() - hoy_d.weekday())
+    viernes = lunes.fromordinal(lunes.toordinal() + 4)
+    semana = []
+    # La semana se dibuja siempre, tenga o no identidad: cinco días vacíos
+    # son la respuesta correcta para quien aún no ha marcado nunca. Antes
+    # se devolvía una lista vacía y el gráfico quedaba en blanco sin decir
+    # por qué.
+    detalle = {}
+    if ident:
+        for f in db.marcas_rango(lunes.isoformat(), viernes.isoformat()):
+            if dict(f).get("staff_number") == ident["staff_number"]:
+                detalle = dict(f).get("dias") or {}
+                break
+    if True:
+        for i in range(5):
+            d = lunes.fromordinal(lunes.toordinal() + i)
+            m = detalle.get(d.isoformat()) or {}
+            semana.append({
+                "fecha": d.isoformat(),
+                "dia": ["Lun", "Mar", "Mié", "Jue", "Vie"][i],
+                "entrada": m.get("entrada"), "salida": m.get("salida"),
+                "horas": m.get("horas"),
+                "hoy": d == hoy_d,
+            })
+
+    return jsonify({"ok": True, "fecha": hoy, "marcas": marcas, "puede": True,
+                    "exigeUbicacion": sede is not None,
+                    "radio": sede[2] if sede else None,
+                    # La hora del SERVIDOR: el reloj no puede salir del
+                    # teléfono, que cualquiera puede cambiar.
+                    "ahora": datetime.datetime.now().strftime("%H:%M:%S"),
+                    "semana": semana, "meta": meta,
+                    # Sin rostro de referencia no se puede comparar nada, así
+                    # que la pantalla tiene que poder pedirlo antes de marcar.
+                    "rostro": db.rostro_web(pid) is not None,
+                    "consintio": db.consentimiento_vigente(pid, "rostro_web") is not None,
+                    "sede": {"lat": sede[0], "lon": sede[1]} if sede else None})
+
+
+@app.post("/api/asistencia/marcar")
+def marcar_desde_el_movil():
+    """
+    Marca de asistencia desde el navegador del propio trabajador.
+
+    Este es el canal «web» de los dos que hay: el otro es el terminal de
+    la puerta. No exige enrolamiento —ese es el punto: sirve para quien
+    todavía no pasó por el Timmy—, pero sí exige haber entrado con su
+    cuenta, que es lo único que dice QUIÉN está marcando.
     """
     pid, err = _yo()
     if err:
         return err
+    ses = auth.sesion_actual()
+    if not auth.csrf_valido(ses):
+        return _error("Petición sin token de seguridad válido", 403)
 
-    if db.consentimiento_vigente(pid, "rostro_web") is None:
-        return jsonify({"ok": False, "motivo": "sin_consentimiento",
-                        "error": "No tienes el aviso aceptado."}), 403
+    persona = db.persona_personal(pid)
+    if not persona:
+        return _error("Tu cuenta no está vinculada a una ficha de personal. "
+                      "Avisa a RRHH: sin ficha no hay a quién atribuir la marca.", 409)
 
+    ident = db.identidad_de("personal", pid)
+    if not ident:
+        # Sin número de terminal no se puede guardar la marca. Se le crea
+        # uno marcado como web; el día que se enrole en el Timmy, el motor
+        # de enrolamiento reutiliza este mismo número.
+        usados = [r["staff_number"] for r in db.identidades()] \
+            if hasattr(db, "identidades") else []
+        sn = db.siguiente_staff_number(usados)
+        config.validar_rango(sn)
+        db.crear_identidad(sn, "personal", pid, "web")
+        ident = db.identidad_de("personal", pid)
+
+    # ── Una entrada y una salida al día, y nada más ──────────────────────
+    # La primera marca del día es la entrada y la segunda la salida. Una
+    # tercera dejaría el día sin lectura única: ¿cuál de las tres cuenta?
+    # Se corta AQUÍ y no solo en la pantalla, porque la pantalla se puede
+    # saltar. Corregir un día ya cerrado es cosa de RRHH, no de un botón.
+    hoy = datetime.date.today().isoformat()
+    del_dia = db.consultar(
+        """SELECT hora FROM marcas WHERE staff_number = ? AND fecha = ?
+            ORDER BY hora""", (ident["staff_number"], hoy))
+    if len(del_dia) >= 2:
+        return jsonify({
+            "ok": False, "motivo": "completo",
+            "entrada": del_dia[0]["hora"], "salida": del_dia[-1]["hora"],
+            "error": f"Hoy ya marcaste entrada ({del_dia[0]['hora']}) y "
+                     f"salida ({del_dia[-1]['hora']}). Solo se marca una vez "
+                     f"cada una; si hay algo que corregir, lo hace RRHH.",
+        }), 409
+
+    cuerpo = request.get_json(silent=True) or {}
+
+    # ── La ubicación ─────────────────────────────────────────────────────
+    lat = lon = precision = distancia = None
+    try:
+        lat = float(cuerpo.get("lat"))
+        lon = float(cuerpo.get("lon"))
+        precision = float(cuerpo.get("precision") or 0) or None
+    except (TypeError, ValueError):
+        lat = lon = None
+
+    sede = _sede_configurada()
+    if sede and lat is not None:
+        distancia = round(_metros_entre(lat, lon, sede[0], sede[1]), 1)
+        # El margen que declara el propio teléfono cuenta a favor de quien
+        # marca: rechazar a alguien que está dentro por un GPS impreciso
+        # sería castigarle por su aparato.
+        margen = min(precision or 0, 120)
+        if distancia - margen > sede[2]:
+            return jsonify({
+                "ok": False, "motivo": "lejos",
+                "distancia": distancia, "radio": sede[2],
+                "error": f"Estás a {int(distancia)} m de la sede y el límite "
+                         f"es de {sede[2]} m. Acércate y vuelve a intentarlo.",
+            }), 403
+    elif sede and lat is None:
+        return jsonify({
+            "ok": False, "motivo": "sin_ubicacion",
+            "error": "No se pudo obtener tu ubicación. Da permiso de "
+                     "ubicación al navegador y vuelve a intentarlo.",
+        }), 400
+
+    # ── El rostro ────────────────────────────────────────────────────────
+    # Aquí es donde la marca deja de ser «alguien con esta cuenta apretó un
+    # botón» y pasa a ser «alguien con esta cara apretó un botón». El
+    # descriptor lo calcula el navegador con el modelo que sirve este mismo
+    # servidor; la COMPARACIÓN se hace aquí, porque si la decidiera el
+    # navegador bastaría con mandar {"coincide": true} desde la consola.
     guardado = db.rostro_web(pid)
     if not guardado:
         return jsonify({
             "ok": False, "motivo": "sin_rostro",
-            "error": "Todavía no registraste tu rostro para el canal web. "
-                     "RRHH te va a agendar el enrolamiento."}), 409
+            "error": "Todavía no registraste tu rostro de referencia. "
+                     "Regístralo una vez y después podrás marcar.",
+        }), 409
 
-    cuerpo = request.get_json(silent=True) or {}
     vector, problema = _validar_descriptor(cuerpo)
     if problema:
-        return _error(problema, 400)
+        return jsonify({"ok": False, "motivo": "sin_descriptor",
+                        "error": problema}), 400
 
     referencia = json.loads(guardado["descriptor"])
     if len(referencia) != len(vector):
         return jsonify({
             "ok": False, "motivo": "modelo_distinto",
             "error": "Tu rostro de referencia se generó con otro modelo. "
-                     "Hay que volver a enrolarlo."}), 409
+                     "Hay que volver a registrarlo.",
+        }), 409
 
     dist = _distancia(referencia, vector)
     if dist > config.ROSTRO_WEB_UMBRAL:
-        log.info(f"marca web rechazada para personal {pid}: distancia {dist:.3f}")
+        log.info("marca rechazada para personal %s: distancia %.3f", pid, dist)
         return jsonify({
             "ok": False, "motivo": "no_coincide", "distancia": round(dist, 4),
-            "error": "No pudimos confirmar que eres tú. Prueba con más luz y "
-                     "de frente, o marca en el terminal."}), 401
+            "error": "No pudimos confirmar que eres tú. Ponte de frente, con "
+                     "luz, sin gorra ni mascarilla, y vuelve a intentarlo. "
+                     "Si sigue sin reconocerte, marca en el terminal.",
+        }), 401
 
-    identidad = db.identidad_de("personal", pid)
-    if not identidad:
-        return jsonify({
-            "ok": False, "motivo": "sin_identidad",
-            "error": "Tu ficha no tiene número de asistencia asignado. "
-                     "Avisa a RRHH."}), 409
-
-    sn = identidad["staff_number"]
-    ahora = datetime.datetime.now()
-    fecha, hora = ahora.strftime("%Y-%m-%d"), ahora.strftime("%H:%M")
-
-    # Un doble toque en el botón no deja dos marcas seguidas.
-    recientes = db.consultar(
-        """SELECT hora FROM marcas WHERE staff_number = ? AND fecha = ?
-            ORDER BY hora DESC LIMIT 1""", (sn, fecha))
-    if recientes:
-        h, m = (recientes[0]["hora"].split(":") + ["0"])[:2]
+    # ── La foto ──────────────────────────────────────────────────────────
+    # Pasa por el mismo camino que las de ficha: se reduce y se le quitan
+    # los metadatos, incluida la ubicación que trae la cámara. La ubicación
+    # que vale es la que declara el navegador, no la escondida en el archivo.
+    nombre_foto = None
+    dato = cuerpo.get("foto") or ""
+    if dato.startswith("data:image/"):
         try:
-            minutos = (ahora.hour * 60 + ahora.minute) - (int(h) * 60 + int(m))
-            if 0 <= minutos < config.ROSTRO_WEB_MINUTOS_ENTRE_MARCAS:
-                return jsonify({
-                    "ok": False, "motivo": "muy_seguida",
-                    "error": f"Ya marcaste a las {recientes[0]['hora']}. "
-                             f"Espera un momento."}), 429
-        except ValueError:
-            pass
+            import base64
+            crudo = base64.b64decode(dato.split(",", 1)[1], validate=True)
+            os.makedirs(config.MARCAS_DIR, exist_ok=True)
+            meta = fotos.aceptar(crudo, "marca.jpg",
+                                 carpeta=config.MARCAS_DIR)
+            nombre_foto = meta.get("foto")
+        except Exception as e:
+            log.warning("no se pudo guardar la foto de la marca: %s", e)
 
-    db.guardar_marca(sn, fecha, hora, metodo="facial", canal="web")
-    log.info(f"marca web de personal {pid} ({sn}) a las {hora} · "
-             f"distancia {dist:.3f}")
-    return jsonify({"ok": True, "fecha": fecha, "hora": hora,
-                    "distancia": round(dist, 4), "canal": "web"})
+    ahora = datetime.datetime.now()
+    hoy = ahora.date().isoformat()
+    hora = ahora.strftime("%H:%M")
+    # metodo='facial' y canal='web': el CÓMO se identificó y el POR DÓNDE
+    # marcó son dos cosas distintas. Antes ponía 'web' en las dos, de cuando
+    # la marca por celular era solo una foto; desde que compara el rostro,
+    # decir 'web' en el método escondía que hubo reconocimiento facial.
+    puesta = db.guardar_marca(ident["staff_number"], hoy, hora, "facial", "web",
+                              foto=nombre_foto, lat=lat, lon=lon,
+                              precision_m=precision, distancia_m=distancia)
+    if not puesta:
+        # INSERT OR IGNORE: ya había una marca en ese mismo minuto.
+        return jsonify({"ok": True, "repetida": True, "hora": hora,
+                        "aviso": "Ya habías marcado en este minuto."})
 
+    log.info("marca web de %s (%s) a las %s desde %s · rostro %.3f",
+             persona.get("nombre"), ident["staff_number"], hora,
+             request.headers.get("X-Forwarded-For") or request.remote_addr,
+             dist)
+    return jsonify({"ok": True, "hora": hora, "fecha": hoy,
+                    "distancia": distancia,
+                    "conFoto": bool(nombre_foto),
+                    "sinRadio": sede is None})
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  Aquí vivía POST /api/asistencia/web: una SEGUNDA puerta para marcar con
+#  rostro, de cuando el reconocimiento estaba a medias. Ninguna pantalla la
+#  usaba desde que /api/asistencia/marcar hace lo mismo —y mejor: exige
+#  también la foto, la ubicación y el tope de dos marcas al día—.
+#
+#  Se retiró el 30/08/2026. Dos entradas a la misma tabla con reglas
+#  distintas son una invitación a que una de las dos se quede atrás; ya
+#  había pasado con el tope de marcas, que hubo que añadir dos veces.
+# ══════════════════════════════════════════════════════════════════════════
 
 # ══════════════════════════════════════════════════════════════════════════
 #  RESPONSABLES / TUTORES
@@ -2280,6 +2833,10 @@ def sincronizar():
 
 def main():
     db.iniciar()
+    # Los tokens que quedaran en claro pasan a huella. Nadie se queda fuera.
+    pasados = auth.migrar_tokens()
+    if pasados:
+        log.info("sesiones migradas a huella: %s", pasados)
 
     ok, faltan = config.configurado()
     url = f"http://127.0.0.1:{config.PUERTO}/"
@@ -2291,6 +2848,8 @@ def main():
     print(f"  Rango reservado  staffNumber >= {config.STAFF_NUMBER_BASE}"
           f"{'  (estricto)' if config.RANGO_ESTRICTO else '  (SIN restricción)'}")
     print(f"  Departamento     {config.DEPT_NAME or '(sin definir)'}")
+    import sondeo_formulario
+    print(f"  Formulario       {sondeo_formulario.arrancar()}")
     if ok:
         print("  Yunatt           credenciales cargadas")
     else:

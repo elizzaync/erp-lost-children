@@ -1,0 +1,9 @@
+            <sc-if value="{{ modalRechazar }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Rechazar la solicitud</h3>
+              <p style="margin:0 0 20px; font-size:14px; color:#5b7185; text-wrap:pretty;">{{ grDetalle }}</p>
+              <div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Motivo</div>
+                <input type="text" value="{{ grNota }}" onChange="{{ onGrNota }}" placeholder="Por qué no se aprueba" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                <p style="margin:9px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">Es obligatorio: quien la pidió lo va a leer en su pantalla, y merece saber por qué.</p>
+              </div>
+            </sc-if>

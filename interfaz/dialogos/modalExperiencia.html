@@ -1,0 +1,26 @@
+            <sc-if value="{{ modalExperiencia }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Agregar experiencia</h3>
+              <p style="margin:0 0 18px; font-size:14px; color:#5b7185; line-height:1.5; text-wrap:pretty;">Trabajos anteriores a esta organización.</p>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:14px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Empresa u organización</div>
+                  <input type="text" value="{{ trEmpresa }}" onChange="{{ onTrEmpresa }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Cargo</div>
+                  <input type="text" value="{{ trCargo }}" onChange="{{ onTrCargo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Desde</div>
+                  <input type="text" value="{{ trDesde2 }}" onChange="{{ onTrDesde2 }}" placeholder="2019" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Hasta</div>
+                  <input type="text" value="{{ trHasta2 }}" onChange="{{ onTrHasta2 }}" placeholder="2022 o «actual»" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="margin-top:16px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Funciones</div>
+                <input type="text" value="{{ trFunciones }}" onChange="{{ onTrFunciones }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              </div>
+            </sc-if>

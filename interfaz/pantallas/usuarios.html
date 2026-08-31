@@ -1,0 +1,159 @@
+      <sc-if value="{{ isUsuarios }}">
+        <div style="padding:26px 0 0;">
+
+          <div style="display:flex; gap:4px; border-bottom:1px solid #e2ddd6; margin-bottom:22px; flex-wrap:wrap;">
+            <sc-for list="{{ usuTabs }}" as="t" hint-placeholder-count="3">
+              <button onClick="{{ t.go }}" style="{{ t.style }}">{{ t.label }}</button>
+            </sc-for>
+          </div>
+
+          <!-- ───────────────────────── CUENTAS ───────────────────────── -->
+          <sc-if value="{{ usuTabCuentas }}">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+              <div style="min-width:0;">
+                <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">{{ usuResumen }}</div>
+                <div style="font-size:13px; color:#7d8e9c; margin-top:3px; text-wrap:pretty;">{{ usuResumenNota }}</div>
+              </div>
+              <sc-if value="{{ usuPuedeEditar }}">
+                <button class="lc-accion" onClick="{{ repUsuarios }}" title="Imprime lo que se está viendo, con los filtros puestos" style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7"><i class="ph-duotone ph-file-arrow-down" style="font-size:17px;"></i>Reporte</button>
+                <button class="lc-accion" onClick="{{ abrirAltaUsuario }}" style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5; flex:none;" style-hover="background:#0e3d69">
+                  <i class="ph-duotone ph-user-plus" style="font-size:17px;"></i>Crear cuenta
+                </button>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ usuVacio }}">
+              <div style="padding:34px 26px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; text-align:center;">
+                <i class="ph-duotone ph-users-three" style="font-size:30px; color:#b0bcc6;"></i>
+                <div style="margin-top:11px; font-size:15px; font-weight:600; color:#3c4a55;">Todavía no hay ninguna cuenta</div>
+                <div style="margin-top:6px; font-size:13.5px; color:#7d8e9c; line-height:1.55; text-wrap:pretty;">{{ usuVacioNota }}</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ usuHay }}">
+              <div style="background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; min-width:720px;">
+                  <thead>
+                    <tr style="background:#f7f5f2;">
+                      <th style="{{ usuTh }}">Persona</th>
+                      <th style="{{ usuTh }}">Usuario</th>
+                      <th style="{{ usuTh }}">Cargo en el sistema</th>
+                      <th style="{{ usuTh }}">Estado</th>
+                      <th style="{{ usuTh }}">Último acceso</th>
+                      <th style="{{ usuTh }}"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ usuLista }}" as="u" hint-placeholder-count="4">
+                      <tr style="border-top:1px solid #efece8;">
+                        <td style="{{ usuTd }}">
+                          <div style="font-weight:600; color:#201e1d;">{{ u.nombre }}</div>
+                          <div style="font-size:12px; color:#7d8e9c;">{{ u.cargo }}</div>
+                        </td>
+                        <td style="{{ usuTd }}"><span style="font-family:ui-monospace, monospace; font-size:13px; color:#0e3d69;">{{ u.usuario }}</span></td>
+                        <td style="{{ usuTd }}">{{ u.rol_nombre }}</td>
+                        <td style="{{ usuTd }}">
+                          <span style="{{ u.estiloEstado }}">{{ u.etiquetaEstado }}</span>
+                        </td>
+                        <td style="{{ usuTd }}"><span style="font-size:13px; color:#5b7185;">{{ u.ultimo }}</span></td>
+                        <td style="{{ usuTd }}">
+                          <sc-if value="{{ u.editable }}">
+                            <div style="display:flex; gap:14px; justify-content:flex-end;">
+                              <button onClick="{{ u.alternar }}" title="{{ u.tituloAlternar }}" style="font-size:12.5px; color:#5b7185;" style-hover="color:#1462a5">{{ u.accionAlternar }}</button>
+                              <button onClick="{{ u.resetear }}" title="Asignarle una contraseña nueva" style="font-size:12.5px; color:#5b7185;" style-hover="color:#1462a5">Resetear clave</button>
+                              <button onClick="{{ u.borrar }}" title="Eliminar la cuenta" style="font-size:12.5px; color:#a8321f;" style-hover="text-decoration:underline">Eliminar</button>
+                            </div>
+                          </sc-if>
+                          <sc-if value="{{ u.protegido }}">
+                            <div style="font-size:12px; color:#9aa7b2; text-align:right;">{{ u.motivoProtegido }}</div>
+                          </sc-if>
+                        </td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <!-- ────────────────────── CARGOS Y PERMISOS ────────────────────── -->
+          <sc-if value="{{ usuTabRoles }}">
+            <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:16px;">
+              <div style="min-width:0; max-width:560px;">
+                <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">Cargos del sistema</div>
+                <div style="font-size:13px; color:#7d8e9c; margin-top:3px; line-height:1.55; text-wrap:pretty;">Los permisos se dan al cargo, no a la persona. Cambiar un cargo cambia a todos los que lo tienen, y cierra sus sesiones abiertas para que el cambio valga desde ya.</div>
+              </div>
+              <sc-if value="{{ usuPuedeEditar }}">
+                <button onClick="{{ abrirAltaRol }}" style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5; flex:none;" style-hover="background:#0e3d69">
+                  <i class="ph-duotone ph-plus" style="font-size:17px;"></i>Nuevo cargo
+                </button>
+              </sc-if>
+            </div>
+
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:14px;">
+              <sc-for list="{{ usuRoles }}" as="r" hint-placeholder-count="3">
+                <div style="{{ r.estilo }}">
+                  <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+                    <div style="min-width:0;">
+                      <div style="font-size:15px; font-weight:600; color:#0e3d69;">{{ r.nombre }}</div>
+                      <div style="font-size:12.5px; color:#7d8e9c; margin-top:2px;">{{ r.nota }}</div>
+                    </div>
+                    <sc-if value="{{ r.esSistema }}">
+                      <span style="font-size:9.5px; letter-spacing:0.1em; text-transform:uppercase; color:#8a5c05; background:#fbf0d9; padding:3px 7px; border-radius:2px; flex:none;">Sistema</span>
+                    </sc-if>
+                  </div>
+                  <div style="font-size:12.5px; color:#5b7185; margin-top:10px; line-height:1.5;">{{ r.resumenPermisos }}</div>
+                  <div style="display:flex; gap:14px; margin-top:13px;">
+                    <button onClick="{{ r.editar }}" style="font-size:12.5px; color:#1462a5;" style-hover="text-decoration:underline">{{ r.etiquetaEditar }}</button>
+                    <sc-if value="{{ r.borrable }}">
+                      <button onClick="{{ r.borrar }}" style="font-size:12.5px; color:#a8321f;" style-hover="text-decoration:underline">Borrar</button>
+                    </sc-if>
+                  </div>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <!-- ───────────────────── REGISTRO DE ACCESOS ───────────────────── -->
+          <sc-if value="{{ usuTabAccesos }}">
+            <div style="margin-bottom:16px; max-width:640px;">
+              <div style="font-size:15.5px; font-weight:600; color:#0e3d69;">Registro de accesos</div>
+              <div style="font-size:13px; color:#7d8e9c; margin-top:3px; line-height:1.55; text-wrap:pretty;">Qué módulo tocó cada cuenta y si se le permitió. Las filas en rojo son intentos denegados.</div>
+            </div>
+
+            <sc-if value="{{ accesosVacio }}">
+              <div style="padding:30px 26px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; text-align:center; font-size:13.5px; color:#7d8e9c;">
+                Todavía no hay nada registrado.
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ accesosHay }}">
+              <div style="background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; overflow-x:auto;">
+                <table style="width:100%; border-collapse:collapse; min-width:660px;">
+                  <thead>
+                    <tr style="background:#f7f5f2;">
+                      <th style="{{ usuTh }}">Cuándo</th>
+                      <th style="{{ usuTh }}">Quién</th>
+                      <th style="{{ usuTh }}">Módulo</th>
+                      <th style="{{ usuTh }}">Qué hizo</th>
+                      <th style="{{ usuTh }}">Resultado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <sc-for list="{{ accesosLista }}" as="a" hint-placeholder-count="8">
+                      <tr style="{{ a.fila }}">
+                        <td style="{{ usuTd }}"><span style="font-size:12.5px; color:#5b7185; white-space:nowrap;">{{ a.cuando }}</span></td>
+                        <td style="{{ usuTd }}">{{ a.usuario }}</td>
+                        <td style="{{ usuTd }}">{{ a.modulo }}</td>
+                        <td style="{{ usuTd }}"><span style="font-size:12.5px; color:#5b7185;">{{ a.accion }}</span></td>
+                        <td style="{{ usuTd }}"><span style="{{ a.estiloResultado }}">{{ a.resultado }}</span></td>
+                      </tr>
+                    </sc-for>
+                  </tbody>
+                </table>
+              </div>
+            </sc-if>
+          </sc-if>
+
+        </div>
+      </sc-if>

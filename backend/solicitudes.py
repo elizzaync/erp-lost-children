@@ -18,7 +18,7 @@ SEIS TIPOS, DOS NATURALEZAS
 Por eso 'vacaciones' no desapareció al desglosar los permisos en cinco: no
 es un permiso más, es otra cosa con reglas propias.
 """
-from datetime import date as _date
+from datetime import date as _date, timedelta as _timedelta
 
 import config
 import db
@@ -28,13 +28,19 @@ import db
 # discrepando, y la que manda es la que valida antes de escribir.
 TIPOS = db.TIPOS_SOLICITUD
 
+# Las mismas palabras que el papel, para que nadie tenga que traducir al
+# leer el documento impreso.
 ETIQUETAS = {
-    "vacaciones": "Vacaciones",
-    "personal":   "Permiso personal",
-    "familiar":   "Permiso familiar",
-    "medico":     "Permiso médico",
-    "licencia":   "Licencia",
-    "otro":       "Otro",
+    "personal":      "Permiso personal",
+    "comision":      "Comisión de trabajo",
+    "medico":        "Cita Essalud / Clínica",
+    "capacitacion":  "Permanencia por capacitación",
+    "permanencia":   "Permanencia extra (horas)",
+    "recuperacion":  "Recuperación (horas)",
+    "vacaciones":    "Vacaciones",
+    "libres":        "Día(s) libre(s)",
+    "transferencia": "Transferencia",
+    "otro":          "Otros",
 }
 
 # Qué se puede hacer desde cada estado. Lo que no está aquí, no se puede:
@@ -132,6 +138,58 @@ def saldo_vacaciones(personal_id, a_fecha=None):
     return generado - usado
 
 
+# Cuántos periodos se ofrecen hacia atrás. Cinco cubre de sobra lo que
+# alguien puede tener pendiente sin convertir la lista en un listín.
+PERIODOS_ATRAS = 5
+
+
+def _mismo_dia(f, anios):
+    """La misma fecha, tantos años después. El 29 de febrero pasa al 28."""
+    try:
+        return f.replace(year=f.year + anios)
+    except ValueError:
+        return f.replace(year=f.year + anios, day=28)
+
+
+def periodos(personal_id, a_fecha=None):
+    """
+    Los periodos a los que se pueden cargar días, del más reciente al más
+    antiguo. Cada uno con su etiqueta corta y las fechas que abarca.
+
+    De aniversario a aniversario cuando hay fecha de ingreso; de enero a
+    diciembre cuando no la hay, que es lo único que se puede decir sin
+    inventarse nada.
+    """
+    hoy = a_fecha or _date.today()
+    p = db.persona_personal(personal_id) if personal_id else None
+    ingreso = str((p or {}).get("fecha_ingreso") or "").strip()
+    try:
+        inicio = _date.fromisoformat(ingreso) if ingreso else None
+    except ValueError:
+        inicio = None
+
+    salida = []
+    if inicio and inicio <= hoy:
+        # Cuántos aniversarios cumplidos: ese es el periodo en curso.
+        n = _aniversarios(ingreso, hoy)
+        for i in range(n, max(-1, n - PERIODOS_ATRAS), -1):
+            desde = _mismo_dia(inicio, i)
+            hasta = _mismo_dia(inicio, i + 1) - _timedelta(days=1)
+            salida.append({
+                "valor": f"{desde.year}-{hasta.year}",
+                "etiqueta": f"{desde.year}-{hasta.year}"
+                            f"  ({desde.strftime('%d/%m/%Y')}"
+                            f" al {hasta.strftime('%d/%m/%Y')})",
+                "en_curso": i == n,
+            })
+    else:
+        for i in range(PERIODOS_ATRAS):
+            a = hoy.year - i
+            salida.append({"valor": str(a), "etiqueta": str(a),
+                           "en_curso": i == 0})
+    return salida
+
+
 def validar_nueva(personal_id, tipo, desde, hasta):
     """
     Comprueba lo que el usuario puede corregir antes de guardar.
@@ -166,7 +224,26 @@ def validar_nueva(personal_id, tipo, desde, hasta):
                 f"Pides {dias(desde, hasta)} días y te quedan {saldo}.")
 
 
-def crear(personal_id, tipo, desde, hasta, motivo=""):
+def _hora(v):
+    """
+    Una hora en HH:MM, o vacío. Lo que no tenga esa forma se descarta en
+    vez de guardarse: media hora escrita «a las 3» no se puede comparar
+    con nada después.
+    """
+    t = str(v or "").strip()
+    if not t:
+        return ""
+    partes = t.split(":")
+    if len(partes) != 2 or not all(x.isdigit() for x in partes):
+        return ""
+    h, m = int(partes[0]), int(partes[1])
+    if not (0 <= h <= 23 and 0 <= m <= 59):
+        return ""
+    return f"{h:02d}:{m:02d}"
+
+
+def crear(personal_id, tipo, desde, hasta, motivo="",
+          hora_desde="", hora_hasta="", periodo=""):
     """
     Registra la solicitud ya validada y decide a quién le toca resolverla.
 
@@ -177,9 +254,18 @@ def crear(personal_id, tipo, desde, hasta, motivo=""):
     p = db.persona_personal(personal_id)
     jefe = p.get("jefe_id") if p else None
     admin = requiere_admin(desde, hasta)
+    # Las horas se guardan como información. NO entran en dias() ni en
+    # saldo_vacaciones(): mientras no se decida si un permiso de tres
+    # horas descuenta día, medio o nada, suponerlo cambiaría derechos de
+    # las personas por una decisión que nadie tomó.
     return db.crear_solicitud(personal_id, tipo, desde, hasta, motivo or "",
                               jefe_id=jefe, requiere_admin=1 if admin else 0,
-                              estado="pendiente")
+                              estado="pendiente",
+                              hora_desde=_hora(hora_desde),
+                              hora_hasta=_hora(hora_hasta),
+                              # Texto libre: ver la cabecera del parche que
+                              # lo introdujo y LEEME.md.
+                              periodo=(periodo or "").strip()[:60])
 
 
 def _siguiente_estado(sol, accion):
@@ -199,13 +285,22 @@ def _siguiente_estado(sol, accion):
                         else "aprob_jefe_el")
 
 
-def resolver(id_, accion, nota=""):
-    """Aprobar, rechazar o cancelar. Devuelve la solicitud ya actualizada."""
+def resolver(id_, accion, nota="", resuelta_por=None):
+    """
+    Aprobar, rechazar o cancelar. Devuelve la solicitud ya actualizada.
+
+    `resuelta_por` es la ficha de quien resuelve, y de ahí sale la firma de
+    jefatura del documento. Antes no se guardaba: la firma se buscaba en
+    `jefe_id`, que se copia de la ficha al crear la solicitud y está vacío
+    mientras nadie tenga jefe asignado. Resultado: se aprobaba, se firmaba,
+    y el papel salía sin la firma de quien había aprobado.
+    """
     sol = db.solicitud(id_)
     if not sol:
         raise KeyError(f"No existe la solicitud {id_}")
     estado, sello = _siguiente_estado(sol, accion)
-    db.actualizar_estado_solicitud(id_, estado, nota=nota or None, sello=sello)
+    db.actualizar_estado_solicitud(id_, estado, nota=nota or None, sello=sello,
+                                   resuelta_por=resuelta_por)
     return db.solicitud(id_)
 
 

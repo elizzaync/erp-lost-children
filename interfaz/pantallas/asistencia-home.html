@@ -1,0 +1,94 @@
+      <sc-if value="{{ isAsistenciaHome }}">
+        <div style="padding:30px 0 44px;">
+
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:18px;">
+            <sc-for list="{{ asKpis }}" as="ak" hint-placeholder-count="5">
+              <div style="background:{{ ak.tint }}; border-top:4px solid {{ ak.color }}; padding:18px 20px 20px; border-radius:2px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:{{ ak.dark }};">{{ ak.label }}</div>
+                <div style="font-size:44px; font-weight:600; letter-spacing:-2px; line-height:1; margin:12px 0 6px; font-variant-numeric:tabular-nums; color:{{ ak.dark }};">{{ ak.valor }}</div>
+                <div style="font-size:13.5px; color:#4d5b66; text-wrap:pretty;">{{ ak.nota }}</div>
+              </div>
+            </sc-for>
+          </div>
+
+          <!-- Lo que no se puede medir todavía se dice aquí, junto a lo que
+               sí. Dejarlo fuera haría creer que el panel está completo. -->
+          <div style="display:flex; align-items:flex-start; gap:10px; margin-top:20px; padding:13px 16px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; max-width:76ch;">
+            <i class="ph-duotone ph-info" style="font-size:19px; color:#7d8e9c; flex:none;"></i>
+            <div style="font-size:13.5px; color:#5b7185; line-height:1.55; text-wrap:pretty;">{{ asNotaFaltantes }}</div>
+          </div>
+
+          <div style="height:1px; background:#dcd9d5; margin:28px 0 22px;"></div>
+
+          <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:14px;">Ir a</div>
+          <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(260px,1fr)); gap:16px;">
+            <sc-for list="{{ asAtajos }}" as="aa" hint-placeholder-count="3">
+              <button onClick="{{ aa.ir }}" style="display:flex; align-items:flex-start; gap:14px; padding:18px 20px; background:#ffffff; border-left:4px solid {{ aa.color }}; border-radius:2px; text-align:left; width:100%;" style-hover="background:#f4f3f1">
+                <div style="width:42px; height:42px; border-radius:2px; background:{{ aa.tint }}; color:{{ aa.dark }}; display:flex; align-items:center; justify-content:center; flex:none;">
+                  <i class="ph-duotone {{ aa.icono }}" style="font-size:21px;"></i>
+                </div>
+                <div style="min-width:0; line-height:1.4;">
+                  <div style="font-size:16.5px; font-weight:600; color:#0e3d69;">{{ aa.titulo }}</div>
+                  <div style="font-size:13.5px; color:#7d8e9c; margin-top:3px; text-wrap:pretty;">{{ aa.detalle }}</div>
+                  <div style="font-size:13.5px; color:{{ aa.dark }}; margin-top:8px; font-weight:600;">{{ aa.cuenta }}</div>
+                </div>
+              </button>
+            </sc-for>
+          </div>
+
+        <div style="height:1px; background:#dcd9d5;"></div>
+
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(400px,1fr)); gap:44px; padding:34px 0 20px;">
+
+          <div style="min-width:0;">
+            <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">Quién marcó, día a día</h2>
+            <p style="margin:0 0 20px; font-size:14.5px; color:#7d8e9c; text-wrap:pretty;">{{ asDiasNota }}</p>
+
+            <sc-if value="{{ asHayDias }}">
+              <div style="display:flex; align-items:flex-end; gap:5px; height:150px;">
+                <sc-for list="{{ asDias }}" as="ad" hint-placeholder-count="14">
+                  <div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:5px;">
+                    <div style="font-size:12px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ ad.n }}</div>
+                    <div style="width:100%; max-width:34px; height:{{ ad.alto }}; background:{{ ad.tono }}; border-radius:2px 2px 0 0;"></div>
+                    <div style="border-top:1px solid #dcd9d5; width:100%; padding-top:6px; text-align:center; font-size:11px; color:{{ ad.tonoDia }};">{{ ad.dia }}</div>
+                    <div style="text-align:center; font-size:10.5px; color:#9aa7b2; font-variant-numeric:tabular-nums; margin-top:-3px;">{{ ad.numero }}</div>
+                  </div>
+                </sc-for>
+              </div>
+              <p style="margin:14px 0 0; font-size:13px; color:#9aa7b2; text-wrap:pretty;">Los sábados y domingos salen a cero porque nadie marca: es el dato, no un fallo. El día de hoy va en verde.</p>
+            </sc-if>
+
+            <sc-if value="{{ asSinDias }}">
+              <div style="padding:20px 22px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; max-width:52ch;">
+                <div style="font-size:14px; color:#5b7185; line-height:1.55; text-wrap:pretty;">No hay ninguna marca en las dos últimas semanas. En cuanto alguien marque —en el terminal o desde el celular— este gráfico se llena solo.</div>
+              </div>
+            </sc-if>
+          </div>
+
+          <div style="min-width:0;">
+            <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">A qué hora se entra</h2>
+            <p style="margin:0 0 20px; font-size:14.5px; color:#7d8e9c; text-wrap:pretty;">Primera marca de cada día, agrupada por hora</p>
+
+            <sc-if value="{{ asHayHoras }}">
+              <div style="display:flex; align-items:flex-end; gap:7px; height:150px;">
+                <sc-for list="{{ asHoras }}" as="ah" hint-placeholder-count="6">
+                  <div style="flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; gap:5px;">
+                    <div style="font-size:12px; color:#5b7185; font-variant-numeric:tabular-nums;">{{ ah.n }}</div>
+                    <div style="width:100%; max-width:44px; height:{{ ah.alto }}; background:{{ ah.tono }}; border-radius:2px 2px 0 0;"></div>
+                    <div style="border-top:1px solid #dcd9d5; width:100%; padding-top:6px; text-align:center; font-size:11.5px; color:#7d8e9c; font-variant-numeric:tabular-nums;">{{ ah.hora }}h</div>
+                  </div>
+                </sc-for>
+              </div>
+              <p style="margin:14px 0 0; font-size:13px; color:#9aa7b2; text-wrap:pretty;">Esto no dice quién llegó tarde: el sistema todavía no conoce el horario de nadie. Dice a qué hora entra la gente.</p>
+            </sc-if>
+
+            <sc-if value="{{ asSinHoras }}">
+              <div style="padding:20px 22px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; max-width:52ch;">
+                <div style="font-size:14px; color:#5b7185; line-height:1.55; text-wrap:pretty;">Todavía no hay marcas de entrada que agrupar.</div>
+              </div>
+            </sc-if>
+          </div>
+
+        </div>
+        </div>
+      </sc-if>

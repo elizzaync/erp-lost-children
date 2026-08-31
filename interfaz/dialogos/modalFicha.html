@@ -1,0 +1,167 @@
+            <sc-if value="{{ modalFicha }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Ficha de personal</h3>
+              <p style="margin:0 0 20px; font-size:14px; color:#5b7185;">Estos datos son la fuente única: Asistencia y Planillas los leen de aquí, no tienen copia propia.</p>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nombre completo</div>
+                  <input type="text" value="{{ fiNombre }}" onChange="{{ onFiNombre }}" placeholder="Apellidos y nombres" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Documento</div>
+                  <input type="text" value="{{ fiDoc }}" onChange="{{ onFiDoc }}" placeholder="DNI o código interno" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Cargo</div>
+                  <input type="text" value="{{ fiCargo }}" onChange="{{ onFiCargo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Área</div>
+                  <input type="text" value="{{ fiArea }}" onChange="{{ onFiArea }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sede</div>
+                  <input type="text" value="{{ fiSede }}" onChange="{{ onFiSede }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha de ingreso</div>
+                  <input type="date" value="{{ fiIngreso }}" onChange="{{ onFiIngreso }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha de nacimiento</div>
+                  <input type="date" value="{{ fiNac }}" onChange="{{ onFiNac }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+
+              <!-- Contacto. Estos datos ya hacían falta pero el alta no
+                   los pedía: había que completarlos campo por campo
+                   después de crear a la persona. -->
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#0e3d69; font-weight:600;">Contacto</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Correo electrónico</div>
+                  <input type="email" value="{{ fiEmail }}" onChange="{{ onFiEmail }}" placeholder="nombre@ejemplo.pe" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Teléfono / celular</div>
+                  <input type="tel" value="{{ fiTelefono }}" onChange="{{ onFiTelefono }}" placeholder="9 dígitos" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                </div>
+                <div style="margin-top:16px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dirección</div>
+                  <input type="text" value="{{ fiDireccion }}" onChange="{{ onFiDireccion }}" placeholder="Calle, número, distrito" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#0e3d69; font-weight:600;">Datos personales</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sexo</div>
+                  <select value="{{ fiSexo }}" onChange="{{ onFiSexo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ fiSexos }}" as="fsx" hint-placeholder-count="4">
+                      <option value="{{ fsx.valor }}">{{ fsx.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nacionalidad</div>
+                  <input type="text" value="{{ fiNacionalidad }}" onChange="{{ onFiNacionalidad }}" placeholder="Peruana" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Lugar de nacimiento</div>
+                  <input type="text" value="{{ fiLugarNac }}" onChange="{{ onFiLugarNac }}" placeholder="Ciudad o distrito" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                </div>
+              </div>
+
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#0e3d69; font-weight:600;">Situación laboral</div>
+                <p style="margin:5px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">La jornada es lo que Asistencia usa para saber cuántas horas se le esperan.</p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Jornada</div>
+                  <select value="{{ fiJornada }}" onChange="{{ onFiJornada }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ fiJornadas }}" as="fjo" hint-placeholder-count="4">
+                      <option value="{{ fjo.valor }}">{{ fjo.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Estado laboral</div>
+                  <select value="{{ fiEstadoLaboral }}" onChange="{{ onFiEstadoLaboral }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ fiEstadosLab }}" as="fel" hint-placeholder-count="4">
+                      <option value="{{ fel.valor }}">{{ fel.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                </div>
+              </div>
+
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#0e3d69; font-weight:600;">Ubicación</div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Departamento</div>
+                  <input type="text" value="{{ fiDepartamento }}" onChange="{{ onFiDepartamento }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Provincia</div>
+                  <input type="text" value="{{ fiProvincia }}" onChange="{{ onFiProvincia }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Distrito</div>
+                  <input type="text" value="{{ fiDistrito }}" onChange="{{ onFiDistrito }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                </div>
+              </div>
+
+              <div style="margin-top:20px; padding-top:16px; border-top:1px solid #dcd9d5;">
+                <div style="font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:#a8321f; font-weight:600;">Contacto de emergencia</div>
+                <p style="margin:5px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">A quién avisar si le pasa algo durante su turno.</p>
+                <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px; margin-top:12px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nombre</div>
+                  <input type="text" value="{{ fiEmerNombre }}" onChange="{{ onFiEmerNombre }}" placeholder="Nombre y parentesco" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Teléfono</div>
+                  <input type="tel" value="{{ fiEmerTelefono }}" onChange="{{ onFiEmerTelefono }}" placeholder="9 dígitos" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                </div>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Reporta a</div>
+                <select value="{{ fiJefe }}" onChange="{{ onFiJefe }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                  <sc-for list="{{ fiJefes }}" as="fj" hint-placeholder-count="6">
+                    <option value="{{ fj.valor }}">{{ fj.etiqueta }}</option>
+                  </sc-for>
+                </select>
+                <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c;">Define su lugar en el organigrama. Sin jefe queda listada aparte, como pendiente de ubicar.</p>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Vínculo</div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:9px;">
+                  <sc-for list="{{ fiVinculos }}" as="fv" hint-placeholder-count="2">
+                    <button onClick="{{ fv.go }}" style="{{ fv.style }}" style-hover="border-color:#1462a5">
+                      <i class="ph-duotone {{ fv.icon }}" style="font-size:17px;"></i>{{ fv.label }}
+                    </button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Ámbito en Asistencia</div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:9px;">
+                  <sc-for list="{{ fiAmbitos }}" as="fa" hint-placeholder-count="2">
+                    <button onClick="{{ fa.go }}" style="{{ fa.style }}" style-hover="border-color:#1462a5">
+                      <i class="ph-duotone {{ fa.icon }}" style="font-size:17px;"></i>{{ fa.label }}
+                    </button>
+                  </sc-for>
+                </div>
+                <p style="margin:9px 0 0; font-size:13px; color:#7d8e9c;">Define en qué pestaña de Asistencia aparece. Los voluntarios solo salen en General.</p>
+              </div>
+            </sc-if>

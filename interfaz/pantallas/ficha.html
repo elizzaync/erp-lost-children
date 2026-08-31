@@ -1,0 +1,308 @@
+      <sc-if value="{{ isFicha }}">
+        <div style="padding:32px 0 0;">
+          <button onClick="{{ backToOrg }}" style="font-size:14px; color:#1462a5; margin-bottom:24px;" style-hover="color:#0e3d69">← Volver al organigrama</button>
+
+          <div style="display:grid; grid-template-columns:230px minmax(0,1fr); gap:40px; align-items:start;">
+            <div style="width:230px; height:280px; background:#e9eef3; border-bottom:5px solid {{ emp.color }};">
+              <image-slot id="foto-ficha" shape="rect" placeholder="Foto del colaborador"></image-slot>
+            </div>
+
+            <div style="min-width:0;">
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:{{ emp.color }};">{{ emp.area }}</div>
+              <h2 style="font-size:40px; font-weight:700; letter-spacing:-1.2px; margin:8px 0 6px; line-height:1.02; color:#0e3d69;">{{ emp.nombre }}</h2>
+              <div style="font-size:19px; color:#4d5b66; font-style:italic;">{{ emp.cargo }}</div>
+
+              <div style="display:flex; gap:10px; margin-top:18px; flex-wrap:wrap;">
+                <span style="font-size:12px; letter-spacing:0.06em; text-transform:uppercase; background:#e2f1e8; color:#1c5f3a; padding:5px 11px; border-radius:2px;">Activo</span>
+                <span style="font-size:12px; letter-spacing:0.06em; text-transform:uppercase; background:#e4eef7; color:#0e3d69; padding:5px 11px; border-radius:2px;">{{ emp.contrato }}</span>
+                <span style="font-size:12px; letter-spacing:0.06em; text-transform:uppercase; background:#f0ece7; color:#4d5b66; padding:5px 11px; border-radius:2px;">{{ emp.sede }}</span>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:20px; margin-top:26px; padding-top:20px; border-top:1px solid #dcd9d5;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Código</div>
+                  <div style="font-size:16px; margin-top:4px; font-variant-numeric:tabular-nums;">{{ emp.codigo }}</div>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha de ingreso</div>
+                  <div style="font-size:16px; margin-top:4px; font-variant-numeric:tabular-nums;">{{ emp.ingreso }}</div>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Antigüedad</div>
+                  <div style="font-size:16px; margin-top:4px;">{{ emp.antiguedad }}</div>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Jefe directo</div>
+                  <div style="font-size:16px; margin-top:4px;">{{ emp.jefeNombre }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex; flex-wrap:wrap; gap:20px; border-bottom:1px solid #dcd9d5; margin:30px 0 26px;">
+            <sc-for list="{{ fichaSecs }}" as="fs" hint-placeholder-count="4">
+              <button onClick="{{ fs.go }}" style="{{ fs.style }}" style-hover="color:#1462a5">
+                <span>{{ fs.label }}</span>
+                <span style="font-size:12px; color:#8697a5; font-variant-numeric:tabular-nums;">{{ fs.count }}</span>
+              </button>
+            </sc-for>
+          </div>
+
+          <sc-if value="{{ secDatos }}" hint-placeholder-val="{{ true }}">
+            <h3 style="font-size:18px; font-weight:600; margin:0 0 18px; color:#0e3d69;">Datos personales y laborales</h3>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px,1fr)); gap:24px 40px;">
+              <sc-for list="{{ emp.datos }}" as="d" hint-placeholder-count="8">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">{{ d.k }}</div>
+                  <div style="font-size:16px; margin-top:5px;">{{ d.v }}</div>
+                </div>
+              </sc-for>
+            </div>
+
+            <div style="height:1px; background:#dcd9d5; margin:28px 0 24px;"></div>
+
+            <div style="display:flex; gap:40px; align-items:flex-start; flex-wrap:wrap;">
+              <div>
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Jefe directo</div>
+                <button onClick="{{ openJefe }}" style="display:flex; align-items:center; gap:12px; margin-top:11px; text-align:left;" style-hover="color:#1462a5">
+                  <div style="width:34px; height:34px; border-radius:2px; background:#e4eef7; color:#0e3d69; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600;">{{ emp.jefeIni }}</div>
+                  <div style="line-height:1.3;">
+                    <div style="font-size:15.5px; font-weight:600;">{{ emp.jefeNombre }}</div>
+                    <div style="font-size:13.5px; color:#7d8e9c;">{{ emp.jefeCargo }}</div>
+                  </div>
+                </button>
+              </div>
+              <div style="min-width:0;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">A su cargo</div>
+                <div style="font-size:15.5px; margin-top:13px; text-wrap:pretty; max-width:46ch;">{{ emp.equipoTexto }}</div>
+              </div>
+            </div>
+          </sc-if>
+
+          <!-- ══════════════════════════════════════════════════════════
+               TRAYECTORIA
+               Formación académica y experiencia laboral. Dos series: cada
+               persona tiene los estudios y los trabajos que tenga, no un
+               número fijo decidido de antemano.
+               ═════════════════════════════════════════════════════════ -->
+          <sc-if value="{{ secTrayectoria }}">
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(320px,1fr)); gap:36px;">
+
+              <div style="min-width:0;">
+                <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+                  <div style="flex:1; min-width:160px;">
+                    <h3 style="font-size:18px; font-weight:600; margin:0 0 3px; color:#0e3d69;">Formación académica</h3>
+                    <p style="margin:0; font-size:13.5px; color:#7d8e9c; text-wrap:pretty;">Estudios, cursos y certificaciones.</p>
+                  </div>
+                  <sc-if value="{{ puedeTrayectoria }}">
+                    <button onClick="{{ trAbrirFormacion }}" style="display:flex; align-items:center; gap:7px; padding:8px 14px; border-radius:2px; font-size:13px; font-weight:600; color:#0e3d69; background:#ffffff; border:1px solid #1462a5; white-space:nowrap;" style-hover="background:#e4eef7">
+                      <i class="ph-duotone ph-plus" style="font-size:15px;"></i>Agregar
+                    </button>
+                  </sc-if>
+                </div>
+
+                <sc-if value="{{ trSinFormacion }}">
+                  <div style="padding:18px 20px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; font-size:14px; color:#7d8e9c; text-wrap:pretty;">Sin formación registrada todavía.</div>
+                </sc-if>
+
+                <sc-for list="{{ trFormacion }}" as="f" hint-placeholder-count="2">
+                  <div style="background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; padding:13px 15px; margin-bottom:8px;">
+                    <div style="display:flex; align-items:flex-start; gap:10px;">
+                      <div style="min-width:0; flex:1;">
+                        <div style="font-size:15px; font-weight:600; color:#201e1d;">{{ f.titulo }}</div>
+                        <div style="font-size:13px; color:#7d8e9c; margin-top:2px;">{{ f.detalle }}</div>
+                        <sc-if value="{{ f.nota }}">
+                          <div style="font-size:13px; color:#5b7185; margin-top:5px; text-wrap:pretty;">{{ f.nota }}</div>
+                        </sc-if>
+                      </div>
+                      <span style="{{ f.estiloNivel }}">{{ f.nivel }}</span>
+                      <sc-if value="{{ puedeTrayectoria }}">
+                        <button onClick="{{ f.corregir }}" title="Corregir" style="font-size:12.5px; color:#0e3d69; flex:none;" style-hover="text-decoration:underline">Corregir</button>
+                      </sc-if>
+                      <sc-if value="{{ puedeTrayectoria }}">
+                        <button onClick="{{ f.borrar }}" title="Quitar" style="font-size:12.5px; color:#a8321f; flex:none;" style-hover="text-decoration:underline">Quitar</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="min-width:0;">
+                <div style="display:flex; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:14px;">
+                  <div style="flex:1; min-width:160px;">
+                    <h3 style="font-size:18px; font-weight:600; margin:0 0 3px; color:#0e3d69;">Experiencia laboral</h3>
+                    <p style="margin:0; font-size:13.5px; color:#7d8e9c; text-wrap:pretty;">Trabajos anteriores a esta organización.</p>
+                  </div>
+                  <sc-if value="{{ puedeTrayectoria }}">
+                    <button onClick="{{ trAbrirExperiencia }}" style="display:flex; align-items:center; gap:7px; padding:8px 14px; border-radius:2px; font-size:13px; font-weight:600; color:#0e3d69; background:#ffffff; border:1px solid #1462a5; white-space:nowrap;" style-hover="background:#e4eef7">
+                      <i class="ph-duotone ph-plus" style="font-size:15px;"></i>Agregar
+                    </button>
+                  </sc-if>
+                </div>
+
+                <sc-if value="{{ trSinExperiencia }}">
+                  <div style="padding:18px 20px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; font-size:14px; color:#7d8e9c; text-wrap:pretty;">Sin experiencia registrada todavía.</div>
+                </sc-if>
+
+                <sc-for list="{{ trExperiencia }}" as="x" hint-placeholder-count="2">
+                  <div style="background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; padding:13px 15px; margin-bottom:8px;">
+                    <div style="display:flex; align-items:flex-start; gap:10px;">
+                      <div style="min-width:0; flex:1;">
+                        <div style="font-size:15px; font-weight:600; color:#201e1d;">{{ x.titulo }}</div>
+                        <div style="font-size:13px; color:#7d8e9c; margin-top:2px;">{{ x.periodo }}</div>
+                        <sc-if value="{{ x.funciones }}">
+                          <div style="font-size:13px; color:#5b7185; margin-top:5px; text-wrap:pretty;">{{ x.funciones }}</div>
+                        </sc-if>
+                      </div>
+                      <sc-if value="{{ puedeTrayectoria }}">
+                        <button onClick="{{ x.corregir }}" title="Corregir" style="font-size:12.5px; color:#0e3d69; flex:none;" style-hover="text-decoration:underline">Corregir</button>
+                        <button onClick="{{ x.borrar }}" title="Quitar" style="font-size:12.5px; color:#a8321f; flex:none;" style-hover="text-decoration:underline">Quitar</button>
+                      </sc-if>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ secDocs }}">
+            <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;">
+              <div style="flex:1; min-width:200px;">
+                <h3 style="font-size:18px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Documentos</h3>
+                <p style="margin:0; font-size:14px; color:#7d8e9c;">Certificados, antecedentes y constancias. El estado se calcula solo desde la fecha de vencimiento.</p>
+              </div>
+              <button onClick="{{ docNuevo }}" style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:2px; font-size:14px; background:#1462a5; color:#f4f3f1;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-plus" style="font-size:16px;"></i>Agregar documento
+              </button>
+            </div>
+            <sc-if value="{{ hayDocs }}">
+              <div style="display:flex; flex-direction:column; gap:5px; max-width:720px;">
+                <sc-for list="{{ fichaDocs }}" as="doc" hint-placeholder-count="4">
+                  <div style="display:flex; align-items:center; gap:14px; padding:12px 14px; background:{{ doc.tint }}; border-left:4px solid {{ doc.color }}; border-radius:2px;">
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:15px; font-weight:600; color:#0e3d69;">{{ doc.nombre }}</div>
+                      <div style="font-size:13px; color:#5b7185; margin-top:2px;">{{ doc.detalle }}</div>
+                    </div>
+                    <span style="font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; color:{{ doc.color }}; white-space:nowrap;">{{ doc.etiqueta }}</span>
+                    <div style="display:flex; gap:4px;">
+                      <button onClick="{{ doc.editar }}" title="Corregir fecha" style="padding:5px 7px; border-radius:2px; border:1px solid #c9d4de; color:#0e3d69; line-height:0; background:#ffffff;" style-hover="background:#e4eef7">
+                        <i class="ph-duotone ph-pencil-simple" style="font-size:15px;"></i>
+                      </button>
+                      <button onClick="{{ doc.borrar }}" title="Eliminar" style="padding:5px 7px; border-radius:2px; border:1px solid #e2503c; color:#a8321f; line-height:0; background:#ffffff;" style-hover="background:#fbe7e3">
+                        <i class="ph-duotone ph-trash" style="font-size:15px;"></i>
+                      </button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sinDocs }}">
+              <div style="display:flex; align-items:flex-start; gap:11px; padding:16px 18px; background:#f0ede9; border-radius:2px; max-width:620px;">
+                <i class="ph-duotone ph-folder-open" style="font-size:20px; color:#9aa7b2; flex-shrink:0;"></i>
+                <div style="font-size:14px; color:#5b7185; text-wrap:pretty;">No hay documentos registrados para esta persona todavía. Al cargarlos, aquí se verá su vigencia y cuáles están por vencer.</div>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <sc-if value="{{ secContratos }}">
+            <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;">
+              <div style="flex:1; min-width:200px;">
+                <h3 style="font-size:18px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Contratos</h3>
+                <p style="margin:0; font-size:14px; color:#7d8e9c;">Vínculo laboral vigente y su histórico de renovaciones.</p>
+              </div>
+              <button onClick="{{ ctrNuevo }}" style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:2px; font-size:14px; background:#1462a5; color:#f4f3f1;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-plus" style="font-size:16px;"></i>Agregar contrato
+              </button>
+            </div>
+            <sc-if value="{{ hayContratos }}">
+              <div style="display:flex; flex-direction:column; gap:5px; max-width:720px;">
+                <sc-for list="{{ fichaContratos }}" as="ct" hint-placeholder-count="3">
+                  <div style="display:flex; align-items:center; gap:14px; padding:12px 14px; background:{{ ct.tint }}; border-left:4px solid {{ ct.color }}; border-radius:2px;">
+                    <div style="flex:1; min-width:0;">
+                      <div style="font-size:15px; font-weight:600; color:#0e3d69;">{{ ct.nombre }}</div>
+                      <div style="font-size:13px; color:#5b7185; margin-top:2px;">{{ ct.detalle }}</div>
+                    </div>
+                    <span style="font-size:11.5px; letter-spacing:0.05em; text-transform:uppercase; color:{{ ct.color }}; white-space:nowrap;">{{ ct.etiqueta }}</span>
+                    <div style="display:flex; gap:4px;">
+                      <button onClick="{{ ct.editar }}" title="Corregir fecha" style="padding:5px 7px; border-radius:2px; border:1px solid #c9d4de; color:#0e3d69; line-height:0; background:#ffffff;" style-hover="background:#e4eef7">
+                        <i class="ph-duotone ph-pencil-simple" style="font-size:15px;"></i>
+                      </button>
+                      <button onClick="{{ ct.borrar }}" title="Eliminar" style="padding:5px 7px; border-radius:2px; border:1px solid #e2503c; color:#a8321f; line-height:0; background:#ffffff;" style-hover="background:#fbe7e3">
+                        <i class="ph-duotone ph-trash" style="font-size:15px;"></i>
+                      </button>
+                    </div>
+                  </div>
+                </sc-for>
+              </div>
+            </sc-if>
+            <sc-if value="{{ sinContratos }}">
+              <div style="display:flex; align-items:flex-start; gap:11px; padding:16px 18px; background:#f0ede9; border-radius:2px; max-width:620px;">
+                <i class="ph-duotone ph-file-text" style="font-size:20px; color:#9aa7b2; flex-shrink:0;"></i>
+                <div style="font-size:14px; color:#5b7185; text-wrap:pretty;">Sin contratos registrados. La ficha indica <b>{{ emp.contrato }}</b> como modalidad, pero el documento aún no está cargado en el sistema.</div>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <!-- Condiciones laborales: el sueldo se edita aquí, en la ficha de
+               la persona. Planillas solo lo lee. -->
+          <sc-if value="{{ secCondiciones }}">
+            <div style="display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; margin-bottom:18px;">
+              <div style="flex:1; min-width:200px;">
+                <h3 style="font-size:18px; font-weight:600; margin:0 0 4px; color:#0e3d69;">Condiciones laborales</h3>
+                <p style="margin:0; font-size:14px; color:#7d8e9c;">Régimen y sueldo de esta persona. Es lo que Planillas usa para calcular su boleta.</p>
+              </div>
+              <sc-if value="{{ puedeCondiciones }}">
+              <button onClick="{{ condNuevo }}" style="display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:2px; font-size:14px; background:#1462a5; color:#f4f3f1;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-plus" style="font-size:16px;"></i>{{ condBotonLabel }}
+              </button>
+              </sc-if>
+            </div>
+
+            <sc-if value="{{ condHay }}">
+              <div style="max-width:720px; padding:18px 20px; background:{{ condTint }}; border-left:4px solid {{ condColor }}; border-radius:2px;">
+                <div style="font-size:11px; letter-spacing:0.14em; text-transform:uppercase; color:{{ condColor }};">Vigente</div>
+                <div style="display:flex; align-items:baseline; gap:14px; flex-wrap:wrap; margin-top:8px;">
+                  <div style="font-size:32px; font-weight:600; letter-spacing:-1px; font-variant-numeric:tabular-nums; color:{{ condColor }};">{{ condSueldoLabel }}</div>
+                  <div style="font-size:15px; color:#3c4a55;">{{ condRegimenLabel }} · {{ condJornadaLabel }}</div>
+                </div>
+                <div style="font-size:13.5px; color:#5b7185; margin-top:8px;">Rige desde el {{ condDesdeLabel }}</div>
+                <sc-if value="{{ condTieneNota }}">
+                  <div style="font-size:13.5px; color:#5b7185; margin-top:5px; text-wrap:pretty;">{{ condNotaVigente }}</div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ condSin }}">
+              <div style="display:flex; align-items:flex-start; gap:11px; padding:16px 18px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px; max-width:640px;">
+                <i class="ph-duotone ph-warning-circle" style="font-size:20px; color:#8a5c05; flex-shrink:0;"></i>
+                <div style="font-size:14px; color:#8a5c05; text-wrap:pretty;">Sin condiciones laborales registradas. Mientras no las tenga, <b>no se le genera boleta</b> y aparece aparte en Planillas.</div>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ condHayPasadas }}">
+              <div style="margin-top:26px; max-width:720px;">
+                <h4 style="font-size:13px; letter-spacing:0.1em; text-transform:uppercase; color:#7d8e9c; margin:0 0 4px;">Historial</h4>
+                <p style="margin:0 0 12px; font-size:13.5px; color:#9aa7b2;">Tramos anteriores. Se conservan para que las boletas ya emitidas sigan cuadrando.</p>
+                <div style="display:flex; flex-direction:column; gap:5px;">
+                  <sc-for list="{{ condPasadas }}" as="c" hint-placeholder-count="2">
+                    <div style="display:flex; align-items:center; gap:14px; padding:11px 14px; background:#f0ede9; border-radius:2px;">
+                      <div style="flex:1; min-width:0;">
+                        <div style="font-size:14.5px; color:#3c4a55;">{{ c.sueldo }} · {{ c.regimen }}</div>
+                        <div style="font-size:13px; color:#7d8e9c; margin-top:2px; font-variant-numeric:tabular-nums;">{{ c.rango }}</div>
+                      </div>
+                      <button onClick="{{ c.quitar }}" title="Quitar del historial" style="padding:5px 7px; border-radius:2px; border:1px solid #e2503c; color:#a8321f; line-height:0; background:#ffffff;" style-hover="background:#fbe7e3">
+                        <i class="ph-duotone ph-trash" style="font-size:15px;"></i>
+                      </button>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </sc-if>
+
+          <div style="display:flex; gap:10px; margin-top:30px; flex-wrap:wrap;">
+            <button onClick="{{ fichaEditar }}" style="font-size:14px; background:#1462a5; color:#f4f3f1; padding:9px 18px; border-radius:2px;" style-hover="background:#0e3d69">Editar ficha</button>
+          </div>
+        </div>
+      </sc-if>

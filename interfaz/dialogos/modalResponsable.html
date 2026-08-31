@@ -1,0 +1,111 @@
+            <sc-if value="{{ modalResponsable }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">{{ rspTitulo }}</h3>
+              <p style="margin:0 0 6px; font-size:14px; color:#5b7185; line-height:1.5; text-wrap:pretty;">{{ rspLede }}</p>
+
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:22px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Datos personales</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:14px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nombres y apellidos</div>
+                  <input type="text" value="{{ rspNombre }}" onChange="{{ onRspNombre }}" placeholder="Rosa Huamán Quispe" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Documento</div>
+                  <input type="text" value="{{ rspDoc }}" onChange="{{ onRspDoc }}" placeholder="DNI" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha de nacimiento</div>
+                  <input type="date" value="{{ rspNac }}" onChange="{{ onRspNac }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Sexo</div>
+                  <select value="{{ rspSexo }}" onChange="{{ onRspSexo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ rspSexos }}" as="rsx" hint-placeholder-count="6">
+                      <option value="{{ rsx.valor }}">{{ rsx.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Nacionalidad</div>
+                  <input type="text" value="{{ rspNacionalidad }}" onChange="{{ onRspNacionalidad }}" placeholder="Peruana" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:22px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Contacto</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:14px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Teléfono</div>
+                  <input type="text" value="{{ rspTel }}" onChange="{{ onRspTel }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Otro teléfono</div>
+                  <input type="text" value="{{ rspTel2 }}" onChange="{{ onRspTel2 }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Correo</div>
+                  <input type="text" value="{{ rspCorreo }}" onChange="{{ onRspCorreo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Departamento</div>
+                  <input type="text" value="{{ rspDepto }}" onChange="{{ onRspDepto }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Provincia</div>
+                  <input type="text" value="{{ rspProv }}" onChange="{{ onRspProv }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Distrito</div>
+                  <input type="text" value="{{ rspDistrito }}" onChange="{{ onRspDistrito }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dirección</div>
+                  <input type="text" value="{{ rspDireccion }}" onChange="{{ onRspDireccion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Referencia</div>
+                  <input type="text" value="{{ rspRef }}" onChange="{{ onRspRef }}" placeholder="Frente al mercado" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#5b7185; margin:22px 0 2px; padding-top:16px; border-top:1px solid #e2ddd6;">Situación laboral</div>
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:14px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Ocupación</div>
+                  <input type="text" value="{{ rspOcupacion }}" onChange="{{ onRspOcupacion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Situación laboral</div>
+                  <select value="{{ rspSituacion }}" onChange="{{ onRspSituacion }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ rspSituaciones }}" as="rsi" hint-placeholder-count="6">
+                      <option value="{{ rsi.valor }}">{{ rsi.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Centro de trabajo</div>
+                  <input type="text" value="{{ rspCentro }}" onChange="{{ onRspCentro }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Tipo de trabajo</div>
+                  <select value="{{ rspTipoTrabajo }}" onChange="{{ onRspTipoTrabajo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ rspTiposTrabajo }}" as="rtt" hint-placeholder-count="6">
+                      <option value="{{ rtt.valor }}">{{ rtt.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Rango de ingresos</div>
+                  <select value="{{ rspIngresos }}" onChange="{{ onRspIngresos }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ rspRangos }}" as="rin" hint-placeholder-count="6">
+                      <option value="{{ rin.valor }}">{{ rin.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Personas a cargo</div>
+                  <input type="number" value="{{ rspACargo }}" onChange="{{ onRspACargo }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+              </div>
+
+              <div style="margin-top:20px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Observaciones</div>
+                <textarea value="{{ rspNota }}" onChange="{{ onRspNota }}" rows="3" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none; resize:vertical;"></textarea>
+              </div>
+            </sc-if>

@@ -1,0 +1,121 @@
+<sc-if value="{{ isLogin }}">
+  <div class="lc-login">
+
+    <div class="lc-login-arte">
+      <img class="lc-login-foto" src="/165e0f57-89ba-4e3b-9cb3-66de1ac3551f.png" alt="Niñas y niños de la casa hogar Lost Children of Peru" />
+      <div class="lc-login-velo"></div>
+
+      <div>
+        <div style="display:flex; gap:7px;">
+          <span style="width:30px; height:9px; background:#1462a5; display:block;"></span>
+          <span style="width:12px; height:9px; background:#e2503c; display:block;"></span>
+          <span style="width:12px; height:9px; background:#e0a11c; display:block;"></span>
+          <span style="width:12px; height:9px; background:#2f8f5b; display:block;"></span>
+        </div>
+        <div style="font-size:11px; letter-spacing:0.2em; text-transform:uppercase; color:#bcd6ea; margin-top:22px;">Sistema ERP · Recursos Humanos</div>
+        <div style="font-size:clamp(32px,3.4vw,44px); font-weight:700; line-height:1.05; letter-spacing:-1px; margin-top:10px; text-shadow:0 2px 18px rgba(4,22,40,0.5);">Lost Children<br />of Peru</div>
+      </div>
+
+      <div>
+        <div class="lc-login-cita" style="max-width:38ch; margin-bottom:clamp(20px,3vh,34px);">
+          <div style="display:flex; gap:8px; margin-bottom:16px;">
+            <span style="width:26px; height:26px; border-radius:50%; background:#e0a11c;"></span>
+            <span style="width:26px; height:26px; border-radius:50%; background:#e2503c;"></span>
+            <span style="width:26px; height:26px; border-radius:50%; background:#2f8f5b;"></span>
+            <span style="width:26px; height:26px; border-radius:50%; background:#5aa9d6;"></span>
+          </div>
+          <p style="margin:0; font-size:20px; line-height:1.45; font-style:italic; color:#f2f7fb; text-wrap:pretty; text-shadow:0 2px 14px rgba(4,22,40,0.6);">Cada expediente de este sistema es la historia de un niño acompañado y de alguien que decidió cuidarlo.</p>
+        </div>
+
+        <div class="lc-login-cifras" style="display:flex; gap:clamp(20px,2.6vw,38px); flex-wrap:wrap;">
+          <div>
+            <!-- Aquí decía "26 beneficiarios acogidos", "20 colaboradores
+                 en planilla" y "2 casas". Ninguna cifra salía de la base, y
+                 esta es la primera pantalla que ve cualquiera: afirmar
+                 cuántos menores acoge la organización con un número
+                 inventado no es un detalle de maqueta. Sin sesión no hay
+                 nada que consultar todavía, así que no se afirma nada. -->
+            <div style="font-size:13.5px; color:#cfe0ee; text-wrap:pretty;">Casa Lima · Casa Comas</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="lc-login-form">
+
+      <div class="lc-login-cabecera">
+        <div style="display:flex; gap:6px;">
+          <span style="width:26px; height:7px; background:#1462a5; display:block;"></span>
+          <span style="width:10px; height:7px; background:#e2503c; display:block;"></span>
+          <span style="width:10px; height:7px; background:#e0a11c; display:block;"></span>
+          <span style="width:10px; height:7px; background:#2f8f5b; display:block;"></span>
+        </div>
+        <div style="font-size:10.5px; letter-spacing:0.18em; text-transform:uppercase; color:#7d8e9c; margin-top:14px;">Módulo de Recursos Humanos</div>
+      </div>
+
+      <div class="lc-login-centro">
+        <div class="lc-login-fecha" style="font-size:12.5px; color:#9aa7b2; margin-bottom:10px; font-variant-numeric:tabular-nums;">{{ loginFecha }}</div>
+        <h1 style="font-size:clamp(30px,2.6vw,38px); font-weight:700; letter-spacing:-1px; line-height:1.08; margin:0; color:#0e3d69;">{{ saludo }}</h1>
+        <p class="lc-sub" style="margin:12px 0 0; font-size:16px; line-height:1.5; color:#5b7185; text-wrap:pretty;">{{ saludoSub }}</p>
+
+        <div style="margin-top:clamp(22px,3.4vh,34px);">
+          <div class="lc-login-campo" style="margin-bottom:16px;">
+            <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:8px;">Usuario</div>
+            <input type="text" value="{{ loginUser }}" onChange="{{ onUser }}" placeholder="jramirez" autocapitalize="none" autocorrect="off" spellcheck="false" style="width:100%; padding:13px 14px; font-family:inherit; font-size:16px; color:#201e1d; background:#ffffff; border:1px solid {{ userBorder }}; border-radius:2px; outline:none;" />
+          </div>
+
+          <div class="lc-login-campo" style="margin-bottom:16px;">
+            <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:8px;">Contraseña</div>
+            <div style="display:flex; align-items:center; gap:8px; background:#ffffff; border:1px solid {{ passBorder }}; border-radius:2px; padding-right:12px;">
+              <input type="{{ passType }}" value="{{ loginPass }}" onChange="{{ onPass }}" onKeyDown="{{ onPassKey }}" placeholder="••••••••" style="flex:1; min-width:0; padding:13px 14px; font-family:inherit; font-size:16px; color:#201e1d; background:transparent; border:none; outline:none;" />
+              <button onClick="{{ togglePass }}" style="display:flex; align-items:center; color:#5b7185;" style-hover="color:#1462a5">
+                <i class="ph-duotone {{ passIcon }}" style="font-size:20px;"></i>
+              </button>
+            </div>
+          </div>
+
+          <div style="display:flex; align-items:center; justify-content:flex-end; gap:14px; flex-wrap:wrap; margin-bottom:22px;">
+            <!-- Aquí había un «Mantener sesión abierta» que no hacía nada.
+                 La duración la fija el servidor y se dice en el pie, donde
+                 no le quita el sitio al enlace de la contraseña. -->
+            <button onClick="{{ olvide }}" style="font-size:14px; color:#1462a5;" style-hover="text-decoration:underline">Olvidé mi contraseña</button>
+          </div>
+
+          <sc-if value="{{ loginErr }}">
+            <div style="display:flex; align-items:center; gap:9px; padding:11px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px; margin-bottom:18px;">
+              <i class="ph-duotone ph-warning-circle" style="font-size:19px; color:#a8321f;"></i>
+              <span style="font-size:14px; color:#a8321f;">{{ loginErr }}</span>
+            </div>
+          </sc-if>
+
+          <button onClick="{{ doLogin }}" style="{{ loginBtnStyle }}" style-hover="background:#0e3d69">
+            <i class="ph-duotone {{ loginBtnIcon }}" style="font-size:19px;"></i>{{ loginBtnLabel }}
+          </button>
+
+          <!-- Mientras no se hace el corte, quien todavía no tiene cuenta
+               tiene que poder entrar o el sistema se quedaría inaccesible.
+               Este bloque desaparece solo al activar LOGIN_ESTRICTO. -->
+          <sc-if value="{{ hayConvivencia }}">
+            <div style="margin-top:18px; padding:13px 15px; background:#fbf0d9; border-left:3px solid #d8a13a; border-radius:2px;">
+              <div style="display:flex; align-items:flex-start; gap:9px;">
+                <i class="ph-duotone ph-info" style="font-size:17px; color:#8a5c05; flex:none; margin-top:1px;"></i>
+                <div style="font-size:13px; line-height:1.5; color:#8a5c05; text-wrap:pretty;">
+                  Todavía no se reparten las cuentas: el sistema sigue abierto para que nadie se quede fuera.
+                </div>
+              </div>
+              <button onClick="{{ entrarSinCuenta }}" style="margin-top:11px; width:100%; padding:10px 14px; border-radius:2px; font-size:14px; font-weight:600; color:#8a5c05; background:#f6e3bd;" style-hover="background:#efd7a4">
+                Entrar sin cuenta
+              </button>
+            </div>
+          </sc-if>
+        </div>
+      </div>
+
+      <div class="lc-login-pie" style="display:flex; align-items:flex-start; gap:9px;">
+        <i class="ph-duotone ph-lock-key" style="font-size:17px; color:#9aa7b2; flex-shrink:0; margin-top:1px;"></i>
+        <p style="margin:0; font-size:12.5px; line-height:1.5; color:#9aa7b2; text-wrap:pretty;">Los datos de niños y adolescentes están protegidos. El acceso queda registrado con tu usuario. {{ politicaSesion }}.</p>
+      </div>
+
+    </div>
+  </div>
+</sc-if>

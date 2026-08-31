@@ -1,0 +1,205 @@
+      <sc-if value="{{ isResponsables }}">
+        <div style="padding:26px 0 0;">
+
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:18px;">
+            <div style="position:relative; flex:1; min-width:220px; max-width:420px;">
+              <input type="text" value="{{ rspBusca }}" onChange="{{ onRspBusca }}" placeholder="Buscar por nombre o documento…" style="width:100%; padding:10px 13px 10px 36px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+              <i class="ph-duotone ph-magnifying-glass" style="position:absolute; left:11px; top:50%; transform:translateY(-50%); font-size:17px; color:#8697a5;"></i>
+            </div>
+            <span style="font-size:13.5px; color:#7d8e9c;">{{ rspResumen }}</span>
+            <sc-if value="{{ puedeResponsables }}">
+              <button class="lc-accion" onClick="{{ invAlternar }}" style="display:flex; align-items:center; gap:8px; margin-left:auto; padding:10px 16px; border-radius:2px; font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7">
+                <i class="ph-duotone ph-link" style="font-size:17px;"></i>{{ invBotonLabel }}
+              </button>
+            </sc-if>
+            <sc-if value="{{ puedeResponsables }}">
+              <button class="lc-accion" onClick="{{ repResponsables }}" title="Imprime lo que se está viendo, con los filtros puestos" style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; color:#0e3d69; border:1px solid #c9d4de; background:#ffffff; white-space:nowrap;" style-hover="background:#e4eef7"><i class="ph-duotone ph-file-arrow-down" style="font-size:17px;"></i>Reporte</button>
+              <button class="lc-accion" onClick="{{ rspNuevo }}" style="display:flex; align-items:center; gap:8px; padding:10px 16px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5; white-space:nowrap;" style-hover="background:#0e3d69">
+                <i class="ph-duotone ph-user-plus" style="font-size:17px;"></i>Agregar responsable
+              </button>
+            </sc-if>
+          </div>
+
+
+          <sc-if value="{{ invAbierto }}">
+            <div style="margin-bottom:20px; background:#ffffff; border:1px solid #c9d4de; border-radius:3px; padding:20px 22px;">
+              <div style="display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;">
+                <h2 style="margin:0; font-size:19px; font-weight:600; color:#0e3d69; letter-spacing:-0.3px;">Enlaces del formulario</h2>
+                <span style="font-size:13px; color:#7d8e9c;">{{ invResumen }}</span>
+              </div>
+              <p style="margin:7px 0 0; font-size:14px; color:#5b7185; text-wrap:pretty; max-width:70ch;">Cada familia recibe un enlace propio. Al volver la respuesta, el código que lleva dentro dice de quién es, sin pedirle el documento dos veces. Lo que llegue no entra a la base: espera en la bandeja a que alguien lo revise.</p>
+
+              <sc-if value="{{ invSinConfig }}">
+                <div style="margin-top:14px; padding:12px 14px; background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px; font-size:13.5px; color:#8a5c05; text-wrap:pretty;">Todavía no está configurada la dirección del formulario, así que no se pueden generar enlaces. Se pone en <b>backend/.env</b>, en FORM_URL_PRELLENADO.</div>
+              </sc-if>
+
+              <sc-if value="{{ invPuedeCrear }}">
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-top:18px; padding-top:16px; border-top:1px solid #efece8;">
+                  <div style="flex:1; min-width:210px;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Para quién</div>
+                    <select value="{{ invPara }}" onChange="{{ onInvPara }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d;">
+                      <sc-for list="{{ invOpciones }}" as="io" hint-placeholder-count="3">
+                        <option value="{{ io.valor }}">{{ io.etiqueta }}</option>
+                      </sc-for>
+                    </select>
+                  </div>
+                  <sc-if value="{{ invPideEtiqueta }}">
+                    <div style="flex:1; min-width:190px;">
+                      <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Cómo reconocerla</div>
+                      <input type="text" value="{{ invEtiqueta }}" onChange="{{ onInvEtiqueta }}" placeholder="Familia Quispe" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+                    </div>
+                  </sc-if>
+                  <div style="width:110px;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Días</div>
+                    <input type="number" value="{{ invDias }}" onChange="{{ onInvDias }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+                  </div>
+                  <button onClick="{{ invCrear }}" style="padding:10px 18px; border-radius:2px; font-size:13.5px; font-weight:600; color:#f4f3f1; background:#1462a5; white-space:nowrap;" style-hover="background:#0e3d69">{{ invCrearLabel }}</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ invHayErr }}">
+                <div style="margin-top:12px; padding:11px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px; font-size:13.5px; color:#a8321f; text-wrap:pretty;">{{ invErr }}</div>
+              </sc-if>
+
+              <sc-if value="{{ invVacio }}">
+                <div style="margin-top:16px; font-size:14px; color:#7d8e9c; text-wrap:pretty;">Todavía no se ha entregado ningún enlace.</div>
+              </sc-if>
+
+              <sc-for list="{{ invLista }}" as="iv" hint-placeholder-count="3">
+                <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap; padding:11px 0; border-top:1px solid #efece8;">
+                  <div style="min-width:150px; flex:1;">
+                    <div style="font-size:14.5px; font-weight:600; color:#201e1d;">{{ iv.para }}</div>
+                    <div style="font-size:12.5px; color:#7d8e9c;">{{ iv.detalle }}</div>
+                  </div>
+                  <span style="{{ iv.estiloSituacion }}">{{ iv.situacion }}</span>
+                  <sc-if value="{{ iv.entregable }}">
+                    <button onClick="{{ iv.copiar }}" style="font-size:12.5px; color:#0e3d69; padding:5px 11px; border-radius:2px; border:1px solid #c9d4de;" style-hover="background:#e4eef7">{{ iv.copiarLabel }}</button>
+                  </sc-if>
+                  <sc-if value="{{ iv.anulable }}">
+                    <button onClick="{{ iv.anular }}" style="font-size:12.5px; color:#a8321f; padding:5px 11px; border-radius:2px; border:1px solid #e2503c;" style-hover="background:#fbe7e3">Anular</button>
+                  </sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ rspVacio }}">
+            <div style="padding:34px 26px; background:#ffffff; border:1px dashed #d5cfc7; border-radius:3px; text-align:center;">
+              <i class="ph-duotone ph-user-focus" style="font-size:30px; color:#b0bcc6;"></i>
+              <div style="margin-top:11px; font-size:15px; font-weight:600; color:#3c4a55;">{{ rspVacioTitulo }}</div>
+              <div style="margin-top:6px; font-size:13.5px; color:#7d8e9c; line-height:1.55; max-width:460px; margin-left:auto; margin-right:auto; text-wrap:pretty;">{{ rspVacioNota }}</div>
+            </div>
+          </sc-if>
+
+          <sc-if value="{{ rspHay }}">
+            <div style="background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; overflow-x:auto;">
+              <table style="width:100%; border-collapse:collapse; min-width:760px;">
+                <thead>
+                  <tr style="background:#f7f5f2;">
+                    <th style="{{ rspTh }}">Responsable</th>
+                    <th style="{{ rspTh }}">Documento</th>
+                    <th style="{{ rspTh }}">Contacto</th>
+                    <th style="{{ rspTh }}">Ocupación</th>
+                    <th style="{{ rspTh }}">A cargo de</th>
+                    <th style="{{ rspTh }}"></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <sc-for list="{{ rspLista }}" as="r" hint-placeholder-count="4">
+                    <tr style="border-top:1px solid #efece8;">
+                      <td style="{{ rspTd }}">
+                        <button onClick="{{ r.abrir }}" style="font-weight:600; color:#0e3d69; text-align:left;" style-hover="text-decoration:underline">{{ r.nombre }}</button>
+                        <sc-if value="{{ r.esMigrado }}">
+                          <div style="font-size:11.5px; color:#8a5c05; margin-top:2px;">Migrado desde personal · revisar</div>
+                        </sc-if>
+                      </td>
+                      <td style="{{ rspTd }}">{{ r.documento }}</td>
+                      <td style="{{ rspTd }}"><span style="font-size:13px; color:#5b7185;">{{ r.contacto }}</span></td>
+                      <td style="{{ rspTd }}">{{ r.ocupacion }}</td>
+                      <td style="{{ rspTd }}"><span style="{{ r.estiloCuenta }}">{{ r.cuenta }}</span></td>
+                      <td style="{{ rspTd }}">
+                        <sc-if value="{{ puedeResponsables }}">
+                          <div style="display:flex; gap:14px; justify-content:flex-end;">
+                            <button onClick="{{ r.editar }}" style="font-size:12.5px; color:#5b7185;" style-hover="color:#1462a5">Editar</button>
+                            <button onClick="{{ r.borrar }}" style="font-size:12.5px; color:#a8321f;" style-hover="text-decoration:underline">Eliminar</button>
+                          </div>
+                        </sc-if>
+                      </td>
+                    </tr>
+                  </sc-for>
+                </tbody>
+              </table>
+            </div>
+          </sc-if>
+
+          <!-- Ficha desplegada: quién es y de quién está a cargo -->
+          <sc-if value="{{ rspHayVer }}">
+            <div style="margin-top:22px; background:#ffffff; border:1px solid #e2ddd6; border-radius:3px; padding:24px 26px;">
+              <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:16px; flex-wrap:wrap;">
+                <div style="display:flex; align-items:flex-start; gap:16px; min-width:0;">
+
+                  <!-- La foto. Sin ella no se deja un hueco con forma de
+                       foto: van las iniciales, que ya identifican. -->
+                  <div style="flex:none;">
+                    <sc-if value="{{ rspTieneFoto }}">
+                      <img src="{{ rspFotoUrl }}" alt="Foto de {{ rspVerNombre }}" style="width:86px; height:86px; object-fit:cover; border-radius:3px; border:1px solid #dcd9d5; display:block; background:#f4f3f1;" />
+                    </sc-if>
+                    <sc-if value="{{ rspSinFoto }}">
+                      <div style="width:86px; height:86px; border-radius:3px; border:1px dashed #c9d4de; background:#f7f5f2; display:flex; align-items:center; justify-content:center; font-size:26px; font-weight:600; color:#9aa7b2; letter-spacing:0.5px;">{{ rspVerIniciales }}</div>
+                    </sc-if>
+                    <sc-if value="{{ puedeResponsables }}">
+                      <div style="display:flex; flex-direction:column; gap:3px; margin-top:7px; width:86px;">
+                        <label style="font-size:12px; color:#0e3d69; cursor:pointer; text-align:center; padding:4px 0; border:1px solid #c9d4de; border-radius:2px;" style-hover="background:#e4eef7">
+                          {{ rspFotoBoton }}
+                          <input type="file" accept="image/jpeg,image/png,image/webp" onChange="{{ onRspFoto }}" style="display:none;" />
+                        </label>
+                        <sc-if value="{{ rspTieneFoto }}">
+                          <button onClick="{{ rspQuitarFoto }}" style="font-size:11.5px; color:#a8321f; padding:2px 0;" style-hover="text-decoration:underline">Quitar foto</button>
+                        </sc-if>
+                      </div>
+                    </sc-if>
+                  </div>
+
+                  <div style="min-width:0;">
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Ficha del responsable</div>
+                    <h2 style="margin:6px 0 0; font-size:21px; font-weight:600; color:#0e3d69; letter-spacing:-0.3px;">{{ rspVerNombre }}</h2>
+                    <div style="font-size:13.5px; color:#7d8e9c; margin-top:3px;">{{ rspVerSub }}</div>
+                    <sc-if value="{{ rspFotoMsgHay }}">
+                      <div style="margin-top:9px; padding:8px 12px; border-left:3px solid {{ rspFotoMsgColor }}; background:{{ rspFotoMsgTint }}; border-radius:2px; font-size:13px; color:{{ rspFotoMsgColor }}; text-wrap:pretty; max-width:420px;">{{ rspFotoMsg }}</div>
+                    </sc-if>
+                  </div>
+                </div>
+                <button onClick="{{ rspCerrarVer }}" style="font-size:13px; color:#5b7185;" style-hover="color:#1462a5">Cerrar ficha</button>
+              </div>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(190px,1fr)); gap:16px; margin-top:20px;">
+                <sc-for list="{{ rspVerCampos }}" as="c" hint-placeholder-count="8">
+                  <div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">{{ c.rotulo }}</div>
+                    <div style="font-size:14.5px; color:{{ c.color }}; margin-top:4px;">{{ c.valor }}</div>
+                  </div>
+                </sc-for>
+              </div>
+
+              <div style="margin-top:22px; padding-top:18px; border-top:1px solid #efece8;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c; margin-bottom:12px;">Beneficiarios a su cargo</div>
+                <sc-if value="{{ rspSinBenefs }}">
+                  <div style="font-size:14px; color:#7d8e9c; text-wrap:pretty;">Todavía no está vinculado a ningún beneficiario. El vínculo se crea desde la ficha del niño, en Beneficiarios.</div>
+                </sc-if>
+                <sc-for list="{{ rspVerBenefs }}" as="b" hint-placeholder-count="2">
+                  <div style="display:flex; align-items:center; gap:12px; padding:9px 0; border-top:1px solid #f2efeb; flex-wrap:wrap;">
+                    <div style="min-width:0; flex:1;">
+                      <div style="font-size:14.5px; font-weight:600; color:#201e1d;">{{ b.nombre }}</div>
+                      <div style="font-size:12.5px; color:#7d8e9c;">{{ b.detalle }}</div>
+                    </div>
+                    <sc-for list="{{ b.papeles }}" as="pa" hint-placeholder-count="2">
+                      <span style="{{ pa.estilo }}">{{ pa.texto }}</span>
+                    </sc-for>
+                  </div>
+                </sc-for>
+              </div>
+            </div>
+          </sc-if>
+
+        </div>
+      </sc-if>

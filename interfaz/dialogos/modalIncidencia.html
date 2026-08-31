@@ -1,0 +1,43 @@
+            <sc-if value="{{ modalIncidencia }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#a8321f;">Reportar incidencia</h3>
+              <p style="margin:0 0 20px; font-size:14px; color:#5b7185; text-wrap:pretty;">Queda en el expediente de <b>{{ inBenef }}</b>.</p>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(200px,1fr)); gap:16px;">
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Fecha</div>
+                  <input type="date" value="{{ inFecha }}" onChange="{{ onInFecha }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+                </div>
+                <div>
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Quién reporta</div>
+                  <select value="{{ inQuien }}" onChange="{{ onInQuien }}" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;">
+                    <sc-for list="{{ inPersonas }}" as="ip" hint-placeholder-count="6">
+                      <option value="{{ ip.valor }}">{{ ip.etiqueta }}</option>
+                    </sc-for>
+                  </select>
+                </div>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Gravedad</div>
+                <div style="display:flex; flex-wrap:wrap; gap:8px; margin-top:9px;">
+                  <sc-for list="{{ inGravedades }}" as="ig" hint-placeholder-count="3">
+                    <button onClick="{{ ig.go }}" style="{{ ig.style }}" style-hover="border-color:#1462a5">{{ ig.label }}</button>
+                  </sc-for>
+                </div>
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Qué pasó</div>
+                <input type="text" value="{{ inDescripcion }}" onChange="{{ onInDescripcion }}" placeholder="Descripción de los hechos" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              </div>
+
+              <div style="margin-top:18px;">
+                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Seguimiento</div>
+                <input type="text" value="{{ inSeguimiento }}" onChange="{{ onInSeguimiento }}" placeholder="Qué se hizo o queda por hacer" style="width:100%; margin-top:7px; padding:9px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              </div>
+
+              <div style="display:flex; align-items:flex-start; gap:10px; margin-top:18px; padding:12px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px;">
+                <i class="ph-duotone ph-warning-circle" style="font-size:18px; color:#a8321f; flex-shrink:0;"></i>
+                <div style="font-size:13.5px; color:#a8321f; text-wrap:pretty;">Registro sensible: puede acabar en un informe al juzgado. Hoy cualquiera con acceso al sistema puede leerlo — no hay roles ni registro de consultas.</div>
+              </div>
+            </sc-if>

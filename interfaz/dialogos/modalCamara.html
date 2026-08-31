@@ -1,0 +1,74 @@
+            <sc-if value="{{ modalCamara }}">
+              <h3 style="font-size:20px; font-weight:600; margin:0 0 4px; color:#0e3d69;">{{ camTitulo }}</h3>
+              <p style="margin:0 0 18px; font-size:14px; color:#5b7185; text-wrap:pretty;">{{ camSubtitulo }}</p>
+
+              <!-- Registrar el rostro es guardar un dato biométrico: se
+                   pregunta antes, con el texto a la vista, y la respuesta
+                   queda registrada tanto si es sí como si es no. -->
+              <sc-if value="{{ camEsBase }}">
+                <div style="margin-bottom:16px; padding:14px 16px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Aviso de tratamiento de datos</div>
+                  <div style="font-size:13px; color:#3c4a55; margin-top:8px; line-height:1.5; text-wrap:pretty;">{{ camTextoAviso }}</div>
+                  <button onClick="{{ camAlternarConsiento }}" style="display:flex; align-items:center; gap:10px; margin-top:12px; padding:10px 12px; border:1px solid #c9d4de; border-radius:2px; background:#f7f6f4; width:100%; text-align:left;" style-hover="background:#e4eef7">
+                    <i class="ph-duotone {{ camConsientoIcono }}" style="font-size:19px; color:{{ camConsientoTono }}; flex:none;"></i>
+                    <span style="font-size:14px; color:#201e1d;">He leído el aviso y acepto que se registre mi rostro para marcar asistencia.</span>
+                  </button>
+                </div>
+              </sc-if>
+
+              <!-- El vídeo va espejado, que es como uno espera verse; la
+                   foto que se guarda NO se espeja, para que sirva de
+                   registro y, más adelante, de comparación. -->
+              <sc-if value="{{ camSinFoto }}">
+                <div style="position:relative; background:#201e1d; border:1px solid #c9d4de; border-radius:3px; overflow:hidden; aspect-ratio:4 / 3;">
+                  <video id="videoMarca" autoplay playsinline muted style="width:100%; height:100%; object-fit:cover; transform:scaleX(-1);"></video>
+                  <sc-if value="{{ camEncendiendo }}">
+                    <div style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; gap:10px; background:#201e1d; color:#e7e3de; font-size:14px;">
+                      <i class="ph-duotone ph-camera" style="font-size:22px;"></i>Encendiendo la cámara...
+                    </div>
+                  </sc-if>
+                  <!-- El modelo son 7 MB: la primera vez tarda, y callarlo
+                       parecería que se colgó. -->
+                  <sc-if value="{{ camModeloCargando }}">
+                    <div style="position:absolute; left:0; right:0; bottom:0; padding:8px 12px; background:rgba(32,30,29,0.82); color:#e7e3de; font-size:12.5px;">Preparando el reconocimiento facial (solo la primera vez)...</div>
+                  </sc-if>
+                </div>
+                <button onClick="{{ camTomar }}" style="{{ camTomarStyle }}" style-hover="background:#0e3d69">
+                  <i class="ph-duotone ph-camera" style="font-size:22px;"></i>Tomar foto
+                </button>
+              </sc-if>
+
+              <sc-if value="{{ camHayFoto }}">
+                <div style="border:1px solid #c9d4de; border-radius:3px; overflow:hidden; background:#201e1d; aspect-ratio:4 / 3;">
+                  <img src="{{ camFoto }}" alt="Foto para la marca" style="width:100%; height:100%; object-fit:cover;" />
+                </div>
+                <div style="display:flex; align-items:center; gap:9px; margin-top:11px;">
+                  <i class="ph-duotone {{ camVerdictoIcono }}" style="font-size:19px; color:{{ camVerdictoTono }}; flex:none;"></i>
+                  <div style="font-size:14px; color:{{ camVerdictoTono }}; text-wrap:pretty;">{{ camVerdicto }}</div>
+                </div>
+                <div style="display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:10px; flex-wrap:wrap;">
+                  <div style="font-size:13px; color:#5b7185; text-wrap:pretty;">Si saliste movido o a oscuras, repítela antes de confirmar.</div>
+                  <button onClick="{{ camRepetir }}" style="font-size:13px; color:#0e3d69;" style-hover="text-decoration:underline">Repetir la foto</button>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ camErrorHay }}">
+                <div style="margin-top:12px; font-size:13.5px; color:#a8321f; padding:11px 14px; background:#fbe7e3; border-left:3px solid #e2503c; border-radius:2px; text-wrap:pretty;">{{ camErrorTexto }}</div>
+              </sc-if>
+
+              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(150px,1fr)); gap:12px; margin-top:16px;">
+                <div style="background:#f0ede9; border-radius:2px; padding:11px 13px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Quedará como</div>
+                  <div style="font-size:15px; color:#201e1d; margin-top:3px;">{{ camQueMarca }}</div>
+                </div>
+                <div style="background:#f0ede9; border-radius:2px; padding:11px 13px;">
+                  <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Ubicación</div>
+                  <div style="font-size:15px; color:#201e1d; margin-top:3px; font-variant-numeric:tabular-nums;">{{ camDondeTexto }}</div>
+                </div>
+              </div>
+
+              <div style="display:flex; align-items:flex-start; gap:10px; margin-top:16px; padding:11px 14px; background:#f0ede9; border-left:3px solid #9aa7b2; border-radius:2px;">
+                <i class="ph-duotone ph-info" style="font-size:17px; color:#5b7185; flex:none;"></i>
+                <div style="font-size:12.5px; color:#5b7185; text-wrap:pretty;">{{ camNotaPie }}</div>
+              </div>
+            </sc-if>
