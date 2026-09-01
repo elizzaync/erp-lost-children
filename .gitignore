@@ -38,6 +38,7 @@ respaldo-*/
 # Es estado de ejecución, como la base: cada máquina tiene el suyo, y
 # subirlo haría que un despliegue creyera haber sembrado lo que no sembró.
 data/ejemplo-sembrado.json
+data/expedientes-sembrados.json
 
 # Documentos y contratos que sube el personal.
 data/archivos/

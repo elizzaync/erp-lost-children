@@ -1003,12 +1003,6 @@
       sinBenIncidencias: (this.state.benIncidencias || []).length === 0,
       benEsReal: !!this.state.benefRealSel,
 
-      benProximamente: () => this.setState({ benAviso:
-        "Todavía no está construido. Editar el expediente necesita que primero "
-        + "acordemos qué campos guarda la tabla de beneficiarios; registrar "
-        + "sesiones e incidencias necesita sus propias tablas. Mientras tanto, "
-        + "el alta de beneficiarios sí funciona desde el botón «Agregar "
-        + "beneficiario» de la pestaña Beneficiarios." }),
       benAviso: this.state.benAviso || "",
       benAvisoHay: !!this.state.benAviso,
       backToBenef: () => this.setState({ view: "legajo", legajoTab: "benef", benAviso: "", benefRealSel: null }),
@@ -1082,7 +1076,6 @@
       condOpen: !!this.state.condOpen,
       condCerrar: () => this.setState({ condOpen: false, condErr: "" }),
       condGuardar: () => this.guardarCondicion(),
-      condGuardando: !!this.state.condGuardando,
       condGuardarLabel: this.state.condGuardando ? "Guardando…" : "Registrar",
       condErr: this.state.condErr || "",
       condHayErr: !!this.state.condErr,
@@ -1188,33 +1181,13 @@
                           : "transparent; color:#5b7185;"),
         go: () => this.setState({ attTab: t.key }, () => this.cargarRango())
       })),
-      addOpen: !!this.state.addOpen,
       /* "Agregar registro" describía el formulario viejo, donde había que
          elegir persona y método. Ya no se agrega nada a mano: se abre la
-         lista de quienes faltan por enrolar. */
-      addLabel: this.state.addOpen ? "Cerrar lista" : "Enrolar personas",
-      toggleAdd: () => this.setState({ addOpen: !this.state.addOpen, attTab: "diaria" },
-        () => this.cargarRango()),
-      addMetodos: [
-        {key:"facial", label:"Rostro", icon:"ph-scan-smiley"},
-        {key:"huella", label:"Huella", icon:"ph-fingerprint"},
-        {key:"ambos", label:"Rostro y huella", icon:"ph-shield-check"}
-      ].map(m => {
-        const disp = this.state.metodosDisponibles;
-        const permitido = !disp || disp.indexOf(m.key) >= 0;
-        const activo = (this.state.addMetodo || "facial") === m.key;
-        return {
-          ...m,
-          label: permitido ? m.label : m.label + " · no disponible",
-          style: "display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:2px; font-size:14px; border:1px solid "
-            + (!permitido
-              ? "#e2ded8; color:#a9b2ba; background:#f0eeeb; cursor:not-allowed; text-decoration:line-through;"
-              : activo
-                ? BLUE + "; background:#ffffff; color:" + BLUE_D + "; font-weight:600;"
-                : "#c9d4de; color:#3c4a55;"),
-          go: permitido ? () => this.setState({ addMetodo: m.key }) : () => {}
-        };
-      }),
+         captura desde la propia fila de la persona.
+
+         OJO: al retirar los valores muertos me llevé el cierre de este
+         comentario, y desde aquí quedaba comentado el resto de renderVals.
+         Corregido el 31/08/2026. */
       addNota: (() => {
         const disp = this.state.metodosDisponibles;
         if (disp && disp.indexOf("huella") < 0)

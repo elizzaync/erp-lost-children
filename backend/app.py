@@ -2328,59 +2328,25 @@ def borrar_rostro_web_():
     return jsonify({"ok": True})
 
 
-@app.get("/api/rostro-web/pendientes")
-@auth.requiere("asistencia", "vista")
-def rostros_web_pendientes():
-    """
-    Quién falta por enrolar. El segundo enrolamiento se exige a todo el
-    personal desde el lanzamiento, así que hace falta una lista de pendientes
-    para poder agendarlos.
-    """
-    filas = db.rostros_web_registrados()
-    return jsonify({
-        "ok": True,
-        "personal": filas,
-        "con_rostro": len([f for f in filas if f["creado"]]),
-        "total": len(filas),
-    })
+# Aquí estaba GET /api/rostro-web/pendientes, que alimentaba el bloque
+# «Rostro para marcar por el celular» de Gestión Biométrica. Ese bloque
+# se retiró el 31/08/2026 —marcar en el terminal o por el celular es una
+# elección de cada quien, no un trámite pendiente— y la puerta se quedó
+# sirviendo a nadie. Con ella se fue db.rostros_web_registrados(), que
+# no tenía otro uso.
+
+
+# Aquí vivían _sede_configurada() y _metros_entre(). Sostenían el punto
+# de sede y el cálculo de metros: primero para rechazar a quien marcara
+# lejos, y después para señalarlo en la lista. Las dos cosas se
+# retiraron el 31/08/2026 por decisión de la ONG — la ubicación de una
+# marca no tiene que ver con la de la casa; lo que hay que ver es DÓNDE
+# estaba la persona, y eso lo dice el nombre del sitio.
 
 
 def _distancia(a, b):
     """Distancia euclídea. Sin numpy: son 128 números una vez por marca."""
     return sum((x - y) ** 2 for x, y in zip(a, b)) ** 0.5
-
-
-def _metros_entre(lat1, lon1, lat2, lon2):
-    """
-    Distancia en metros entre dos coordenadas.
-
-    Fórmula del semiverseno sobre una Tierra esférica. Para decidir si
-    alguien está en la casa o a diez cuadras, el error de suponerla
-    esférica es de centímetros: no hace falta más.
-    """
-    import math
-    r = 6371000.0
-    f1, f2 = math.radians(lat1), math.radians(lat2)
-    df = math.radians(lat2 - lat1)
-    dl = math.radians(lon2 - lon1)
-    a = (math.sin(df / 2) ** 2
-         + math.cos(f1) * math.cos(f2) * math.sin(dl / 2) ** 2)
-    return 2 * r * math.asin(min(1.0, math.sqrt(a)))
-
-
-def _sede_configurada():
-    """(lat, lon, radio) de la sede, o None si todavía no se ha puesto."""
-    par = db.parametros() or {}
-    try:
-        lat = float(par.get("lat"))
-        lon = float(par.get("lon"))
-    except (TypeError, ValueError):
-        return None
-    try:
-        radio = int(par.get("radio_marca") or config.RADIO_MARCA_M)
-    except (TypeError, ValueError):
-        radio = config.RADIO_MARCA_M
-    return lat, lon, radio
 
 
 @app.get("/api/asistencia/mias")
@@ -2394,7 +2360,6 @@ def mis_marcas_de_hoy():
     marcas = []
     if ident:
         marcas = [dict(m) for m in db.marcas_del_staff(ident["staff_number"], hoy)]
-    sede = _sede_configurada()
     par = db.parametros() or {}
     try:
         # 48 h: la jornada máxima en Perú. Es el valor que la ONG fijó el
@@ -2432,8 +2397,6 @@ def mis_marcas_de_hoy():
             })
 
     return jsonify({"ok": True, "fecha": hoy, "marcas": marcas, "puede": True,
-                    "exigeUbicacion": sede is not None,
-                    "radio": sede[2] if sede else None,
                     # La hora del SERVIDOR: el reloj no puede salir del
                     # teléfono, que cualquiera puede cambiar.
                     "ahora": datetime.datetime.now().strftime("%H:%M:%S"),
@@ -2441,8 +2404,7 @@ def mis_marcas_de_hoy():
                     # Sin rostro de referencia no se puede comparar nada, así
                     # que la pantalla tiene que poder pedirlo antes de marcar.
                     "rostro": db.rostro_web(pid) is not None,
-                    "consintio": db.consentimiento_vigente(pid, "rostro_web") is not None,
-                    "sede": {"lat": sede[0], "lon": sede[1]} if sede else None})
+                    "consintio": db.consentimiento_vigente(pid, "rostro_web") is not None})
 
 
 @app.post("/api/asistencia/marcar")
@@ -2500,7 +2462,7 @@ def marcar_desde_el_movil():
     cuerpo = request.get_json(silent=True) or {}
 
     # ── La ubicación ─────────────────────────────────────────────────────
-    lat = lon = precision = distancia = None
+    lat = lon = precision = None
     try:
         lat = float(cuerpo.get("lat"))
         lon = float(cuerpo.get("lon"))
@@ -2508,20 +2470,14 @@ def marcar_desde_el_movil():
     except (TypeError, ValueError):
         lat = lon = None
 
-    # La distancia se CALCULA y se guarda, pero no rechaza nada.
+    # No se mide ninguna distancia.
     #
-    # Antes: pasado el radio, 403 «lejos», y sin ubicación, 400. Ninguna de
-    # las dos se queda. Marcar siempre entra —esté quien marca donde esté— y
-    # lo que quede registrado lo mira RRHH, que es quien puede preguntar. Un
-    # GPS urbano se equivoca por decenas de metros y dentro de un edificio
-    # por más: rechazar por esa cifra es castigar a alguien por su teléfono.
-    # Una persona mirando «marcó a 300 m» decide bien; un umbral, no.
-    #
-    # El radio configurado sigue sirviendo: es con lo que la lista de
-    # asistencia señala quién marcó fuera, para que se vea sin buscarlo.
-    sede = _sede_configurada()
-    if sede and lat is not None:
-        distancia = round(_metros_entre(lat, lon, sede[0], sede[1]), 1)
+    # Hubo un rato un punto de sede, un radio y un cálculo de metros: primero
+    # para rechazar a quien marcara lejos —retirado— y después para señalarlo
+    # en la lista. Las dos cosas se fueron el 31/08/2026 por decisión de la
+    # ONG: la ubicación de una marca no tiene que ver con la de la casa. Lo
+    # que hay que ver es DÓNDE estaba la persona, y eso lo dice el nombre del
+    # sitio, no una cifra en metros.
 
     # ── El rostro ────────────────────────────────────────────────────────
     # Aquí es donde la marca deja de ser «alguien con esta cuenta apretó un
@@ -2592,7 +2548,7 @@ def marcar_desde_el_movil():
 
     puesta = db.guardar_marca(ident["staff_number"], hoy, hora, "facial", "web",
                               foto=nombre_foto, lat=lat, lon=lon,
-                              precision_m=precision, distancia_m=distancia,
+                              precision_m=precision,
                               lugar=lugar)
     if not puesta:
         # INSERT OR IGNORE: ya había una marca en ese mismo minuto.
@@ -2604,12 +2560,11 @@ def marcar_desde_el_movil():
              request.headers.get("X-Forwarded-For") or request.remote_addr,
              dist)
     return jsonify({"ok": True, "hora": hora, "fecha": hoy,
-                    "distancia": distancia,
-                    # El nombre del sitio, para que el aviso diga dónde
-                    # marcó y no a cuántos metros de algo.
+                    # El nombre del sitio: es lo único que se dice de la
+                    # ubicación. Ni distancia ni radio, que se retiraron
+                    # el 31/08/2026 con el resto del cerco.
                     "lugar": lugar,
-                    "conFoto": bool(nombre_foto),
-                    "sinRadio": sede is None})
+                    "conFoto": bool(nombre_foto)})
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -2861,13 +2816,7 @@ def cancelar_enrolamiento(staff_number):
 @auth.requiere("asistencia", "vista")
 def asistencia():
     fecha = request.args.get("fecha") or date.today().isoformat()
-    # El radio va con las filas: la pantalla lo necesita para señalar
-    # quién marcó fuera. No es un límite que rechace nada —marcar entra
-    # siempre— sino la referencia con la que RRHH sabe a quién preguntar.
-    sede = _sede_configurada()
-    return jsonify({"ok": True, "fecha": fecha, "filas": db.marcas_de(fecha),
-                    "radio": sede[2] if sede else None,
-                    "haySede": sede is not None})
+    return jsonify({"ok": True, "fecha": fecha, "filas": db.marcas_de(fecha)})
 
 
 @app.get("/api/asistencia/resumen")

@@ -2015,23 +2015,10 @@ def rostro_web(personal_id):
     return filas[0] if filas else None
 
 
-def rostros_web_registrados():
-    """
-    Quién tiene rostro del canal web y quién no. Alimenta el seguimiento del
-    enrolamiento, que se exige a todo el personal desde el lanzamiento.
-    """
-    return consultar(
-        """SELECT p.id, p.nombre, p.cargo, p.area,
-                  r.creado, r.modelo, r.dimension,
-                  (SELECT COUNT(*) FROM consentimientos c
-                    WHERE c.personal_id = p.id AND c.tipo = 'rostro_web'
-                      AND c.aceptado = 1
-                      AND (c.revocado_el IS NULL OR c.revocado_el = '')) AS consintio
-             FROM personal p
-             LEFT JOIN rostros_web r ON r.personal_id = p.id
-            WHERE p.estado = 'activo'
-            ORDER BY p.nombre"""
-    )
+# Aquí estaba rostros_web_registrados(). La usaba una sola puerta —la
+# lista de pendientes de rostro web— y esa puerta se retiró con su
+# bloque de pantalla el 31/08/2026.
+
 
 
 def guardar_rostro_web(personal_id, descriptor_json, dimension, modelo,

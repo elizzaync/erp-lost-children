@@ -17,25 +17,13 @@
                 <input type="number" value="{{ cfgMeta }}" onChange="{{ onCfgMeta }}" placeholder="48" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none; font-variant-numeric:tabular-nums;" />
                 <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">{{ cfgMetaNota }}</p>
               </div>
-              <div>
-                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Radio permitido (metros)</div>
-                <input type="number" value="{{ cfgRadio }}" onChange="{{ onCfgRadio }}" placeholder="200" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none; font-variant-numeric:tabular-nums;" />
-                <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">Se anota, no se aplica: hoy nadie es rechazado por marcar lejos.</p>
-              </div>
             </div>
-
-            <div style="margin-top:22px; padding-top:20px; border-top:1px solid #e7e3de;">
-              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dónde está la sede</div>
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:20px; margin-top:4px;">
-                <div>
-                  <input type="text" value="{{ cfgLat }}" onChange="{{ onCfgLat }}" placeholder="Latitud · -11.9391" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
-                </div>
-                <div>
-                  <input type="text" value="{{ cfgLon }}" onChange="{{ onCfgLon }}" placeholder="Longitud · -77.0619" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
-                </div>
-              </div>
-              <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">{{ cfgNotaLugar }}</p>
-            </div>
+            <!-- Aquí estaban «Radio permitido» y «Dónde está la sede».
+                 Servían para medir a qué distancia de la casa marcó cada
+                 persona. Se retiraron el 31/08/2026 por decisión de la
+                 ONG: la ubicación de una marca no tiene que ver con la de
+                 la casa —lo que hay que ver es DÓNDE estaba— y unos campos
+                 que ya no cambian nada solo confunden a quien los llene. -->
           </div>
 
           <!-- Aquí había un bloque «Permisos» para elegir quién cierra

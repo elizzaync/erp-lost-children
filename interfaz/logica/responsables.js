@@ -363,20 +363,7 @@
       onCfgFundacion: (e) => this.setState({ cfgFundacion: e.target.value, cfgOk: "", cfgError: "" }),
       /* ── Configuración ────────────────────────────────────────────── */
       cfgMeta: this.state.cfgMeta == null ? "" : this.state.cfgMeta,
-      cfgLat: this.state.cfgLat == null ? "" : this.state.cfgLat,
-      cfgLon: this.state.cfgLon == null ? "" : this.state.cfgLon,
-      cfgRadio: this.state.cfgRadio == null ? "" : this.state.cfgRadio,
       onCfgMeta: (e) => this.setState({ cfgMeta: e.target.value }),
-      onCfgLat: (e) => this.setState({ cfgLat: e.target.value }),
-      onCfgLon: (e) => this.setState({ cfgLon: e.target.value }),
-      onCfgRadio: (e) => this.setState({ cfgRadio: e.target.value }),
-      /* Sin coordenadas puestas el sistema NO rechaza a nadie por estar
-         lejos: guarda dónde marcó y ya. Decirlo aquí evita creer que hay
-         un control que no existe. */
-      cfgHayLugar: !!(this.state.cfgLat && this.state.cfgLon),
-      cfgNotaLugar: (this.state.cfgLat && this.state.cfgLon)
-        ? "Se guarda a qué distancia de este punto marcó cada persona. Hoy no se rechaza a nadie por estar lejos; el radio queda anotado para cuando se decida usarlo."
-        : "Sin coordenadas no se calcula ninguna distancia: las marcas se guardan igual, solo que sin decir desde dónde.",
       cfgMetaNota: this.state.cfgMeta
         ? ("Cada persona verá su semana contra " + this.state.cfgMeta + " horas.")
         : "Sin meta puesta, la barra de la semana no compara contra nada.",
@@ -650,7 +637,6 @@
             pct: Math.round(cuenta[nombre] / gente.length * 100) + "%",
           }));
       })(),
-      hayAreas: (this.state.personal || []).length > 0,
       areasNota: (() => {
         const n = (this.state.personal || []).length;
         return n === 0 ? "Todavía no hay fichas de personal registradas"
@@ -767,17 +753,6 @@
       /* Las dos banderas son opuestas a propósito: este runtime no tiene
          sc-else, así que una condición y su contraria se declaran aparte. */
       sinAusentismo: true,
-      fichaTabs: [
-        {key:"colab", label:"Colaboradores", icon:"ph-users-three",
-         count:String((this.state.personal || []).length)},
-        {key:"ninos", label:"Beneficiarios", icon:"ph-baby",
-         count:String((this.state.beneficiarios || []).length)}
-      ].map(t => ({
-        ...t,
-        style: "display:flex; align-items:center; gap:8px; padding:8px 15px; border-radius:2px; font-size:14.5px;"
-          + (fs === t.key ? "background:#ffffff; font-weight:600; color:" + BLUE_D + "; box-shadow:inset 0 -3px 0 " + BLUE + ";" : "color:#5b7185;"),
-        go: () => this.setState({ fichaScope: t.key })
-      })),
       fichaColab: lt === "org",
       fichaNinos: lt === "benef",
       sinBenefReales: (this.state.beneficiarios || []).length === 0,

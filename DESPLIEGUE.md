@@ -47,6 +47,30 @@ Con esas tres cosas, el resto ya está preparado en el repositorio.
 7. **Entrar desde un celular** y registrar el rostro: es la primera prueba
    real de que la cámara y el GPS funcionan.
 
+## 3 bis. El dominio: aplazado hasta después de la entrevista
+
+Decidido el 31/08/2026: no se contrata dominio hasta hablarlo con el
+cliente. Eso tiene una consecuencia práctica que conviene tener presente.
+
+**El sistema desplegado en Coolify no deja entrar a nadie sin dominio**, y
+es a propósito: `COOKIE_SECURE` viene en 1, así que el navegador solo manda
+la cookie de sesión por HTTPS. Sin certificado no hay sesión. Falla
+cerrado, que es lo correcto — una contraseña viajando en claro por la red
+de la casa es justo lo que no puede pasar.
+
+Así que **para la presentación no se usa el despliegue**, sino el túnel:
+
+    herramientas	unel-rrhh.bat
+
+Levanta una dirección `https://algo.trycloudflare.com` contra el servidor
+que corre en la computadora. Va por HTTPS, así que la cámara y el GPS
+funcionan en el celular. Tres cosas que hay que saber:
+
+  · La dirección CAMBIA cada vez que se levanta. No sirve guardarla.
+  · La computadora tiene que quedarse encendida con el servidor arriba.
+  · Sirve para DEMOSTRAR que funciona, no para trabajar con datos reales
+    de niños: el tráfico pasa por Cloudflare.
+
 ## 4. Antes de dar la dirección al equipo
 
 - [ ] **Rotar la contraseña de yunatt** y la llave de la cuenta de servicio
@@ -58,10 +82,22 @@ Con esas tres cosas, el resto ya está preparado en el repositorio.
       documentos en el bloque 90.000.000–90.999.999, que RENIEC no emite:
       ninguna puede coincidir con el DNI de una persona real. Se retiran
       con `py backend\sembrar_ejemplo.py --borrar`.
-- [ ] **Retirar esas fichas de ejemplo antes de que el equipo empiece a
-      registrar de verdad.** Sirven para enseñar el sistema, no para
-      convivir con datos reales: mezclarlas es cómo un dato inventado
-      acaba en un informe.
+- [ ] **Retirar las fichas de ejemplo antes de que el equipo empiece a
+      registrar de verdad** — pero NO antes de la presentación.
+
+      Decidido el 31/08/2026: se quedan para enseñar el sistema al
+      cliente. Sin datos las pantallas salen vacías y los gráficos no se
+      ven, y una demostración de pantallas en blanco no enseña nada.
+
+      El día que el equipo empiece a registrar de verdad hay que quitarlas:
+      mezclar una ficha inventada con las reales es cómo un dato falso
+      acaba en un informe. `py backend\sembrar_ejemplo.py --borrar` las
+      retira por identificador, sin tocar nada más.
+
+- [x] **Las cuentas `hari` y `harito`** son de prueba, creadas por la
+      administradora el 31/08/2026. Conviene retirarlas junto con las
+      fichas de ejemplo, por lo mismo: una cuenta que nadie recuerda haber
+      creado es una puerta abierta que nadie vigila.
 - [ ] Subir la primera copia de seguridad de `data/` fuera del servidor.
 
 ## 5. Lo que NO cambia con el despliegue

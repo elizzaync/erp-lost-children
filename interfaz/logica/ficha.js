@@ -345,8 +345,6 @@
         modal: "experiencia", modalError: "", trEditId: null,
         trEmpresa: "", trCargo: "", trDesde2: "", trHasta2: "", trFunciones: ""
       }),
-      /* Corregir abre el MISMO diálogo con los datos dentro. */
-      trEditando: !!st.trEditId,
       modalFormacion: st.modal === "formacion",
       modalExperiencia: st.modal === "experiencia",
       trNivel: st.trNivel,

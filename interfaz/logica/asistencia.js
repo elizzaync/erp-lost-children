@@ -110,24 +110,23 @@
      La distancia no se tira: sigue sirviendo para pintar en ámbar a quien
      marcó fuera del radio, cuando hay sede configurada. Pero lo que se LEE
      es el lugar. */
-  static ubicacionFila(f, radio) {
+  /* DÓNDE marcó. El nombre del sitio, y nada más.
+
+     Aquí hubo un rato una distancia —«a 340 m de la sede»— y un color
+     ámbar para quien pasara del radio. Se retiró el 31/08/2026 por
+     decisión de la ONG: lo que hay que ver es dónde estaba la persona, no
+     si estaba cerca o lejos de la casa. Medir la distancia convertía la
+     columna en un juicio, y pintaba de sospechoso a quien fichó desde
+     donde le tocaba estar ese día. */
+  static ubicacionFila(f) {
     if (!(f.total > 0)) return { texto: "", color: "#7d8e9c" };
-    const m = f.distancia == null ? null : Number(f.distancia);
-    const fuera = m != null && radio != null && m > radio;
-    const color = fuera ? "#8a5c05" : "#7d8e9c";
-
-    if (f.lugar) return { texto: f.lugar, color: color };
-
-    /* Sin nombre: o no dio ubicación, o el servicio de mapas no contestó
-       cuando se guardó. Se distingue, porque no es lo mismo. */
+    if (f.lugar) return { texto: f.lugar, color: "#5b7185" };
+    /* Sin nombre hay dos casos distintos y conviene no confundirlos: que
+       no diera ubicación, o que la diera y el servicio de mapas no
+       contestara cuando se guardó. */
     const dioAlguna = (f.sin_ubicacion || 0) < (f.total || 0);
-    if (!dioAlguna) return { texto: "sin ubicación", color: "#7d8e9c" };
-    if (m != null) {
-      const dicho = m >= 1000 ? (m / 1000).toFixed(1) + " km"
-                              : Math.round(m) + " m";
-      return { texto: "a " + dicho + " de la sede", color: color };
-    }
-    return { texto: "con ubicación, sin nombre", color: "#7d8e9c" };
+    return { texto: dioAlguna ? "con ubicación, sin nombre" : "sin ubicación",
+             color: "#9aa7b2" };
   }
 
   /* De dónde vino la marca de ese día, y desde dónde si fue del celular.
@@ -136,7 +135,7 @@
      —Rostro o Huella—, que describe el enrolamiento y no el fichaje. Lo
      que hace falta saber al mirar un día es si la persona estuvo delante
      del equipo o fichó desde el teléfono, y en ese caso desde dónde. */
-  static origenFila(f, radio) {
+  static origenFila(f) {
     if (!(f.total > 0)) return { texto: "—", icono: "ph-minus", color: "#9aa7b2" };
     const cs = String(f.canales || "").split(",").filter(Boolean);
     const web = cs.indexOf("web") >= 0;
@@ -147,7 +146,7 @@
          que echar en falta. Estuvo en la puerta, y con eso basta. */
       return { texto: "Terminal", icono: "ph-identification-card", color: "#0e3d69" };
     }
-    const u = Component.ubicacionFila(f, radio);
+    const u = Component.ubicacionFila(f);
     const donde = u.texto ? (" · " + u.texto) : "";
     if (web && term) {
       return { texto: "Terminal y celular" + donde,
@@ -156,7 +155,7 @@
     return { texto: "Celular" + donde, icono: "ph-device-mobile", color: u.color };
   }
 
-  static adornoFila(f, radio) {
+  static adornoFila(f) {
     const PALETA = [
       [BLUE_T, BLUE_D], [GREEN_T, GREEN_D], [GOLD_T, GOLD_D],
       [RED_T, RED_D], ["#efe7f5", "#5b3a7a"], ["#e6f0f2", "#2b5f68"],
@@ -172,9 +171,9 @@
          mejor; ahora tiene el suyo, en la columna «Registro». */
       subtitulo: f.rolLabel || "",
       subColor: "#7d8e9c",
-      origen: Component.origenFila(f, radio).texto,
-      origenIcono: Component.origenFila(f, radio).icono,
-      origenColor: Component.origenFila(f, radio).color,
+      origen: Component.origenFila(f).texto,
+      origenIcono: Component.origenFila(f).icono,
+      origenColor: Component.origenFila(f).color,
       /* Fondo de aviso solo para quien NO PUEDE marcar. A quien puede y
          todavía no ha marcado no se le pinta nada: puede que aún no haya
          llegado, y teñirle la fila lo señalaría sin motivo. */
@@ -298,8 +297,6 @@
       syncTint: this.state.syncEstado === "error" ? RED_T : GREEN_T,
       syncMsgIcono: this.state.syncEstado === "error" ? "ph-warning-circle" : "ph-check-circle",
 
-      iniciarCaptura: () => this.iniciarCaptura(),
-
 /*§CORTE§ linea original 10579 §*/
       /* ── Vista semanal con datos reales ───────────────────────────── */
       semanaDias: this.diasDelRango().map((f) => {
@@ -422,7 +419,7 @@
         return this.realesVisibles(mtd, sc)
           .concat(mtd === "todos" ? this.filasSinEnrolar().filter(enAmbito) : [])
           .filter(coincide)
-          .map((f) => Object.assign({}, f, Component.adornoFila(f, this.state.asisRadio)));
+          .map((f) => Object.assign({}, f, Component.adornoFila(f)));
       })(),
       diaHay: (() => {
         const enAmbito = (f) => sc === "todos" || f.ambito === sc;

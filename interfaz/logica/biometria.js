@@ -208,13 +208,6 @@
   }
 
 /*§CORTE§ linea original 10047 §*/
-      /* ── Captura biométrica real ─────────────────────────────────── */
-      candidatos: (this.state.candidatos || []).map((c) => ({
-        valor: c.tipo + ":" + c.id,
-        etiqueta: c.nombre + (c.detalle ? " — " + c.detalle : "")
-          + (c.tipo === "beneficiario" ? " (beneficiario)" : c.vinculo === "voluntario" ? " (voluntario)" : "")
-      })),
-      candidatoSel: this.state.candidatoSel || "",
       onCandidato: (e) => this.setState({ candidatoSel: e.target.value, capFase: "", capMsg: "" }),
       hayCandidatos: (this.state.candidatos || []).length > 0,
       sinCandidatos: (this.state.candidatos || []).length === 0,
@@ -276,12 +269,6 @@
         return String(Math.floor(s / 60)) + ":" + String(s % 60).padStart(2, "0");
       })(),
       capStaffNumber: this.state.capSn ? String(this.state.capSn) : "",
-
-      capBotonLabel: this.state.capFase === "enviando" ? "Enviando…"
-        : this.state.capFase === "esperando" ? "Captura en curso…"
-        : "Iniciar captura biométrica",
-      capBotonStyle: "font-size:13.5px; padding:8px 16px; border-radius:2px; color:#f4f3f1; background:"
-        + (this.state.capFase === "enviando" || this.state.capFase === "esperando" ? "#9aa7b2" : "#2f8f5b") + ";",
 
       capAviso: !this.state.backendVivo
         ? "No hay conexión con el servidor local. Abre la interfaz desde http://127.0.0.1:7801/ (ejecuta iniciar.bat), no abriendo el archivo directamente."
@@ -598,9 +585,9 @@
       })),
       /* En la vista de beneficiarios sale quien esté registrado de verdad.
          Si no hay nadie, la rejilla queda vacía: antes se rellenaba con
-         nueve marcadores de la maqueta. */
-      reporteDia: "Reporte del día",
-      reporteMes: "Reporte mensual",
+         nueve marcadores de la maqueta.
 
-
-
+         OJO: al retirar los valores muertos me llevé por delante el cierre
+         de este comentario, y desde aquí quedó comentado medio renderVals.
+         La cola de enrolamiento aparecía vacía sin que nada dijera por
+         qué. Corregido el 31/08/2026. */

@@ -198,56 +198,6 @@
                        : n + " personas sin condiciones laborales registradas";
       })(),
 
-      docFilters: [
-        {label:"Todos · 7", color:BLUE_D, tint:BLUE_T},
-        {label:"Vigentes · 2", color:GREEN_D, tint:GREEN_T},
-        {label:"Por vencer · 3", color:GOLD_D, tint:GOLD_T},
-        {label:"Vencidos · 2", color:RED_D, tint:RED_T}
-      ],
-      documentos: [
-        {id:6, doc:"Certificado de salud ocupacional", vence:"18/08/2026", estado:"Por vencer", color:GOLD_D, tint:GOLD_T},
-        {id:12, doc:"Certificado de antecedentes penales", vence:"27/08/2026", estado:"Por vencer", color:GOLD_D, tint:GOLD_T},
-        {id:9, doc:"Certificado de salud ocupacional", vence:"30/08/2026", estado:"Por vencer", color:GOLD_D, tint:GOLD_T},
-        {id:3, doc:"Certificado de salud ocupacional", vence:"02/07/2026", estado:"Vencido", color:RED_D, tint:RED_T},
-        {id:15, doc:"Póliza de seguro complementario", vence:"12/06/2026", estado:"Vencido", color:RED_D, tint:RED_T},
-        {id:13, doc:"Política de salvaguarda infantil", vence:"14/03/2027", estado:"Vigente", color:GREEN_D, tint:GREEN_T},
-        {id:20, doc:"Contrato de trabajo firmado", vence:"04/11/2027", estado:"Vigente", color:GREEN_D, tint:GREEN_T}
-      ].map(d => ({ ...d, nombre: byId(d.id).n, open: () => this.go("ficha", d.id) })),
-
-      evalKpis: [
-        {label:"Ciclo 2026-I", value:"7", note:"Evaluaciones abiertas de 20", color:BLUE, tint:BLUE_T, dark:BLUE_D},
-        {label:"Completadas", value:"13", note:"Con acta firmada por ambas partes", color:GREEN, tint:GREEN_T, dark:GREEN_D},
-        {label:"Promedio general", value:"4.1", note:"Sobre una escala de 5 puntos", color:GOLD, tint:GOLD_T, dark:GOLD_D},
-        {label:"Vencen este mes", value:"2", note:"Sin iniciar al 11 de agosto", color:RED, tint:RED_T, dark:RED_D}
-      ],
-      evaluaciones: [
-        {id:12, evaluador:"Marco Ancco Puma", vence:"22/08/2026", estado:"Sin iniciar", color:RED_D, tint:RED_T, resultado:"—"},
-        {id:13, evaluador:"Marco Ancco Puma", vence:"22/08/2026", estado:"Sin iniciar", color:RED_D, tint:RED_T, resultado:"—"},
-        {id:16, evaluador:"Silvia Paredes León", vence:"29/08/2026", estado:"En curso", color:GOLD_D, tint:GOLD_T, resultado:"—"},
-        {id:17, evaluador:"Silvia Paredes León", vence:"29/08/2026", estado:"En curso", color:GOLD_D, tint:GOLD_T, resultado:"—"},
-        {id:4, evaluador:"Luis Ferreyra Soto", vence:"05/09/2026", estado:"Sin iniciar", color:RED_D, tint:RED_T, resultado:"—"},
-        {id:11, evaluador:"Ps. Elena Huamán Ccama", vence:"31/07/2026", estado:"Completada", color:GREEN_D, tint:GREEN_T, resultado:"4.6"},
-        {id:15, evaluador:"Ps. Elena Huamán Ccama", vence:"31/07/2026", estado:"Completada", color:GREEN_D, tint:GREEN_T, resultado:"4.4"},
-        {id:8, evaluador:"Mariela Quispe Ríos", vence:"31/07/2026", estado:"Completada", color:GREEN_D, tint:GREEN_T, resultado:"3.9"}
-      ].map(e => ({ ...e, nombre: byId(e.id).n, open: () => this.go("ficha", e.id) })),
-
-      capacitaciones: [
-        {fecha:"Marzo — junio", titulo:"Salvaguarda infantil, nivel 2", detalle:"Obligatoria para todo el personal con contacto directo con beneficiarios.", pct:"85%", avance:"17/20", color:GREEN, tint:GREEN_T, dark:GREEN_D},
-        {fecha:"Agosto", titulo:"Primeros auxilios y evacuación", detalle:"Dictada por Bomberos Voluntarios en la casa de Lima.", pct:"45%", avance:"9/20", color:GOLD, tint:GOLD_T, dark:GOLD_D},
-        {fecha:"Setiembre — noviembre", titulo:"Acompañamiento pastoral y escucha", detalle:"Para tutores, docentes y el equipo de bienestar.", pct:"10%", avance:"2/20", color:RED, tint:RED_T, dark:RED_D}
-      ],
-      sesiones: [
-        {fecha:"19/08", titulo:"Primeros auxilios · grupo A", lugar:"Casa Lima, sala común", inscritos:"12 de 20", color:GOLD_D},
-        {fecha:"26/08", titulo:"Primeros auxilios · grupo B", lugar:"Casa Lima, sala común", inscritos:"8 de 20", color:GOLD_D},
-        {fecha:"09/09", titulo:"Escucha activa con niños", lugar:"Sede Comas", inscritos:"6 de 9", color:RED_D},
-        {fecha:"23/09", titulo:"Protocolo de reporte de incidentes", lugar:"Virtual", inscritos:"20 de 20", color:GREEN_D}
-      ],
-
-      volKpis: [
-        {label:"Voluntarios activos", value:"6", note:"Fuera de planilla, con convenio firmado", color:BLUE, tint:BLUE_T, dark:BLUE_D},
-        {label:"Horas del mes", value:"148", note:"Registradas por el coordinador", color:GREEN, tint:GREEN_T, dark:GREEN_D},
-        {label:"Convenios por renovar", value:"2", note:"Vencen en setiembre", color:GOLD, tint:GOLD_T, dark:GOLD_D}
-      ],
       /* Aquí vivían seis voluntarios inventados —nombres, horas y
          convenios— que no salían de la base y que ninguna pantalla
          llegaba a pintar. Se van con la pantalla de Reportes de

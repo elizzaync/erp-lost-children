@@ -94,9 +94,9 @@
     busLegajo: "", busBenef: "", busBandeja: "",
     /* El diálogo de reporte: qué módulo, qué alcance y a quiénes. */
     mkMarcas: [], mkOcupado: false, mkAviso: "", mkAvisoTipo: "bien",
-    mkPaso: "", mkRadio: null, camBuscandoUbi: false,
+    mkPaso: "", camBuscandoUbi: false,
     mkTic: 0, mkGps: "preguntar", mkDonde: null, mkSemana: [], mkMeta: 40,
-    mkSede: null, mkRostro: false, mkConsintio: false,
+    mkRostro: false, mkConsintio: false,
     camPensando: false,
     /* El diálogo de la cámara sirve para dos cosas: marcar y registrar el
        rostro de referencia. camModo dice cuál de las dos. */
@@ -176,7 +176,13 @@
      en vez de dibujar un NaN. */
   static anioDe(fecha) {
     const t = String(fecha == null ? "" : fecha).trim();
-    let m = t.match(/^(\d{4})/);
+    /* OJO: aquí se coló un carácter de control (0x08) dentro de la
+       expresión regular en alguna edición. El patrón dejó de casar
+       nunca, así que anioDe() devolvía vacío para TODAS las fechas y
+       el gráfico «Altas por año» anunciaba que ninguna ficha tenía
+       fecha de ingreso, teniéndolas todas. No se veía leyendo el
+       código: el carácter es invisible. Corregido el 31/08/2026. */
+    let m = t.match(/^(\d{4})/);
     if (m) return m[1];
     m = t.match(/(\d{4})$/);
     return m ? m[1] : "";
@@ -198,9 +204,7 @@
                            condiciona nada. El radio se conserva porque lo
                            usa la lista de asistencia para señalar quién
                            marcó fuera. */
-                        mkRadio: d.radio || null,
                         mkSemana: d.semana || [], mkMeta: d.meta || 40,
-                        mkSede: d.sede || null,
                         mkRostro: !!d.rostro, mkConsintio: !!d.consintio });
         this.sincronizarReloj(d.ahora);
         this.revisarGps();
@@ -263,15 +267,10 @@
 
   /* Metros entre dos coordenadas. La misma cuenta que hace el servidor
      antes de aceptar la marca; aquí solo sirve para enseñarla antes. */
-  metrosHasta(lat, lon, sede) {
-    if (!sede || lat == null) return null;
-    const r = 6371000, g = Math.PI / 180;
-    const f1 = lat * g, f2 = sede.lat * g;
-    const df = (sede.lat - lat) * g, dl = (sede.lon - lon) * g;
-    const a = Math.sin(df / 2) ** 2
-            + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
-    return 2 * r * Math.asin(Math.min(1, Math.sqrt(a)));
-  }
+  /* Aquí estaba metrosHasta(), que medía la distancia a la sede.
+     Se fue con el resto del cerco el 31/08/2026: no se mide nada.
+     Lo que se guarda y se lee es DÓNDE, no a cuánto. */
+
 
   /* Marcar son dos pasos: primero la ubicación —que puede tardar y puede
      fallar, y no tiene sentido encender la cámara si va a fallar—, y luego
@@ -460,15 +459,19 @@
         this.apagarCamara();
         this.setState({
           modalOcupado: false, modal: "", modalError: "",
+          /* El sitio queda a la vista en el recuadro «Dónde» hasta la
+             siguiente marca: es la confirmación de que se registró. */
+          mkLugar: d.lugar || "",
           camFoto: "", camDonde: null, camListo: false, camError: "",
           mkAviso: d.repetida ? d.aviso
             /* El sitio, no la distancia: «a 340 m de la sede» no le dice
                a nadie dónde está. Si el servicio de mapas no contestó, se
                cae a los metros, que es mejor que nada. */
+            /* El sitio, si se supo. Antes caía a los metros cuando el
+               servicio de mapas no contestaba; ya no hay metros que
+               enseñar, así que se calla y basta. */
             : "Marca registrada a las " + d.hora
-              + (d.lugar ? " · " + d.lugar
-                 : (d.distancia != null
-                      ? " · a " + Math.round(d.distancia) + " m de la sede" : "")),
+              + (d.lugar ? " · " + d.lugar : ""),
           mkAvisoTipo: d.repetida ? "aviso" : "bien",
         });
         this.cargarMisMarcas();
@@ -1589,13 +1592,9 @@
                    responsables: "Reporte de responsables",
                    asistencia: "Reporte de asistencia por persona" }[this.state.repModulo]
                  || "Reporte",
-      /* En Asistencia no hay «ficha completa» que incluir: lo que se
-         imprime de una persona es su asistencia, no su expediente. */
-      repHayFichas: this.state.repModulo !== "asistencia",
       repNotaModulo: this.state.repModulo === "asistencia"
         ? "Sale la asistencia del día que tengas puesto en la pantalla."
         : "Lo que salga respeta el buscador que tengas puesto en la pantalla.",
-      repTodos: this.state.repAlcance === "todos",
       repTodosConFicha: this.state.repAlcance === "todos"
                         && this.state.repModulo !== "asistencia",
       repPorElegidos: this.state.repAlcance === "elegidos",
@@ -1607,7 +1606,6 @@
         : "padding:9px 16px; border-radius:2px; font-size:14px; color:#3c4a55; border:1px solid #c9d4de; background:#ffffff;",
       repVerTodos: () => this.setState({ repAlcance: "todos", modalError: "" }),
       repVerElegidos: () => this.setState({ repAlcance: "elegidos", modalError: "" }),
-      repFichas: !!this.state.repFichas,
       repIconoFichas: this.state.repFichas ? "ph-check-square" : "ph-square",
       repTonoFichas: this.state.repFichas ? BLUE_D : "#9aa7b2",
       repAlternarFichas: () => this.setState({ repFichas: !this.state.repFichas }),
@@ -1804,18 +1802,12 @@
           ? "El navegador bloquea la ubicación fuera de una conexión segura"
         : st.mkGps === "no" ? "Permiso de ubicación denegado"
         : "Se pedirá tu ubicación al marcar",
-      mkDistancia: (() => {
-        const d = st.mkDonde;
-        const m = d ? this.metrosHasta(d.lat, d.lon, st.mkSede) : null;
-        return m == null ? "—" : Math.round(m) + " m";
-      })(),
-      /* Sin sede configurada NO hay cerco: la ubicación se guarda con cada
-         marca, pero no se rechaza a nadie por estar lejos. Decirlo evita
-         que alguien crea que el sistema vigila algo que no vigila. */
-      mkSinSede: !st.mkSede,
-      mkSinSedeNota: "No hay una sede configurada, así que nadie es "
-        + "rechazado por estar lejos: la ubicación se guarda junto a la "
-        + "marca como constancia, nada más.",
+      /* Aquí se enseñaba la distancia a la sede en metros. Se retiró el
+         31/08/2026: la ubicación de una marca no tiene que ver con la de
+         la casa. Lo que se enseña es el SITIO, cuando se sabe. */
+      mkLugar: st.mkLugar || (st.mkDonde ? "Registrada" : "—"),
+      mkSinSede: false,
+      mkSinSedeNota: "",
       mkPrecision: st.mkDonde && st.mkDonde.precision
         ? "± " + Math.round(st.mkDonde.precision) + " m" : "—",
       mkCoords: st.mkDonde
@@ -1974,8 +1966,6 @@
         + (this.puede("personal", "edicion")
             ? " · el lápiz edita la ficha"
             : " · solo lectura"),
-      nuevoLegajo: () => this.abrirFicha(null),
-
       /* El botón de alta del módulo cambia según la pestaña: un
          beneficiario no es un colaborador y no comparte tabla ni campos. */
       altaLabel: lt === "benef" ? "Agregar beneficiario" : "Agregar usuario",

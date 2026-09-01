@@ -323,9 +323,6 @@
       mpHoraNota: (st.mpHoraDesde || st.mpHoraHasta)
         ? "Las horas quedan registradas en la solicitud. No cambian el número de días ni el saldo de vacaciones."
         : "Solo si el permiso no ocupa el día entero. Opcional.",
-      mpDocHorario: (st.mpHoraDesde && st.mpHoraHasta)
-        ? (st.mpHoraDesde + " a " + st.mpHoraHasta)
-        : (st.mpHoraDesde ? ("desde las " + st.mpHoraDesde) : "Día completo"),
       mpDocSustento: st.mpArchivo ? st.mpArchivo.name : "Sin documento adjunto",
       mpDocMotivo: st.mpMotivo || "Sin motivo indicado",
       /* El jefe sale de la ficha de quien pide, no se escribe aquí. Si no

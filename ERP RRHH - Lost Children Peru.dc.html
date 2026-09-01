@@ -1944,25 +1944,13 @@
                 <input type="number" value="{{ cfgMeta }}" onChange="{{ onCfgMeta }}" placeholder="48" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none; font-variant-numeric:tabular-nums;" />
                 <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">{{ cfgMetaNota }}</p>
               </div>
-              <div>
-                <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Radio permitido (metros)</div>
-                <input type="number" value="{{ cfgRadio }}" onChange="{{ onCfgRadio }}" placeholder="200" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none; font-variant-numeric:tabular-nums;" />
-                <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">Se anota, no se aplica: hoy nadie es rechazado por marcar lejos.</p>
-              </div>
             </div>
-
-            <div style="margin-top:22px; padding-top:20px; border-top:1px solid #e7e3de;">
-              <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dónde está la sede</div>
-              <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(230px,1fr)); gap:20px; margin-top:4px;">
-                <div>
-                  <input type="text" value="{{ cfgLat }}" onChange="{{ onCfgLat }}" placeholder="Latitud · -11.9391" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
-                </div>
-                <div>
-                  <input type="text" value="{{ cfgLon }}" onChange="{{ onCfgLon }}" placeholder="Longitud · -77.0619" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
-                </div>
-              </div>
-              <p style="margin:8px 0 0; font-size:13px; color:#7d8e9c; text-wrap:pretty;">{{ cfgNotaLugar }}</p>
-            </div>
+            <!-- Aquí estaban «Radio permitido» y «Dónde está la sede».
+                 Servían para medir a qué distancia de la casa marcó cada
+                 persona. Se retiraron el 31/08/2026 por decisión de la
+                 ONG: la ubicación de una marca no tiene que ver con la de
+                 la casa —lo que hay que ver es DÓNDE estaba— y unos campos
+                 que ya no cambian nada solo confunden a quien los llene. -->
           </div>
 
           <!-- Aquí había un bloque «Permisos» para elegir quién cierra
@@ -3078,8 +3066,8 @@
 
                 <div style="display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:14px; margin-top:16px;">
                   <div style="min-width:0;">
-                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Distancia</div>
-                    <div style="font-size:16px; color:#201e1d; margin-top:4px; font-variant-numeric:tabular-nums;">{{ mkDistancia }}</div>
+                    <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Dónde</div>
+                    <div style="font-size:16px; color:#201e1d; margin-top:4px; font-variant-numeric:tabular-nums;">{{ mkLugar }}</div>
                   </div>
                   <div style="min-width:0;">
                     <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Precisión</div>
@@ -5213,9 +5201,9 @@ class Component extends DCLogic {
     busLegajo: "", busBenef: "", busBandeja: "",
     /* El diálogo de reporte: qué módulo, qué alcance y a quiénes. */
     mkMarcas: [], mkOcupado: false, mkAviso: "", mkAvisoTipo: "bien",
-    mkPaso: "", mkRadio: null, camBuscandoUbi: false,
+    mkPaso: "", camBuscandoUbi: false,
     mkTic: 0, mkGps: "preguntar", mkDonde: null, mkSemana: [], mkMeta: 40,
-    mkSede: null, mkRostro: false, mkConsintio: false,
+    mkRostro: false, mkConsintio: false,
     camPensando: false,
     /* El diálogo de la cámara sirve para dos cosas: marcar y registrar el
        rostro de referencia. camModo dice cuál de las dos. */
@@ -5293,7 +5281,13 @@ class Component extends DCLogic {
      en vez de dibujar un NaN. */
   static anioDe(fecha) {
     const t = String(fecha == null ? "" : fecha).trim();
-    let m = t.match(/^(\d{4})/);
+    /* OJO: aquí se coló un carácter de control (0x08) dentro de la
+       expresión regular en alguna edición. El patrón dejó de casar
+       nunca, así que anioDe() devolvía vacío para TODAS las fechas y
+       el gráfico «Altas por año» anunciaba que ninguna ficha tenía
+       fecha de ingreso, teniéndolas todas. No se veía leyendo el
+       código: el carácter es invisible. Corregido el 31/08/2026. */
+    let m = t.match(/^(\d{4})/);
     if (m) return m[1];
     m = t.match(/(\d{4})$/);
     return m ? m[1] : "";
@@ -5315,9 +5309,7 @@ class Component extends DCLogic {
                            condiciona nada. El radio se conserva porque lo
                            usa la lista de asistencia para señalar quién
                            marcó fuera. */
-                        mkRadio: d.radio || null,
                         mkSemana: d.semana || [], mkMeta: d.meta || 40,
-                        mkSede: d.sede || null,
                         mkRostro: !!d.rostro, mkConsintio: !!d.consintio });
         this.sincronizarReloj(d.ahora);
         this.revisarGps();
@@ -5380,15 +5372,10 @@ class Component extends DCLogic {
 
   /* Metros entre dos coordenadas. La misma cuenta que hace el servidor
      antes de aceptar la marca; aquí solo sirve para enseñarla antes. */
-  metrosHasta(lat, lon, sede) {
-    if (!sede || lat == null) return null;
-    const r = 6371000, g = Math.PI / 180;
-    const f1 = lat * g, f2 = sede.lat * g;
-    const df = (sede.lat - lat) * g, dl = (sede.lon - lon) * g;
-    const a = Math.sin(df / 2) ** 2
-            + Math.cos(f1) * Math.cos(f2) * Math.sin(dl / 2) ** 2;
-    return 2 * r * Math.asin(Math.min(1, Math.sqrt(a)));
-  }
+  /* Aquí estaba metrosHasta(), que medía la distancia a la sede.
+     Se fue con el resto del cerco el 31/08/2026: no se mide nada.
+     Lo que se guarda y se lee es DÓNDE, no a cuánto. */
+
 
   /* Marcar son dos pasos: primero la ubicación —que puede tardar y puede
      fallar, y no tiene sentido encender la cámara si va a fallar—, y luego
@@ -5577,15 +5564,19 @@ class Component extends DCLogic {
         this.apagarCamara();
         this.setState({
           modalOcupado: false, modal: "", modalError: "",
+          /* El sitio queda a la vista en el recuadro «Dónde» hasta la
+             siguiente marca: es la confirmación de que se registró. */
+          mkLugar: d.lugar || "",
           camFoto: "", camDonde: null, camListo: false, camError: "",
           mkAviso: d.repetida ? d.aviso
             /* El sitio, no la distancia: «a 340 m de la sede» no le dice
                a nadie dónde está. Si el servicio de mapas no contestó, se
                cae a los metros, que es mejor que nada. */
+            /* El sitio, si se supo. Antes caía a los metros cuando el
+               servicio de mapas no contestaba; ya no hay metros que
+               enseñar, así que se calla y basta. */
             : "Marca registrada a las " + d.hora
-              + (d.lugar ? " · " + d.lugar
-                 : (d.distancia != null
-                      ? " · a " + Math.round(d.distancia) + " m de la sede" : "")),
+              + (d.lugar ? " · " + d.lugar : ""),
           mkAvisoTipo: d.repetida ? "aviso" : "bien",
         });
         this.cargarMisMarcas();
@@ -7253,9 +7244,6 @@ class Component extends DCLogic {
              mano. Se guardan como texto porque así viajan y así vuelven:
              convertirlos aquí solo añadiría un sitio donde equivocarse. */
           cfgMeta: pr.meta_semanal == null ? "" : String(pr.meta_semanal),
-          cfgLat: pr.lat == null ? "" : String(pr.lat),
-          cfgLon: pr.lon == null ? "" : String(pr.lon),
-          cfgRadio: pr.radio_marca == null ? "" : String(pr.radio_marca),
           /* Si ya hay fecha, entra bloqueada: no es un campo que se toque
              a diario y un cambio accidental altera el Dashboard. */
           cfgEditandoFecha: !pr.fecha_fundacion
@@ -7273,10 +7261,7 @@ class Component extends DCLogic {
         organizacion: this.state.cfgOrg || "",
         ciudad: this.state.cfgCiudad || "",
         fecha_fundacion: this.state.cfgFundacion || "",
-        meta_semanal: this.state.cfgMeta || "",
-        lat: this.state.cfgLat || "",
-        lon: this.state.cfgLon || "",
-        radio_marca: this.state.cfgRadio || ""
+        meta_semanal: this.state.cfgMeta || ""
       })
     })
       .then((d) => {
@@ -7286,9 +7271,6 @@ class Component extends DCLogic {
           cfgGuardando: false, parametros: pr,
           cfgEditandoFecha: !pr.fecha_fundacion,
           cfgMeta: pr.meta_semanal == null ? "" : String(pr.meta_semanal),
-          cfgLat: pr.lat == null ? "" : String(pr.lat),
-          cfgLon: pr.lon == null ? "" : String(pr.lon),
-          cfgRadio: pr.radio_marca == null ? "" : String(pr.radio_marca),
           cfgOk: "Guardado."
         });
       })
@@ -7366,10 +7348,7 @@ class Component extends DCLogic {
   cargarPersonas() {
     this.api("/api/asistencia?fecha=" + encodeURIComponent(this.state.fecha || this.fechaHoy()))
       .then((d) => { if (this._vivo) this.setState({
-          personasReales: d.filas || [],
-          /* El radio no limita nada: es con lo que la lista señala quién
-             marcó fuera, para que RRHH sepa a quién preguntar. */
-          asisRadio: d.radio == null ? null : Number(d.radio) }); })
+          personasReales: d.filas || [] }); })
       .catch(() => {});
   }
 
@@ -7945,24 +7924,23 @@ class Component extends DCLogic {
      La distancia no se tira: sigue sirviendo para pintar en ámbar a quien
      marcó fuera del radio, cuando hay sede configurada. Pero lo que se LEE
      es el lugar. */
-  static ubicacionFila(f, radio) {
+  /* DÓNDE marcó. El nombre del sitio, y nada más.
+
+     Aquí hubo un rato una distancia —«a 340 m de la sede»— y un color
+     ámbar para quien pasara del radio. Se retiró el 31/08/2026 por
+     decisión de la ONG: lo que hay que ver es dónde estaba la persona, no
+     si estaba cerca o lejos de la casa. Medir la distancia convertía la
+     columna en un juicio, y pintaba de sospechoso a quien fichó desde
+     donde le tocaba estar ese día. */
+  static ubicacionFila(f) {
     if (!(f.total > 0)) return { texto: "", color: "#7d8e9c" };
-    const m = f.distancia == null ? null : Number(f.distancia);
-    const fuera = m != null && radio != null && m > radio;
-    const color = fuera ? "#8a5c05" : "#7d8e9c";
-
-    if (f.lugar) return { texto: f.lugar, color: color };
-
-    /* Sin nombre: o no dio ubicación, o el servicio de mapas no contestó
-       cuando se guardó. Se distingue, porque no es lo mismo. */
+    if (f.lugar) return { texto: f.lugar, color: "#5b7185" };
+    /* Sin nombre hay dos casos distintos y conviene no confundirlos: que
+       no diera ubicación, o que la diera y el servicio de mapas no
+       contestara cuando se guardó. */
     const dioAlguna = (f.sin_ubicacion || 0) < (f.total || 0);
-    if (!dioAlguna) return { texto: "sin ubicación", color: "#7d8e9c" };
-    if (m != null) {
-      const dicho = m >= 1000 ? (m / 1000).toFixed(1) + " km"
-                              : Math.round(m) + " m";
-      return { texto: "a " + dicho + " de la sede", color: color };
-    }
-    return { texto: "con ubicación, sin nombre", color: "#7d8e9c" };
+    return { texto: dioAlguna ? "con ubicación, sin nombre" : "sin ubicación",
+             color: "#9aa7b2" };
   }
 
   /* De dónde vino la marca de ese día, y desde dónde si fue del celular.
@@ -7971,7 +7949,7 @@ class Component extends DCLogic {
      —Rostro o Huella—, que describe el enrolamiento y no el fichaje. Lo
      que hace falta saber al mirar un día es si la persona estuvo delante
      del equipo o fichó desde el teléfono, y en ese caso desde dónde. */
-  static origenFila(f, radio) {
+  static origenFila(f) {
     if (!(f.total > 0)) return { texto: "—", icono: "ph-minus", color: "#9aa7b2" };
     const cs = String(f.canales || "").split(",").filter(Boolean);
     const web = cs.indexOf("web") >= 0;
@@ -7982,7 +7960,7 @@ class Component extends DCLogic {
          que echar en falta. Estuvo en la puerta, y con eso basta. */
       return { texto: "Terminal", icono: "ph-identification-card", color: "#0e3d69" };
     }
-    const u = Component.ubicacionFila(f, radio);
+    const u = Component.ubicacionFila(f);
     const donde = u.texto ? (" · " + u.texto) : "";
     if (web && term) {
       return { texto: "Terminal y celular" + donde,
@@ -7991,7 +7969,7 @@ class Component extends DCLogic {
     return { texto: "Celular" + donde, icono: "ph-device-mobile", color: u.color };
   }
 
-  static adornoFila(f, radio) {
+  static adornoFila(f) {
     const PALETA = [
       [BLUE_T, BLUE_D], [GREEN_T, GREEN_D], [GOLD_T, GOLD_D],
       [RED_T, RED_D], ["#efe7f5", "#5b3a7a"], ["#e6f0f2", "#2b5f68"],
@@ -8007,9 +7985,9 @@ class Component extends DCLogic {
          mejor; ahora tiene el suyo, en la columna «Registro». */
       subtitulo: f.rolLabel || "",
       subColor: "#7d8e9c",
-      origen: Component.origenFila(f, radio).texto,
-      origenIcono: Component.origenFila(f, radio).icono,
-      origenColor: Component.origenFila(f, radio).color,
+      origen: Component.origenFila(f).texto,
+      origenIcono: Component.origenFila(f).icono,
+      origenColor: Component.origenFila(f).color,
       /* Fondo de aviso solo para quien NO PUEDE marcar. A quien puede y
          todavía no ha marcado no se le pinta nada: puede que aún no haya
          llegado, y teñirle la fila lo señalaría sin motivo. */
@@ -9578,13 +9556,9 @@ class Component extends DCLogic {
                    responsables: "Reporte de responsables",
                    asistencia: "Reporte de asistencia por persona" }[this.state.repModulo]
                  || "Reporte",
-      /* En Asistencia no hay «ficha completa» que incluir: lo que se
-         imprime de una persona es su asistencia, no su expediente. */
-      repHayFichas: this.state.repModulo !== "asistencia",
       repNotaModulo: this.state.repModulo === "asistencia"
         ? "Sale la asistencia del día que tengas puesto en la pantalla."
         : "Lo que salga respeta el buscador que tengas puesto en la pantalla.",
-      repTodos: this.state.repAlcance === "todos",
       repTodosConFicha: this.state.repAlcance === "todos"
                         && this.state.repModulo !== "asistencia",
       repPorElegidos: this.state.repAlcance === "elegidos",
@@ -9596,7 +9570,6 @@ class Component extends DCLogic {
         : "padding:9px 16px; border-radius:2px; font-size:14px; color:#3c4a55; border:1px solid #c9d4de; background:#ffffff;",
       repVerTodos: () => this.setState({ repAlcance: "todos", modalError: "" }),
       repVerElegidos: () => this.setState({ repAlcance: "elegidos", modalError: "" }),
-      repFichas: !!this.state.repFichas,
       repIconoFichas: this.state.repFichas ? "ph-check-square" : "ph-square",
       repTonoFichas: this.state.repFichas ? BLUE_D : "#9aa7b2",
       repAlternarFichas: () => this.setState({ repFichas: !this.state.repFichas }),
@@ -9793,18 +9766,12 @@ class Component extends DCLogic {
           ? "El navegador bloquea la ubicación fuera de una conexión segura"
         : st.mkGps === "no" ? "Permiso de ubicación denegado"
         : "Se pedirá tu ubicación al marcar",
-      mkDistancia: (() => {
-        const d = st.mkDonde;
-        const m = d ? this.metrosHasta(d.lat, d.lon, st.mkSede) : null;
-        return m == null ? "—" : Math.round(m) + " m";
-      })(),
-      /* Sin sede configurada NO hay cerco: la ubicación se guarda con cada
-         marca, pero no se rechaza a nadie por estar lejos. Decirlo evita
-         que alguien crea que el sistema vigila algo que no vigila. */
-      mkSinSede: !st.mkSede,
-      mkSinSedeNota: "No hay una sede configurada, así que nadie es "
-        + "rechazado por estar lejos: la ubicación se guarda junto a la "
-        + "marca como constancia, nada más.",
+      /* Aquí se enseñaba la distancia a la sede en metros. Se retiró el
+         31/08/2026: la ubicación de una marca no tiene que ver con la de
+         la casa. Lo que se enseña es el SITIO, cuando se sabe. */
+      mkLugar: st.mkLugar || (st.mkDonde ? "Registrada" : "—"),
+      mkSinSede: false,
+      mkSinSedeNota: "",
       mkPrecision: st.mkDonde && st.mkDonde.precision
         ? "± " + Math.round(st.mkDonde.precision) + " m" : "—",
       mkCoords: st.mkDonde
@@ -9963,8 +9930,6 @@ class Component extends DCLogic {
         + (this.puede("personal", "edicion")
             ? " · el lápiz edita la ficha"
             : " · solo lectura"),
-      nuevoLegajo: () => this.abrirFicha(null),
-
       /* El botón de alta del módulo cambia según la pestaña: un
          beneficiario no es un colaborador y no comparte tabla ni campos. */
       altaLabel: lt === "benef" ? "Agregar beneficiario" : "Agregar usuario",
@@ -10526,9 +10491,6 @@ class Component extends DCLogic {
       mpHoraNota: (st.mpHoraDesde || st.mpHoraHasta)
         ? "Las horas quedan registradas en la solicitud. No cambian el número de días ni el saldo de vacaciones."
         : "Solo si el permiso no ocupa el día entero. Opcional.",
-      mpDocHorario: (st.mpHoraDesde && st.mpHoraHasta)
-        ? (st.mpHoraDesde + " a " + st.mpHoraHasta)
-        : (st.mpHoraDesde ? ("desde las " + st.mpHoraDesde) : "Día completo"),
       mpDocSustento: st.mpArchivo ? st.mpArchivo.name : "Sin documento adjunto",
       mpDocMotivo: st.mpMotivo || "Sin motivo indicado",
       /* El jefe sale de la ficha de quien pide, no se escribe aquí. Si no
@@ -11395,20 +11357,7 @@ class Component extends DCLogic {
       onCfgFundacion: (e) => this.setState({ cfgFundacion: e.target.value, cfgOk: "", cfgError: "" }),
       /* ── Configuración ────────────────────────────────────────────── */
       cfgMeta: this.state.cfgMeta == null ? "" : this.state.cfgMeta,
-      cfgLat: this.state.cfgLat == null ? "" : this.state.cfgLat,
-      cfgLon: this.state.cfgLon == null ? "" : this.state.cfgLon,
-      cfgRadio: this.state.cfgRadio == null ? "" : this.state.cfgRadio,
       onCfgMeta: (e) => this.setState({ cfgMeta: e.target.value }),
-      onCfgLat: (e) => this.setState({ cfgLat: e.target.value }),
-      onCfgLon: (e) => this.setState({ cfgLon: e.target.value }),
-      onCfgRadio: (e) => this.setState({ cfgRadio: e.target.value }),
-      /* Sin coordenadas puestas el sistema NO rechaza a nadie por estar
-         lejos: guarda dónde marcó y ya. Decirlo aquí evita creer que hay
-         un control que no existe. */
-      cfgHayLugar: !!(this.state.cfgLat && this.state.cfgLon),
-      cfgNotaLugar: (this.state.cfgLat && this.state.cfgLon)
-        ? "Se guarda a qué distancia de este punto marcó cada persona. Hoy no se rechaza a nadie por estar lejos; el radio queda anotado para cuando se decida usarlo."
-        : "Sin coordenadas no se calcula ninguna distancia: las marcas se guardan igual, solo que sin decir desde dónde.",
       cfgMetaNota: this.state.cfgMeta
         ? ("Cada persona verá su semana contra " + this.state.cfgMeta + " horas.")
         : "Sin meta puesta, la barra de la semana no compara contra nada.",
@@ -11682,7 +11631,6 @@ class Component extends DCLogic {
             pct: Math.round(cuenta[nombre] / gente.length * 100) + "%",
           }));
       })(),
-      hayAreas: (this.state.personal || []).length > 0,
       areasNota: (() => {
         const n = (this.state.personal || []).length;
         return n === 0 ? "Todavía no hay fichas de personal registradas"
@@ -11799,17 +11747,6 @@ class Component extends DCLogic {
       /* Las dos banderas son opuestas a propósito: este runtime no tiene
          sc-else, así que una condición y su contraria se declaran aparte. */
       sinAusentismo: true,
-      fichaTabs: [
-        {key:"colab", label:"Colaboradores", icon:"ph-users-three",
-         count:String((this.state.personal || []).length)},
-        {key:"ninos", label:"Beneficiarios", icon:"ph-baby",
-         count:String((this.state.beneficiarios || []).length)}
-      ].map(t => ({
-        ...t,
-        style: "display:flex; align-items:center; gap:8px; padding:8px 15px; border-radius:2px; font-size:14.5px;"
-          + (fs === t.key ? "background:#ffffff; font-weight:600; color:" + BLUE_D + "; box-shadow:inset 0 -3px 0 " + BLUE + ";" : "color:#5b7185;"),
-        go: () => this.setState({ fichaScope: t.key })
-      })),
       fichaColab: lt === "org",
       fichaNinos: lt === "benef",
       sinBenefReales: (this.state.beneficiarios || []).length === 0,
@@ -12021,12 +11958,6 @@ class Component extends DCLogic {
       sinBenIncidencias: (this.state.benIncidencias || []).length === 0,
       benEsReal: !!this.state.benefRealSel,
 
-      benProximamente: () => this.setState({ benAviso:
-        "Todavía no está construido. Editar el expediente necesita que primero "
-        + "acordemos qué campos guarda la tabla de beneficiarios; registrar "
-        + "sesiones e incidencias necesita sus propias tablas. Mientras tanto, "
-        + "el alta de beneficiarios sí funciona desde el botón «Agregar "
-        + "beneficiario» de la pestaña Beneficiarios." }),
       benAviso: this.state.benAviso || "",
       benAvisoHay: !!this.state.benAviso,
       backToBenef: () => this.setState({ view: "legajo", legajoTab: "benef", benAviso: "", benefRealSel: null }),
@@ -12140,8 +12071,6 @@ class Component extends DCLogic {
         modal: "experiencia", modalError: "", trEditId: null,
         trEmpresa: "", trCargo: "", trDesde2: "", trHasta2: "", trFunciones: ""
       }),
-      /* Corregir abre el MISMO diálogo con los datos dentro. */
-      trEditando: !!st.trEditId,
       modalFormacion: st.modal === "formacion",
       modalExperiencia: st.modal === "experiencia",
       trNivel: st.trNivel,
@@ -12202,7 +12131,6 @@ class Component extends DCLogic {
       condOpen: !!this.state.condOpen,
       condCerrar: () => this.setState({ condOpen: false, condErr: "" }),
       condGuardar: () => this.guardarCondicion(),
-      condGuardando: !!this.state.condGuardando,
       condGuardarLabel: this.state.condGuardando ? "Guardando…" : "Registrar",
       condErr: this.state.condErr || "",
       condHayErr: !!this.state.condErr,
@@ -12308,33 +12236,13 @@ class Component extends DCLogic {
                           : "transparent; color:#5b7185;"),
         go: () => this.setState({ attTab: t.key }, () => this.cargarRango())
       })),
-      addOpen: !!this.state.addOpen,
       /* "Agregar registro" describía el formulario viejo, donde había que
          elegir persona y método. Ya no se agrega nada a mano: se abre la
-         lista de quienes faltan por enrolar. */
-      addLabel: this.state.addOpen ? "Cerrar lista" : "Enrolar personas",
-      toggleAdd: () => this.setState({ addOpen: !this.state.addOpen, attTab: "diaria" },
-        () => this.cargarRango()),
-      addMetodos: [
-        {key:"facial", label:"Rostro", icon:"ph-scan-smiley"},
-        {key:"huella", label:"Huella", icon:"ph-fingerprint"},
-        {key:"ambos", label:"Rostro y huella", icon:"ph-shield-check"}
-      ].map(m => {
-        const disp = this.state.metodosDisponibles;
-        const permitido = !disp || disp.indexOf(m.key) >= 0;
-        const activo = (this.state.addMetodo || "facial") === m.key;
-        return {
-          ...m,
-          label: permitido ? m.label : m.label + " · no disponible",
-          style: "display:flex; align-items:center; gap:8px; padding:8px 14px; border-radius:2px; font-size:14px; border:1px solid "
-            + (!permitido
-              ? "#e2ded8; color:#a9b2ba; background:#f0eeeb; cursor:not-allowed; text-decoration:line-through;"
-              : activo
-                ? BLUE + "; background:#ffffff; color:" + BLUE_D + "; font-weight:600;"
-                : "#c9d4de; color:#3c4a55;"),
-          go: permitido ? () => this.setState({ addMetodo: m.key }) : () => {}
-        };
-      }),
+         captura desde la propia fila de la persona.
+
+         OJO: al retirar los valores muertos me llevé el cierre de este
+         comentario, y desde aquí quedaba comentado el resto de renderVals.
+         Corregido el 31/08/2026. */
       addNota: (() => {
         const disp = this.state.metodosDisponibles;
         if (disp && disp.indexOf("huella") < 0)
@@ -12347,13 +12255,6 @@ class Component extends DCLogic {
             : "Se capturan ambos métodos: la persona podrá marcar en cualquier terminal.";
       })(),
 
-      /* ── Captura biométrica real ─────────────────────────────────── */
-      candidatos: (this.state.candidatos || []).map((c) => ({
-        valor: c.tipo + ":" + c.id,
-        etiqueta: c.nombre + (c.detalle ? " — " + c.detalle : "")
-          + (c.tipo === "beneficiario" ? " (beneficiario)" : c.vinculo === "voluntario" ? " (voluntario)" : "")
-      })),
-      candidatoSel: this.state.candidatoSel || "",
       onCandidato: (e) => this.setState({ candidatoSel: e.target.value, capFase: "", capMsg: "" }),
       hayCandidatos: (this.state.candidatos || []).length > 0,
       sinCandidatos: (this.state.candidatos || []).length === 0,
@@ -12415,12 +12316,6 @@ class Component extends DCLogic {
         return String(Math.floor(s / 60)) + ":" + String(s % 60).padStart(2, "0");
       })(),
       capStaffNumber: this.state.capSn ? String(this.state.capSn) : "",
-
-      capBotonLabel: this.state.capFase === "enviando" ? "Enviando…"
-        : this.state.capFase === "esperando" ? "Captura en curso…"
-        : "Iniciar captura biométrica",
-      capBotonStyle: "font-size:13.5px; padding:8px 16px; border-radius:2px; color:#f4f3f1; background:"
-        + (this.state.capFase === "enviando" || this.state.capFase === "esperando" ? "#9aa7b2" : "#2f8f5b") + ";",
 
       capAviso: !this.state.backendVivo
         ? "No hay conexión con el servidor local. Abre la interfaz desde http://127.0.0.1:7801/ (ejecuta iniciar.bat), no abriendo el archivo directamente."
@@ -12800,8 +12695,6 @@ class Component extends DCLogic {
       syncTint: this.state.syncEstado === "error" ? RED_T : GREEN_T,
       syncMsgIcono: this.state.syncEstado === "error" ? "ph-warning-circle" : "ph-check-circle",
 
-      iniciarCaptura: () => this.iniciarCaptura(),
-
       /* ── Candidatos a enrolar ─────────────────────────────────────────
          Salen de /api/candidatos, que devuelve a quien tenga ficha activa y
          todavía no tenga identidad biométrica. Las tres entidades conviven
@@ -13106,12 +12999,12 @@ class Component extends DCLogic {
       })),
       /* En la vista de beneficiarios sale quien esté registrado de verdad.
          Si no hay nadie, la rejilla queda vacía: antes se rellenaba con
-         nueve marcadores de la maqueta. */
-      reporteDia: "Reporte del día",
-      reporteMes: "Reporte mensual",
+         nueve marcadores de la maqueta.
 
-
-
+         OJO: al retirar los valores muertos me llevé por delante el cierre
+         de este comentario, y desde aquí quedó comentado medio renderVals.
+         La cola de enrolamiento aparecía vacía sin que nada dijera por
+         qué. Corregido el 31/08/2026. */
       /* ── Vista semanal con datos reales ───────────────────────────── */
       semanaDias: this.diasDelRango().map((f) => {
         const [a, m, d] = f.split("-").map(Number);
@@ -13231,7 +13124,7 @@ class Component extends DCLogic {
         return this.realesVisibles(mtd, sc)
           .concat(mtd === "todos" ? this.filasSinEnrolar().filter(enAmbito) : [])
           .filter(coincide)
-          .map((f) => Object.assign({}, f, Component.adornoFila(f, this.state.asisRadio)));
+          .map((f) => Object.assign({}, f, Component.adornoFila(f)));
       })(),
       diaHay: (() => {
         const enAmbito = (f) => sc === "todos" || f.ambito === sc;
@@ -13421,56 +13314,6 @@ class Component extends DCLogic {
                        : n + " personas sin condiciones laborales registradas";
       })(),
 
-      docFilters: [
-        {label:"Todos · 7", color:BLUE_D, tint:BLUE_T},
-        {label:"Vigentes · 2", color:GREEN_D, tint:GREEN_T},
-        {label:"Por vencer · 3", color:GOLD_D, tint:GOLD_T},
-        {label:"Vencidos · 2", color:RED_D, tint:RED_T}
-      ],
-      documentos: [
-        {id:6, doc:"Certificado de salud ocupacional", vence:"18/08/2026", estado:"Por vencer", color:GOLD_D, tint:GOLD_T},
-        {id:12, doc:"Certificado de antecedentes penales", vence:"27/08/2026", estado:"Por vencer", color:GOLD_D, tint:GOLD_T},
-        {id:9, doc:"Certificado de salud ocupacional", vence:"30/08/2026", estado:"Por vencer", color:GOLD_D, tint:GOLD_T},
-        {id:3, doc:"Certificado de salud ocupacional", vence:"02/07/2026", estado:"Vencido", color:RED_D, tint:RED_T},
-        {id:15, doc:"Póliza de seguro complementario", vence:"12/06/2026", estado:"Vencido", color:RED_D, tint:RED_T},
-        {id:13, doc:"Política de salvaguarda infantil", vence:"14/03/2027", estado:"Vigente", color:GREEN_D, tint:GREEN_T},
-        {id:20, doc:"Contrato de trabajo firmado", vence:"04/11/2027", estado:"Vigente", color:GREEN_D, tint:GREEN_T}
-      ].map(d => ({ ...d, nombre: byId(d.id).n, open: () => this.go("ficha", d.id) })),
-
-      evalKpis: [
-        {label:"Ciclo 2026-I", value:"7", note:"Evaluaciones abiertas de 20", color:BLUE, tint:BLUE_T, dark:BLUE_D},
-        {label:"Completadas", value:"13", note:"Con acta firmada por ambas partes", color:GREEN, tint:GREEN_T, dark:GREEN_D},
-        {label:"Promedio general", value:"4.1", note:"Sobre una escala de 5 puntos", color:GOLD, tint:GOLD_T, dark:GOLD_D},
-        {label:"Vencen este mes", value:"2", note:"Sin iniciar al 11 de agosto", color:RED, tint:RED_T, dark:RED_D}
-      ],
-      evaluaciones: [
-        {id:12, evaluador:"Marco Ancco Puma", vence:"22/08/2026", estado:"Sin iniciar", color:RED_D, tint:RED_T, resultado:"—"},
-        {id:13, evaluador:"Marco Ancco Puma", vence:"22/08/2026", estado:"Sin iniciar", color:RED_D, tint:RED_T, resultado:"—"},
-        {id:16, evaluador:"Silvia Paredes León", vence:"29/08/2026", estado:"En curso", color:GOLD_D, tint:GOLD_T, resultado:"—"},
-        {id:17, evaluador:"Silvia Paredes León", vence:"29/08/2026", estado:"En curso", color:GOLD_D, tint:GOLD_T, resultado:"—"},
-        {id:4, evaluador:"Luis Ferreyra Soto", vence:"05/09/2026", estado:"Sin iniciar", color:RED_D, tint:RED_T, resultado:"—"},
-        {id:11, evaluador:"Ps. Elena Huamán Ccama", vence:"31/07/2026", estado:"Completada", color:GREEN_D, tint:GREEN_T, resultado:"4.6"},
-        {id:15, evaluador:"Ps. Elena Huamán Ccama", vence:"31/07/2026", estado:"Completada", color:GREEN_D, tint:GREEN_T, resultado:"4.4"},
-        {id:8, evaluador:"Mariela Quispe Ríos", vence:"31/07/2026", estado:"Completada", color:GREEN_D, tint:GREEN_T, resultado:"3.9"}
-      ].map(e => ({ ...e, nombre: byId(e.id).n, open: () => this.go("ficha", e.id) })),
-
-      capacitaciones: [
-        {fecha:"Marzo — junio", titulo:"Salvaguarda infantil, nivel 2", detalle:"Obligatoria para todo el personal con contacto directo con beneficiarios.", pct:"85%", avance:"17/20", color:GREEN, tint:GREEN_T, dark:GREEN_D},
-        {fecha:"Agosto", titulo:"Primeros auxilios y evacuación", detalle:"Dictada por Bomberos Voluntarios en la casa de Lima.", pct:"45%", avance:"9/20", color:GOLD, tint:GOLD_T, dark:GOLD_D},
-        {fecha:"Setiembre — noviembre", titulo:"Acompañamiento pastoral y escucha", detalle:"Para tutores, docentes y el equipo de bienestar.", pct:"10%", avance:"2/20", color:RED, tint:RED_T, dark:RED_D}
-      ],
-      sesiones: [
-        {fecha:"19/08", titulo:"Primeros auxilios · grupo A", lugar:"Casa Lima, sala común", inscritos:"12 de 20", color:GOLD_D},
-        {fecha:"26/08", titulo:"Primeros auxilios · grupo B", lugar:"Casa Lima, sala común", inscritos:"8 de 20", color:GOLD_D},
-        {fecha:"09/09", titulo:"Escucha activa con niños", lugar:"Sede Comas", inscritos:"6 de 9", color:RED_D},
-        {fecha:"23/09", titulo:"Protocolo de reporte de incidentes", lugar:"Virtual", inscritos:"20 de 20", color:GREEN_D}
-      ],
-
-      volKpis: [
-        {label:"Voluntarios activos", value:"6", note:"Fuera de planilla, con convenio firmado", color:BLUE, tint:BLUE_T, dark:BLUE_D},
-        {label:"Horas del mes", value:"148", note:"Registradas por el coordinador", color:GREEN, tint:GREEN_T, dark:GREEN_D},
-        {label:"Convenios por renovar", value:"2", note:"Vencen en setiembre", color:GOLD, tint:GOLD_T, dark:GOLD_D}
-      ],
       /* Aquí vivían seis voluntarios inventados —nombres, horas y
          convenios— que no salían de la base y que ninguna pantalla
          llegaba a pintar. Se van con la pantalla de Reportes de
