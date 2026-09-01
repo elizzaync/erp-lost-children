@@ -52,9 +52,16 @@ Con esas tres cosas, el resto ya está preparado en el repositorio.
 - [ ] **Rotar la contraseña de yunatt** y la llave de la cuenta de servicio
       de Google: han estado en archivos locales.
 - [ ] **Cerrar las sesiones abiertas** (una orden, la ejecuto yo).
-- [ ] Borrar las 8 personas «Zzz Prueba» y las fichas sueltas *luisao*,
-      *chr*, *LUIS* — **decidido el 27/08: todavía no**, siguen sirviendo
-      para ver listas y gráficos con datos.
+- [x] Borrar las 8 personas «Zzz Prueba» y las fichas sueltas *luisao*,
+      *chr*, *LUIS* — **hecho el 31/08/2026**. En su lugar hay un juego de
+      fichas de ejemplo completas (`backend/sembrar_ejemplo.py`), con
+      documentos en el bloque 90.000.000–90.999.999, que RENIEC no emite:
+      ninguna puede coincidir con el DNI de una persona real. Se retiran
+      con `py backend\sembrar_ejemplo.py --borrar`.
+- [ ] **Retirar esas fichas de ejemplo antes de que el equipo empiece a
+      registrar de verdad.** Sirven para enseñar el sistema, no para
+      convivir con datos reales: mezclarlas es cómo un dato inventado
+      acaba en un informe.
 - [ ] Subir la primera copia de seguridad de `data/` fuera del servidor.
 
 ## 5. Lo que NO cambia con el despliegue

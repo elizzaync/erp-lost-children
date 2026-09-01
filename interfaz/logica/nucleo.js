@@ -60,7 +60,7 @@
     capFase: "", capMsg: "", capSn: null, candidatos: [], candidatoSel: "",
     /* Quiénes están enrolados en el terminal. Es distinto de las marcas
        del día: alguien enrolado que hoy no vino sigue estando enrolado. */
-    identidades: [], rostrosWeb: [], terminal: null,
+    identidades: [], terminal: null,
     /* Qué fila del expediente se está corrigiendo. Vacío = se crea una
        nueva. Vive aquí y no en cada diálogo porque los seis comparten
        el mismo camino de guardado. */
@@ -94,7 +94,7 @@
     busLegajo: "", busBenef: "", busBandeja: "",
     /* El diálogo de reporte: qué módulo, qué alcance y a quiénes. */
     mkMarcas: [], mkOcupado: false, mkAviso: "", mkAvisoTipo: "bien",
-    mkPaso: "", mkExigeUbicacion: false, mkRadio: null,
+    mkPaso: "", mkRadio: null, camBuscandoUbi: false,
     mkTic: 0, mkGps: "preguntar", mkDonde: null, mkSemana: [], mkMeta: 40,
     mkSede: null, mkRostro: false, mkConsintio: false,
     camPensando: false,
@@ -141,8 +141,16 @@
     /* Quién tiene rostro cambia sin que RRHH toque nada: lo registra cada
        persona desde su propio celular. Se relee al entrar, no al arrancar,
        o la lista enseñaría la foto de esta mañana. */
-    if (view === "biometria") { this.cargarRostrosWeb();
-                                this.cargarEstadoTerminal(); }
+    if (view === "biometria") { this.cargarEstadoTerminal();
+                                /* Y se le pregunta al equipo por los que se
+                                   quedaron a medias: sin esto, una ficha
+                                   enrolada en el Timmy podía quedarse en
+                                   «esperando» para siempre. */
+                                this.revisarEnrolamientos(); }
+    /* Las marcas del terminal no llegan solas. Antes había que acordarse de
+       pulsar «Sincronizar», y quien acababa de fichar se veía ausente y no
+       entendía por qué. Entrar a la pantalla ya es pedirlo. */
+    if (view === "asistencia") this.sincronizarMarcas();
   }
 
   /* ══════════════════════════════════════════════════════════════════════
@@ -186,7 +194,10 @@
       .then((d) => {
         if (!this._vivo) return;
         this.setState({ mkMarcas: d.marcas || [],
-                        mkExigeUbicacion: !!d.exigeUbicacion,
+                        /* mkExigeUbicacion ya no existe: la ubicación no
+                           condiciona nada. El radio se conserva porque lo
+                           usa la lista de asistencia para señalar quién
+                           marcó fuera. */
                         mkRadio: d.radio || null,
                         mkSemana: d.semana || [], mkMeta: d.meta || 40,
                         mkSede: d.sede || null,
@@ -269,42 +280,51 @@
   async marcarAhora() {
     if (this.state.mkOcupado) return;
     if ((this.state.mkMarcas || []).length >= 2) return;   // ya no queda qué marcar
-    this.setState({ mkOcupado: true, mkAviso: "", mkPaso: "Buscando tu ubicación..." });
+    /* Sin paso intermedio: la cámara se abre en el acto. Decía «Buscando
+       tu ubicación…» porque antes se esperaba al GPS; ahora no se espera,
+       así que ese cartel solo sería un parpadeo. */
+    this.setState({ mkOcupado: true, mkAviso: "" });
 
-    let donde = null;
-    if (this.state.mkExigeUbicacion) {
-      try {
-        donde = await this.ubicacionActual();
-      } catch (e) {
-        this.setState({ mkOcupado: false, mkPaso: "",
-                        mkAviso: String(e.message || e), mkAvisoTipo: "mal" });
-        return;
-      }
-    }
+    /* La ubicación se pide SIEMPRE, y no se espera por ella.
 
-    /* Si ya se sabe que está lejos, no se le hace tomar la foto para
-       decírselo después. El servidor lo vuelve a comprobar igual: esto
-       ahorra el paseo, no sustituye la decisión. */
-    const metros = donde
-      ? this.metrosHasta(donde.lat, donde.lon, this.state.mkSede) : null;
-    if (metros != null && this.state.mkRadio != null) {
-      const margen = Math.min(donde.precision || 0, 120);
-      if (metros - margen > this.state.mkRadio) {
-        this.setState({
-          mkOcupado: false, mkPaso: "", mkDonde: donde,
-          mkAviso: "Estás a " + Math.round(metros) + " m de la sede y el "
-            + "límite es de " + this.state.mkRadio + " m. Acércate y vuelve "
-            + "a intentarlo.",
-          mkAvisoTipo: "mal",
-        });
-        return;
-      }
-    }
+       Dos cosas que antes estaban mal, y la segunda la traje yo al
+       arreglar la primera:
+
+       · Solo se pedía si había una sede configurada. Sin sede el navegador
+         no llegaba ni a preguntar, la marca quedaba sin coordenadas, y la
+         pantalla mientras tanto prometía que se guardaban «como
+         constancia». Además era circular: sin marcas con ubicación no hay
+         forma de saber dónde está la sede.
+
+       · Al pedirla siempre, quien no da permiso se quedaba doce segundos
+         —lo que tarda el navegador en rendirse— mirando «Buscando tu
+         ubicación…». Esperar tanto por un dato que no condiciona nada es
+         peor que no pedirlo.
+
+       Así que se lanza la petición y se sigue: la cámara se abre en el
+       acto y la respuesta se recoge al enviar la marca, en
+       ubicacionSiLlego(). Entre medias la persona se acomoda y se hace la
+       foto, que es tiempo de sobra para que conteste un GPS.
+
+       Nunca se le niega el fichaje a nadie por la ubicación: ni por no
+       darla, ni por estar lejos. Lo que quede registrado —o lo que falte—
+       lo mira RRHH, que es quien puede preguntar qué pasó. */
+    this._ubicacion = this.ubicacionActual().catch(() => null);
+    /* En cuanto conteste el GPS, el diálogo lo enseña: la persona ve
+       «Buscándola…» pasar a «Registrada» mientras se acomoda, en vez de
+       enterarse al final de que había una ubicación. */
+    this._ubicacion.then((d) => {
+      if (this._vivo) this.setState({ camDonde: d || null,
+                                      camBuscandoUbi: false,
+                                      mkDonde: d || this.state.mkDonde });
+    });
 
     this.setState({
-      mkOcupado: false, mkPaso: "", mkDonde: donde || this.state.mkDonde,
+      mkOcupado: false, mkPaso: "",
       modal: "camara", modalError: "", modalOcupado: false, camModo: "marca",
-      camDonde: donde, camFoto: "", camDescriptor: null,
+      /* Todavía no hay coordenadas: llegarán mientras se hace la foto. */
+      camDonde: null, camBuscandoUbi: true,
+      camFoto: "", camDescriptor: null,
       camListo: false, camError: "",
     });
     /* El modelo se va cargando mientras la persona se acomoda: son 7 MB y
@@ -396,7 +416,23 @@
 
   /* El botón de confirmar del diálogo. La marca se manda con la foto que
      la persona vio y aceptó, no con otra. */
-  confirmarMarca() {
+  /* Lo que haya contestado el GPS mientras la persona se hacía la foto.
+
+     Se espera un poco, pero no los 12 segundos que tarda el navegador en
+     rendirse: a estas alturas o ya contestó o no va a contestar, y vale
+     más una marca puntual sin ubicación que una persona esperando delante
+     de la cámara por un dato que no condiciona nada. */
+  async ubicacionSiLlego() {
+    if (!this._ubicacion) return null;
+    const corte = new Promise((r) => setTimeout(() => r(null), 2500));
+    try {
+      return await Promise.race([this._ubicacion, corte]);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async confirmarMarca() {
     if (this.state.modalOcupado) return;
     if (!this.state.camFoto) {
       this.setState({ modalError: "Toma la foto antes de marcar." });
@@ -409,10 +445,14 @@
       return;
     }
     this.setState({ modalOcupado: true, modalError: "" });
+    /* La ubicación se pidió al abrir la cámara y se recoge aquí: para
+       cuando la persona termina su foto, el GPS ya suele haber contestado
+       y nadie ha esperado por él. */
+    const donde = this.state.camDonde || await this.ubicacionSiLlego();
     const cuerpo = Object.assign(
       { foto: this.state.camFoto, descriptor: this.state.camDescriptor,
         modelo: MODELO_ROSTRO },
-      this.state.camDonde || {});
+      donde || {});
     this.api("/api/asistencia/marcar",
              { method: "POST", body: JSON.stringify(cuerpo) })
       .then((d) => {
@@ -422,8 +462,13 @@
           modalOcupado: false, modal: "", modalError: "",
           camFoto: "", camDonde: null, camListo: false, camError: "",
           mkAviso: d.repetida ? d.aviso
+            /* El sitio, no la distancia: «a 340 m de la sede» no le dice
+               a nadie dónde está. Si el servicio de mapas no contestó, se
+               cae a los metros, que es mejor que nada. */
             : "Marca registrada a las " + d.hora
-              + (d.distancia != null ? " · a " + Math.round(d.distancia) + " m de la sede" : ""),
+              + (d.lugar ? " · " + d.lugar
+                 : (d.distancia != null
+                      ? " · a " + Math.round(d.distancia) + " m de la sede" : "")),
           mkAvisoTipo: d.repetida ? "aviso" : "bien",
         });
         this.cargarMisMarcas();
@@ -538,7 +583,6 @@
                           + "registrarlo cuando quieras.",
                         mkAvisoTipo: "aviso" });
         this.cargarMisMarcas();
-        this.cargarRostrosWeb();
       })
       .catch((e) => {
         if (this._vivo) this.setState({ modalOcupado: false,
@@ -573,7 +617,6 @@
                           + "marca comprueba que eres tú.",
                         mkAvisoTipo: "bien" });
         this.cargarMisMarcas();
-        this.cargarRostrosWeb();
       })
       .catch((e) => {
         if (this._vivo) this.setState({ modalOcupado: false,
@@ -779,6 +822,10 @@
     };
     alDia();
     this._reloj = setInterval(alDia, 60000);
+
+    /* Y que la pantalla se entere sola de lo que pase en el terminal o en
+       el celular de otra persona, sin que nadie tenga que recargar. */
+    this.arrancarVigilancia();
   }
 
 /*§CORTE§ linea original 4722 §*/
@@ -790,6 +837,7 @@
       this._alCambiarRuta = null;
     }
     if (this._sondeo) { clearTimeout(this._sondeo); this._sondeo = null; }
+    if (this._vigila) { clearInterval(this._vigila); this._vigila = null; }
     if (this._esc) { document.removeEventListener("keydown", this._esc); this._esc = null; }
     if (this._reloj) { clearInterval(this._reloj); this._reloj = null; }
   }
@@ -974,13 +1022,74 @@
   }
 
 /*§CORTE§ linea original 5629 §*/
+  /* ══════════════════════════════════════════════════════════════════
+     QUE LA PANTALLA SE ENTERE SOLA
+
+     Se pidieron websockets. Aquí no caben: el servidor corre con un solo
+     proceso —obligatorio, porque el enrolamiento vive en su memoria— y
+     ocho hilos, y cada websocket ocuparía uno mientras la pestaña siga
+     abierta. Con ocho personas mirando, el servidor dejaría de atender
+     nada, ni siquiera marcar.
+
+     Así que se pregunta. Una consulta minúscula cada pocos segundos que
+     devuelve un sello; si el sello no cambió, no se hace nada más.
+
+     Si algún día el enrolamiento sale de la memoria del proceso y se
+     pueden levantar varios, esto se sustituye por websockets sin tocar
+     ninguna pantalla: lo único que sabe la interfaz es «algo cambió». */
+  arrancarVigilancia() {
+    if (this._vigila) return;
+    const CADA = 12000;
+
+    const mirar = (soloApuntar) => {
+      /* Con la pestaña de fondo no se pregunta: no hay nadie mirando, y en
+         un teléfono eso es batería y datos regalados. */
+      if (!this._vivo || (!soloApuntar && document.hidden)) return;
+      this.api("/api/novedades")
+        .then((d) => {
+          if (!this._vivo || !d || !d.sello) return;
+          /* La primera vez solo se apunta cómo estaban las cosas. Eso se
+             hace AQUÍ, al arrancar, y no en el primer latido: si se
+             esperaba al primer latido, cualquier cambio ocurrido en esos
+             segundos se tomaba por el punto de partida y no se veía nunca.
+             Pasó de verdad, y por eso está escrito. */
+          if (this._sello === undefined || soloApuntar) {
+            this._sello = d.sello;
+            return;
+          }
+          if (d.sello === this._sello) return;
+          this._sello = d.sello;
+          this.alCambiarAlgo();
+        })
+        .catch(() => { /* un fallo suelto de red no merece aviso */ });
+    };
+
+    mirar(true);
+    this._vigila = setInterval(() => mirar(false), CADA);
+  }
+
+  /* Qué recargar cuando algo cambió. Solo lo de la pantalla que se está
+     mirando: recargarlo todo en cada cambio haría lo contrario de lo que
+     se busca. */
+  alCambiarAlgo() {
+    const v = this.state.view;
+    if (v === "asistencia" || v === "dash" || v === "personas") {
+      this.cargarPersonas();
+      this.cargarRango();
+    }
+    if (v === "biometria") {
+      this.cargarIdentidades();
+      this.cargarCandidatos();
+    }
+    if (v === "marcar") this.cargarMisMarcas();
+  }
+
   cargarTodo() {
     this.revisarBackend();
     this.cargarPersonas();
     this.cargarRango();
     this.cargarCandidatos();
     this.cargarIdentidades();
-    this.cargarRostrosWeb();
     this.cargarPersonal();
     this.cargarParametros();
     this.cargarAlertas();
@@ -1659,9 +1768,28 @@
           + "y las coordenadas.",
       camQueMarca: st.camModo === "base" ? "Tu rostro de referencia"
         : (st.mkMarcas || []).length ? "Tu salida de hoy" : "Tu entrada de hoy",
+      /* Decía «No se exige ubicación» mientras el GPS todavía estaba
+         contestando: falso y desconcertante. Y al llegar enseñaba dos
+         decimales que no le dicen nada a nadie —«-12.0210, -77.1040» no
+         distingue la casa de la otra punta de Lima—.
+
+         Ahora dice en qué punto está la cosa, y la PRECISIÓN, que es lo
+         único de ese dato que una persona puede juzgar: ±26 m sirve,
+         ±2000 m no sirve para nada. Las coordenadas exactas quedan
+         guardadas para RRHH, que es quien las necesita. */
       camDondeTexto: st.camDonde
-        ? st.camDonde.lat.toFixed(4) + ", " + st.camDonde.lon.toFixed(4)
-        : "No se exige ubicación",
+        ? ("Registrada · ±" + Math.round(st.camDonde.precision || 0) + " m")
+        : (st.camBuscandoUbi ? "Buscándola…" : "Sin ubicación"),
+      camDondeColor: st.camDonde ? "#1c5f3a"
+                   : (st.camBuscandoUbi ? "#7d8e9c" : "#8a5c05"),
+      /* Si no llegó, se dice por qué no pasa nada: nadie deja de marcar
+         por esto, y callarlo dejaría a la persona pensando que hizo algo
+         mal. */
+      camDondeNota: st.camDonde ? ""
+        : (st.camBuscandoUbi
+             ? "Se guarda con la marca si llega a tiempo."
+             : "No pasa nada: la marca se registra igual y consta que vino sin ubicación."),
+      camHayNotaUbi: !st.camDonde,
 
       /* ── El GPS ─────────────────────────────────────────────────────── */
       mkGpsDenegado: st.mkGps === "no" || st.mkGps === "inseguro",
@@ -1827,6 +1955,11 @@
           sede: p.sede || "—",
           contrato: p.contrato === "Indeterminado" ? "Indefinido" : (p.contrato || "—"),
           ini: ini(p.nombre), tint: pal[0], dark: pal[1],
+          /* La cara que tomó el terminal al enrolar. Quien no la tenga
+             sigue con sus iniciales de colores, que es lo que había. */
+          tieneFoto: !!p.foto,
+          sinFoto: !p.foto,
+          fotoUrl: p.foto ? ("/api/personal/" + p.id + "/foto?v=" + p.foto) : "",
           bio: enrolada ? ("ID " + p.staff_number) : (p.staff_number ? "Pendiente" : "Sin enrolar"),
           bioColor: enrolada ? GREEN_D : (p.staff_number ? GOLD_D : "#7d8e9c"),
           bioTint: enrolada ? GREEN_T : (p.staff_number ? GOLD_T : "#efece8"),

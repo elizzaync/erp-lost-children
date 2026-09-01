@@ -25,6 +25,7 @@ import time
 
 import config
 import db
+import fotos
 from yunatt_client import cliente, YunattError
 
 log = logging.getLogger("enrolamiento")
@@ -296,6 +297,10 @@ def estado(staff_number):
                 huella=sesion.logrado["huella"],
                 detalle=sesion.detalle,
             )
+            # La cara que acaba de tomar el equipo pasa a ser la de la
+            # ficha. 'actual' ya trae la ruta: no cuesta otra consulta.
+            if sesion.logrado["rostro"]:
+                traer_foto(sn, actual.get("foto") or "")
         else:
             # Encadenar la segunda fase de "ambos" sin intervención.
             try:
@@ -414,6 +419,96 @@ def cancelar(staff_number):
             sesion.detalle = "Captura cancelada desde el sistema"
     db.actualizar_identidad(sn, "error", detalle="Captura cancelada desde el sistema")
     return {"ok": True}
+
+
+def traer_foto(staff_number, ruta_foto):
+    """
+    Baja del terminal la foto que tomó y la deja en la ficha.
+
+    El equipo fotografía a cada persona al registrarle el rostro. Esa foto
+    estaba en yunatt y en ningún sitio más: la ficha se quedaba sin cara
+    aunque el sistema tuviera la manera de traerla desde el principio.
+
+    Nunca tumba un enrolamiento: si la descarga falla, se apunta y se
+    sigue. Quedarse sin foto es un incordio; quedarse sin enrolar, no.
+    """
+    ident = db.identidad(staff_number)
+    if not ident or not ruta_foto:
+        return False
+
+    # En el terminal se enrola a tres clases de persona y cada una guarda su
+    # foto en su propia tabla.
+    #
+    # Los beneficiarios estuvieron fuera hasta el 31/08/2026 por ser
+    # menores. Entran por decisión de la ONG, que recoge de los padres o
+    # tutores un permiso firmado para compartir estos datos.
+    if ident.get("personal_id"):
+        guardar = lambda m: db.guardar_foto_personal(ident["personal_id"], m)
+    elif ident.get("responsable_id"):
+        guardar = lambda m: db.actualizar_foto_responsable(ident["responsable_id"], m)
+    elif ident.get("beneficiario_id"):
+        guardar = lambda m: db.guardar_foto_beneficiario(ident["beneficiario_id"], m)
+    else:
+        return False
+
+    try:
+        crudo = cliente.descargar_foto(ruta_foto)
+        if not crudo:
+            return False
+        meta = fotos.aceptar(crudo, "terminal.jpg")
+        guardar(meta)
+        log.info(f"enrolamiento: {staff_number} — foto del terminal guardada")
+        return True
+    except Exception as e:
+        log.warning(f"enrolamiento: {staff_number} — no se pudo traer la foto: {e}")
+        return False
+
+
+def revisar_pendientes():
+    """
+    Le pregunta al equipo por todas las identidades a medias.
+
+    Existe porque la sesión de enrolamiento vive en la memoria del proceso:
+    en cuanto la pantalla deja de sondear, nadie vuelve a preguntar y la
+    ficha se queda en «esperando» aunque el terminal ya la haya capturado.
+    Esto es lo que permite ponerse al día después.
+
+    Una sola consulta al dispositivo para todas —la cuenta de yunatt está
+    compartida con el ERP anterior y conviene no gastarla— y el cruce se
+    hace aquí.
+    """
+    pendientes = [i for i in db.identidades()
+                  if i["estado"] in ("esperando", "error")]
+    if not pendientes:
+        return {"ok": True, "revisadas": 0, "enroladas": 0, "fotos": 0,
+                "nombres": []}
+
+    en_equipo = {str(f.get("enrollid")): (f.get("backupnums") or [])
+                 for f in cliente.staff_en_dispositivo()}
+    fotos_por_sn = {str(s.get("staffNumber")): (s.get("photo") or "")
+                    for s in cliente.staff_en_nube()}
+
+    enroladas, con_foto, nombres = 0, 0, []
+    for ident in pendientes:
+        sn = str(ident["staff_number"])
+        nums = en_equipo.get(sn)
+        if nums is None:
+            continue                       # no está en el equipo todavía
+        rostro = config.tiene_rostro(nums)
+        huella = config.tiene_huella(nums)
+        if not (rostro or huella):
+            continue                       # está dado de alta, sin biométrico
+        db.actualizar_identidad(
+            int(sn), "enrolado", rostro=rostro, huella=huella,
+            detalle="Confirmado consultando el terminal")
+        enroladas += 1
+        nombres.append(ident["nombre"])
+        if rostro and traer_foto(int(sn), fotos_por_sn.get(sn, "")):
+            con_foto += 1
+        log.info(f"enrolamiento: {sn} se confirmó como enrolado al revisar")
+
+    return {"ok": True, "revisadas": len(pendientes), "enroladas": enroladas,
+            "fotos": con_foto, "nombres": nombres}
 
 
 def sincronizar_marcas():

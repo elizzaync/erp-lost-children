@@ -33,6 +33,16 @@
         nombre: p.nombre,
         ambito: p.ambito || null,
         rolLabel: Component.etiquetaRol(p),
+        /* Lo que hace falta para decir DÓNDE marcó. Esta función arma un
+           objeto nuevo en vez de pasar la fila entera, así que lo que no se
+           copie aquí no existe para la pantalla: la columna «Dónde marcó»
+           salía siempre «—» porque `total` llegaba sin definir, y no había
+           forma de verlo mirando la columna. */
+        total: p.total || 0,
+        canales: p.canales || "",
+        lugar: p.lugar || "",
+        distancia: p.distancia == null ? null : p.distancia,
+        sin_ubicacion: p.sin_ubicacion || 0,
         sub: Component.etiquetaRol(p) + " · enrolado aquí",
         metodo: metodoLabel[p.metodo] || "Rostro",
         metodoIcon: p.metodo === "huella" ? "ph-fingerprint" : p.metodo === "ambos" ? "ph-shield-check" : "ph-scan-smiley",

@@ -802,8 +802,29 @@ _COLUMNAS_NUEVAS = {
         "creado":                "TEXT DEFAULT NULL",
         # Campos que alguien declaró «sin dato por ahora». Ver _sin_dato().
         "sin_dato":              "TEXT DEFAULT ''",
+        # La foto de la ficha. Existían solo en 'responsables' porque las
+        # fotos entraron por el formulario de tutores; ahora también las
+        # trae el terminal, que fotografía a cada persona al registrarle el
+        # rostro. Se guarda el NOMBRE del archivo, no la imagen: la base no
+        # es sitio para binarios que crecen sin límite.
+        # La firma dibujada. Solo el nombre interno del archivo; el trazo
+        # vive en disco, como las fotos. Ver firmas.py. Estaba en un SEGUNDO
+        # bloque "personal" más abajo, y esa duplicación descartaba en
+        # silencio todo lo declarado aquí arriba: en un diccionario la
+        # segunda clave gana. Unidos el 31/08/2026.
+        "firma":                 "TEXT DEFAULT NULL",
+        "foto":                  "TEXT DEFAULT ''",
+        "foto_mime":             "TEXT DEFAULT ''",
+        "foto_tam":              "INTEGER DEFAULT 0",
+        "foto_ancho":            "INTEGER DEFAULT 0",
+        "foto_alto":             "INTEGER DEFAULT 0",
     },
     "marcas": {
+        # El nombre del sitio desde el que se fichó: «Comas, Lima» o
+        # «Bocanegra, Callao». Se resuelve UNA VEZ al guardar la marca —ver
+        # lugares.py— y se queda escrito. Una distancia en metros no dice
+        # dónde está nadie; esto sí.
+        "lugar":      "TEXT DEFAULT ''",
         # Las marcas anteriores a esta columna vinieron todas del terminal:
         # el canal web no existía. El valor por defecto es correcto, no una
         # suposición cómoda.
@@ -834,11 +855,6 @@ _COLUMNAS_NUEVAS = {
         "archivo_nombre": "TEXT DEFAULT NULL",
         "archivo_mime":   "TEXT DEFAULT NULL",
         "archivo_tam":    "INTEGER DEFAULT NULL",
-    },
-    "personal": {
-        # La firma dibujada de la persona. Solo el nombre interno del
-        # archivo; el trazo vive en disco, como las fotos. Ver firmas.py.
-        "firma": "TEXT DEFAULT NULL",
     },
     "responsables": {
         "sin_dato": "TEXT DEFAULT ''",   # ver _sin_dato()
@@ -922,6 +938,21 @@ _COLUMNAS_NUEVAS = {
         "rango_ingresos":            "TEXT DEFAULT ''",
         "personas_dependientes":     "INTEGER DEFAULT 0",
         "nota_socioeconomica":       "TEXT DEFAULT ''",
+        # La foto que toma el terminal al registrarle el rostro.
+        #
+        # Es la cara de un MENOR acogido, y por eso no estaba: se añadió el
+        # 31/08/2026 por decisión de la ONG, que recoge de los padres o
+        # tutores un permiso firmado para compartir estos datos. Ese
+        # permiso es lo que lo justifica.
+        #
+        # Se guarda el nombre del archivo, no la imagen. Si un permiso se
+        # revoca, basta con poner esto en NULL y borrar el archivo de
+        # data/fotos/.
+        "foto":                      "TEXT DEFAULT ''",
+        "foto_mime":                 "TEXT DEFAULT ''",
+        "foto_tam":                  "INTEGER DEFAULT 0",
+        "foto_ancho":                "INTEGER DEFAULT 0",
+        "foto_alto":                 "INTEGER DEFAULT 0",
     },
 }
 
@@ -1189,10 +1220,12 @@ def resumen_vencimientos():
 # que llegue por la API acabaría en la tabla.
 CLAVES_PARAMETRO = ("organizacion", "fecha_fundacion", "ciudad",
                     "descuento_planilla", "descuento_honorarios",
-                    # Quién da el visto bueno de Administración en las
-                    # solicitudes largas. Es un personal_id, no un rol: no
-                    # hay sistema de permisos y no vale la pena inventarlo.
-                    "aprobador_admin",
+                    # Aquí estaba "aprobador_admin", con una nota que decía
+                    # que no había sistema de permisos. Lo hay, y es el que
+                    # manda: quien cierra una solicitud larga es cualquiera
+                    # con permiso de edición sobre «permisos», y sale de su
+                    # sesión. El parámetro no lo leía nadie. Retirado el
+                    # 31/08/2026.
                     # Dónde está la sede y hasta cuántos metros vale marcar
                     # desde el celular. Sin coordenadas puestas no se
                     # rechaza a nadie: ver el endpoint de marcar.
@@ -1314,6 +1347,43 @@ def actualizar_personal(id_, datos):
     return ejecutar(
         f"UPDATE personal SET {asignaciones} WHERE id = ?",
         tuple(datos[c] for c in campos) + (int(id_),),
+    )
+
+
+def guardar_foto_personal(personal_id, meta):
+    """
+    Deja la foto en la ficha. 'meta' es lo que devuelve fotos.aceptar().
+
+    Se pasa entera y no campo a campo porque las cinco columnas van juntas
+    siempre: una foto sin su tamaño o sin sus medidas no sirve para
+    pintarla, y separarlas invita a guardar la mitad.
+    """
+    return ejecutar(
+        """UPDATE personal
+              SET foto = ?, foto_mime = ?, foto_tam = ?,
+                  foto_ancho = ?, foto_alto = ?
+            WHERE id = ?""",
+        (meta.get("foto") or "", meta.get("foto_mime") or "image/jpeg",
+         int(meta.get("foto_tam") or 0), int(meta.get("foto_ancho") or 0),
+         int(meta.get("foto_alto") or 0), int(personal_id)),
+    )
+
+
+def guardar_foto_beneficiario(beneficiario_id, meta):
+    """
+    Deja en la ficha del niño la foto que tomó el terminal.
+
+    Existe por decisión de la ONG del 31/08/2026, apoyada en el permiso
+    firmado por los padres o tutores. Ver la nota de las columnas.
+    """
+    return ejecutar(
+        """UPDATE beneficiarios
+              SET foto = ?, foto_mime = ?, foto_tam = ?,
+                  foto_ancho = ?, foto_alto = ?
+            WHERE id = ?""",
+        (meta.get("foto") or "", meta.get("foto_mime") or "image/jpeg",
+         int(meta.get("foto_tam") or 0), int(meta.get("foto_ancho") or 0),
+         int(meta.get("foto_alto") or 0), int(beneficiario_id)),
     )
 
 
@@ -2300,7 +2370,8 @@ def marcas_del_staff(staff_number, fecha):
     """Las marcas de una persona en un día, en orden. Para su propia
     pantalla: quien marca quiere ver que su marca quedó."""
     return consultar(
-        "SELECT hora, metodo, canal, foto, lat, lon, distancia_m FROM marcas "
+        "SELECT hora, metodo, canal, foto, lat, lon, distancia_m, lugar "
+        "  FROM marcas "
         "WHERE staff_number = ? AND fecha = ? ORDER BY hora",
         (int(staff_number), fecha))
 
@@ -2318,12 +2389,13 @@ def guardar_marca(staff_number, fecha, hora, metodo="facial", canal="terminal",
     return ejecutar(
         """INSERT OR IGNORE INTO marcas
                (staff_number, fecha, hora, metodo, canal,
-                foto, lat, lon, precision_m, distancia_m)
-           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS
+                foto, lat, lon, precision_m, distancia_m, lugar)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS
            (SELECT 1 FROM identidades WHERE staff_number = ?)""",
         (int(staff_number), fecha, hora, metodo, canal,
          extra.get("foto"), extra.get("lat"), extra.get("lon"),
          extra.get("precision_m"), extra.get("distancia_m"),
+         extra.get("lugar") or "",
          int(staff_number)),
     )
 
@@ -2342,7 +2414,26 @@ def marcas_de(fecha):
                   v.vinculo, v.metodo, v.estado, v.tiene_rostro, v.tiene_huella,
                   MIN(m.hora) AS entrada,
                   MAX(m.hora) AS salida,
-                  COUNT(m.id) AS total
+                  COUNT(m.id) AS total,
+                  -- Desde dónde marcó. Se trae la distancia MÁS GRANDE del
+                  -- día: si alguien marcó la entrada en la casa y la salida
+                  -- a tres kilómetros, lo que hay que ver es lo segundo.
+                  -- Quedarse con la media lo escondería.
+                  MAX(m.distancia_m) AS distancia,
+                  -- Cuántas de sus marcas llegaron sin coordenadas.
+                  SUM(CASE WHEN m.id IS NOT NULL AND m.lat IS NULL
+                           THEN 1 ELSE 0 END) AS sin_ubicacion,
+                  -- Por dónde fichó ese día. Puede haber usado los dos: el
+                  -- terminal al entrar y el celular al salir, o al revés.
+                  GROUP_CONCAT(DISTINCT m.canal) AS canales,
+                  -- Y desde dónde. Se coge el último sitio con nombre del
+                  -- día: si entró en la casa y salió desde otro lado, lo
+                  -- que hay que ver es de dónde salió.
+                  (SELECT m2.lugar FROM marcas m2
+                    WHERE m2.staff_number = v.staff_number
+                      AND m2.fecha = ?
+                      AND m2.lugar IS NOT NULL AND m2.lugar <> ''
+                    ORDER BY m2.hora DESC LIMIT 1) AS lugar
              FROM v_identidades v
              LEFT JOIN marcas m
                ON m.staff_number = v.staff_number AND m.fecha = ?
@@ -2356,7 +2447,9 @@ def marcas_de(fecha):
             WHERE v.enrolado = 1 OR m.id IS NOT NULL OR m.id IS NOT NULL
             GROUP BY v.staff_number
             ORDER BY v.staff_number""",
-        (fecha,),
+        # La fecha va dos veces: una para el LEFT JOIN de las marcas y
+        # otra para la subconsulta que busca el último sitio con nombre.
+        (fecha, fecha),
     )
     for f in filas:
         if (f["total"] or 0) < 2:
@@ -2762,8 +2855,11 @@ def actualizar_estado_solicitud(id_, estado, nota=None, sello=None,
         f"UPDATE solicitudes SET {', '.join(campos)} WHERE id = ?", tuple(params))
 
 
-def borrar_solicitud(id_):
-    return ejecutar("DELETE FROM solicitudes WHERE id = ?", (id_,))
+# Aquí hubo un borrar_solicitud(). No lo llamaba nadie, y no debía: una
+# solicitud no se borra, se CANCELA —resolver(id, "cancelar")— justo para
+# que quede constancia de que se pidió y de qué pasó con ello. Dejarlo
+# escrito era invitar a que alguien lo enganchara a un botón y se llevara
+# por delante esa constancia. Retirado el 31/08/2026.
 
 
 def resumen_solicitudes():

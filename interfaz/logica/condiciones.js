@@ -8,6 +8,13 @@
           cfgOrg: pr.organizacion || "",
           cfgCiudad: pr.ciudad || "",
           cfgFundacion: pr.fecha_fundacion || "",
+          /* Los que hasta ahora solo se podían cambiar tocando la base a
+             mano. Se guardan como texto porque así viajan y así vuelven:
+             convertirlos aquí solo añadiría un sitio donde equivocarse. */
+          cfgMeta: pr.meta_semanal == null ? "" : String(pr.meta_semanal),
+          cfgLat: pr.lat == null ? "" : String(pr.lat),
+          cfgLon: pr.lon == null ? "" : String(pr.lon),
+          cfgRadio: pr.radio_marca == null ? "" : String(pr.radio_marca),
           /* Si ya hay fecha, entra bloqueada: no es un campo que se toque
              a diario y un cambio accidental altera el Dashboard. */
           cfgEditandoFecha: !pr.fecha_fundacion
@@ -25,7 +32,11 @@
       body: JSON.stringify({
         organizacion: this.state.cfgOrg || "",
         ciudad: this.state.cfgCiudad || "",
-        fecha_fundacion: this.state.cfgFundacion || ""
+        fecha_fundacion: this.state.cfgFundacion || "",
+        meta_semanal: this.state.cfgMeta || "",
+        lat: this.state.cfgLat || "",
+        lon: this.state.cfgLon || "",
+        radio_marca: this.state.cfgRadio || ""
       })
     })
       .then((d) => {
@@ -34,7 +45,11 @@
         this.setState({
           cfgGuardando: false, parametros: pr,
           cfgEditandoFecha: !pr.fecha_fundacion,
-          cfgOk: "Parámetros guardados."
+          cfgMeta: pr.meta_semanal == null ? "" : String(pr.meta_semanal),
+          cfgLat: pr.lat == null ? "" : String(pr.lat),
+          cfgLon: pr.lon == null ? "" : String(pr.lon),
+          cfgRadio: pr.radio_marca == null ? "" : String(pr.radio_marca),
+          cfgOk: "Guardado."
         });
       })
       .catch((e) => {

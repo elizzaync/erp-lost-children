@@ -182,6 +182,12 @@
       sede: p.sede || "—",
       contrato: p.contrato === "Indeterminado" ? "Indefinido" : (p.contrato || "—"),
       codigo: p.staff_number ? ("Terminal " + p.staff_number) : "Sin enrolar",
+      /* La foto que tomó el terminal al registrarle el rostro. El «?v=»
+         lleva el nombre del archivo: al cambiar la foto cambia la
+         dirección, y el navegador no enseña la vieja de su caché. */
+      tieneFoto: !!p.foto,
+      sinFoto: !p.foto,
+      fotoUrl: p.foto ? ("/api/personal/" + p.id + "/foto?v=" + p.foto) : "",
       ingreso: p.fecha_ingreso || "—",
       antiguedad: anios === null ? "—" : (anios + (anios === 1 ? " año" : " años")),
       jefeNombre: jefe ? jefe.nombre : "Sin jefe asignado",

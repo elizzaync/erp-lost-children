@@ -137,6 +137,12 @@
       /* El código que escriba el equipo manda; si no hay ninguno, se genera
          uno del id para que la ficha no salga sin identificador. */
       codigo: (b.codigo || "").trim() || ("BEN-" + String(b.id).padStart(4, "0")),
+      /* La foto que tomó el terminal al registrarle el rostro. Se guarda
+         desde el 31/08/2026, con el permiso firmado de los padres o
+         tutores; antes de eso los menores quedaban fuera. */
+      tieneFoto: !!b.foto,
+      sinFoto: !b.foto,
+      fotoUrl: b.foto ? ("/api/beneficiarios/" + b.id + "/foto?v=" + b.foto) : "",
       ingreso: V(b.anio_ingreso),
       tiempo: b.anio_ingreso
         ? ((new Date().getFullYear() - Number(b.anio_ingreso)) + " años en la casa")
@@ -1137,11 +1143,27 @@
       backToOrg: () => this.setState({ view: "legajo", legajoTab: "dir" }),
       openJefe: () => { const j = this.fichaFor(sel).jefeId; if (j) this.go("ficha", j); },
 
+      /* Estas pestañas llevaban las cifras 43, 26, 11 y 8 escritas a mano:
+         venían de la maqueta y no salían de ninguna parte. Con 6 personas
+         y 8 niños en la base, la pantalla anunciaba 43 de algo. Justo
+         debajo, en attTabs, ya se habían quitado tres cifras iguales por
+         lo mismo; estas se pasaron por alto.
+
+         Ahora se cuentan de verdad, y la que no tiene nada que contar no
+         enseña número: un cero escrito es un dato, pero un número que
+         nadie calculó es una mentira. */
       scopeTabs: [
-        {key:"todos", label:"General", icon:"ph-chart-pie-slice", count:"43"},
-        {key:"ninos", label:"Beneficiarios", icon:"ph-baby", count:"26"},
-        {key:"min", label:"Colaboradores", icon:"ph-users-three", count:"11"},
-        {key:"adm", label:"Administración", icon:"ph-briefcase", count:"8"}
+        {key:"todos", label:"General", icon:"ph-chart-pie-slice",
+         count:String((this.state.personal || []).length
+                      + (this.state.beneficiarios || []).length)},
+        {key:"ninos", label:"Beneficiarios", icon:"ph-baby",
+         count:String((this.state.beneficiarios || []).length)},
+        {key:"min", label:"Colaboradores", icon:"ph-users-three",
+         count:String((this.state.personal || [])
+                        .filter((p) => p.ambito !== "adm").length)},
+        {key:"adm", label:"Administración", icon:"ph-briefcase",
+         count:String((this.state.personal || [])
+                        .filter((p) => p.ambito === "adm").length)}
       ].map(t => ({
         ...t,
         style: "padding:5px 11px; border-radius:2px; font-size:13.5px; white-space:nowrap;"

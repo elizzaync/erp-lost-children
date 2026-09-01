@@ -361,6 +361,26 @@
       onCfgOrg: (e) => this.setState({ cfgOrg: e.target.value, cfgOk: "", cfgError: "" }),
       onCfgCiudad: (e) => this.setState({ cfgCiudad: e.target.value, cfgOk: "", cfgError: "" }),
       onCfgFundacion: (e) => this.setState({ cfgFundacion: e.target.value, cfgOk: "", cfgError: "" }),
+      /* ── Configuración ────────────────────────────────────────────── */
+      cfgMeta: this.state.cfgMeta == null ? "" : this.state.cfgMeta,
+      cfgLat: this.state.cfgLat == null ? "" : this.state.cfgLat,
+      cfgLon: this.state.cfgLon == null ? "" : this.state.cfgLon,
+      cfgRadio: this.state.cfgRadio == null ? "" : this.state.cfgRadio,
+      onCfgMeta: (e) => this.setState({ cfgMeta: e.target.value }),
+      onCfgLat: (e) => this.setState({ cfgLat: e.target.value }),
+      onCfgLon: (e) => this.setState({ cfgLon: e.target.value }),
+      onCfgRadio: (e) => this.setState({ cfgRadio: e.target.value }),
+      /* Sin coordenadas puestas el sistema NO rechaza a nadie por estar
+         lejos: guarda dónde marcó y ya. Decirlo aquí evita creer que hay
+         un control que no existe. */
+      cfgHayLugar: !!(this.state.cfgLat && this.state.cfgLon),
+      cfgNotaLugar: (this.state.cfgLat && this.state.cfgLon)
+        ? "Se guarda a qué distancia de este punto marcó cada persona. Hoy no se rechaza a nadie por estar lejos; el radio queda anotado para cuando se decida usarlo."
+        : "Sin coordenadas no se calcula ninguna distancia: las marcas se guardan igual, solo que sin decir desde dónde.",
+      cfgMetaNota: this.state.cfgMeta
+        ? ("Cada persona verá su semana contra " + this.state.cfgMeta + " horas.")
+        : "Sin meta puesta, la barra de la semana no compara contra nada.",
+
       cfgFundacionFijada: !this.state.cfgEditandoFecha && !!(this.state.parametros || {}).fecha_fundacion,
       cfgFundacionEditable: this.state.cfgEditandoFecha,
       cfgTeniaFecha: !!(this.state.parametros || {}).fecha_fundacion,
@@ -428,19 +448,15 @@
           });
           return salida;
         }, []),
-      /* Configuración ya existe de verdad; el resto siguen siendo etiquetas
-         de módulos futuros y no llevan a ninguna parte. */
+      /* Aquí colgaban ocho módulos apagados —Planillas, Capacitaciones,
+         Evaluación, Finanzas, Donaciones, Proyectos, Beneficiarios,
+         Inventario— con su etiqueta de «Pendiente» o «2027». Ocupaban media
+         barra y no llevaban a ninguna parte: anunciar lo que no existe no
+         ayuda a quien trabaja hoy. Retirados el 31/08/2026.
+
+         Planillas SÍ está construida y funciona; su pantalla y sus
+         endpoints siguen intactos, solo deja de anunciarse. */
       otherModules: [
-        /* Desactivados el 17/08: se anuncian pero no se entra. Sus pantallas
-           solo tenían título, nunca se construyeron. */
-        /* Planillas SÍ está construida y funciona —cálculo, cierre de período
-           y boletas—; se desactiva a petición del equipo, no por estar a
-           medias. Su pantalla y sus endpoints siguen intactos. */
-        {label:"Planillas", tag:"Desactivado"},
-        {label:"Capacitaciones", tag:"Pendiente"},
-        {label:"Evaluación de Desempeño", tag:"Pendiente"},
-        {label:"Finanzas", tag:"Q4"}, {label:"Donaciones", tag:"Q4"}, {label:"Proyectos", tag:"2027"},
-        {label:"Beneficiarios", tag:"2027"}, {label:"Inventario", tag:"2027"},
         {label:"Configuración", tag:"", vivo:true, mod:"configuracion", ir:"config"},
         {label:"Usuarios y permisos", tag:"", vivo:true, mod:"usuarios", ir:"usuarios"}
       ].filter(m => !m.mod || this.puede(m.mod, "vista")).map(m => ({
@@ -583,27 +599,33 @@
          Y es de lo más accionable que hay hoy — quien no está enrolado no
          puede marcar. */
       enrolTexto: (() => {
-        const total = (this.state.personal || []).length;
-        const dentro = (this.state.personasReales || []).length;
-        if (!total) return "—";
-        return dentro + " de " + total;
+        const t = Component.enrolDelPersonal(this.state.personal);
+        if (!t.total) return "—";
+        return t.dentro + " de " + t.total;
+      })(),
+      /* El ancho de la barra, limitado al 100 %. Antes se le pasaba el
+         porcentaje tal cual y con un 129 % la barra se salía de su caja.
+         Aunque ya no pueda pasar de cien, un medidor capaz de desbordar su
+         recuadro es un fallo esperando a que alguien lo vea. */
+      enrolAncho: (() => {
+        const t = Component.enrolDelPersonal(this.state.personal);
+        if (!t.total) return "0%";
+        return Math.max(0, Math.min(100, Math.round(t.dentro / t.total * 100))) + "%";
       })(),
       enrolPct: (() => {
-        const total = (this.state.personal || []).length;
-        const dentro = (this.state.personasReales || []).length;
-        return total ? Math.round(dentro / total * 100) + "%" : "0%";
+        const t = Component.enrolDelPersonal(this.state.personal);
+        return t.total ? Math.round(t.dentro / t.total * 100) + "%" : "0%";
       })(),
       enrolTono: (() => {
-        const total = (this.state.personal || []).length;
-        const dentro = (this.state.personasReales || []).length;
-        if (!total) return "#dcd9d5";
-        const r = dentro / total;
+        const t = Component.enrolDelPersonal(this.state.personal);
+        if (!t.total) return "#dcd9d5";
+        const r = t.dentro / t.total;
         return r >= 0.9 ? GREEN : r >= 0.5 ? GOLD : RED;
       })(),
       enrolNota: (() => {
-        const total = (this.state.personal || []).length;
-        const fuera = total - (this.state.personasReales || []).length;
-        if (!total) return "Sin fichas todavía.";
+        const t = Component.enrolDelPersonal(this.state.personal);
+        const fuera = t.total - t.dentro;
+        if (!t.total) return "Sin fichas todavía.";
         if (!fuera) return "Todo el personal puede marcar en el terminal.";
         return fuera + (fuera === 1 ? " persona no puede marcar" : " personas no pueden marcar")
           + " hasta que se la enrole.";

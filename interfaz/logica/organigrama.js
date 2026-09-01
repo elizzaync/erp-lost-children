@@ -48,8 +48,29 @@
   }
 
   /* Cómo se nombra a cada quien en la tabla, según de qué entidad viene */
+  /* Qué es cada persona, para ponerlo debajo de su nombre.
+
+     Faltaba el caso «responsable» y por eso un tutor que marca en el
+     terminal salía como «Colaborador»: caía por el final, que es el
+     cajón del personal. No es un detalle de estilo — decía que alguien
+     trabaja aquí cuando lo que hace es responder por un niño. */
+  /* Del personal, cuántos están enrolados en el terminal.
+
+     Antes esto se calculaba cruzando dos listas distintas: el total salía
+     de `personal` y los enrolados de `personasReales`, que incluye también
+     a responsables y beneficiarios. Con un tutor y una niña enrolados, el
+     numerador pasaba al denominador y el panel anunciaba «9 de 7 · 129 % ·
+     −2 personas». Aquí se cuenta una sola lista, y cada ficha ya sabe si
+     está enrolada. */
+  static enrolDelPersonal(personal) {
+    const gente = personal || [];
+    return { total: gente.length,
+             dentro: gente.filter((p) => p.enrolado).length };
+  }
+
   static etiquetaRol(p) {
     if (p.tipo === "beneficiario") return "Beneficiario";
+    if (p.tipo === "responsable") return "Responsable / Tutor";
     if (p.vinculo === "voluntario") return "Voluntario";
     return p.ambito === "adm" ? "Administración" : "Colaborador";
   }

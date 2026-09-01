@@ -3,8 +3,20 @@
           <button onClick="{{ backToBenef }}" style="font-size:14px; color:#1462a5; margin-bottom:24px;" style-hover="color:#0e3d69">← Volver a beneficiarios</button>
 
           <div style="display:grid; grid-template-columns:230px minmax(0,1fr); gap:40px; align-items:start;">
-            <div style="width:230px; height:280px; background:#e9eef3; border-bottom:5px solid {{ ben.color }};">
-              <image-slot id="foto-beneficiario" shape="rect" placeholder="Foto del beneficiario"></image-slot>
+            <!-- Aquí había un hueco de la maqueta que nunca enseñó nada.
+                 Ahora va la foto que tomó el TERMINAL al registrar su
+                 rostro. Se guarda con el permiso firmado de los padres o
+                 tutores; hasta el 31/08/2026 los menores quedaban fuera. -->
+            <div style="width:230px; height:280px; background:#e9eef3; border-bottom:5px solid {{ ben.color }}; overflow:hidden;">
+              <sc-if value="{{ ben.tieneFoto }}">
+                <img src="{{ ben.fotoUrl }}" alt="Foto de {{ ben.nombre }}" style="width:230px; height:280px; object-fit:cover; display:block;" />
+              </sc-if>
+              <sc-if value="{{ ben.sinFoto }}">
+                <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:20px; text-align:center;">
+                  <i class="ph-duotone ph-baby" style="font-size:38px; color:#9aa7b2;"></i>
+                  <div style="font-size:12.5px; color:#7d8e9c; text-wrap:pretty;">La toma el terminal al registrar el rostro</div>
+                </div>
+              </sc-if>
             </div>
 
             <div style="min-width:0;">

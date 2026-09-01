@@ -3,18 +3,38 @@
   /* Cómo está la conexión con el terminal. No llama a yunatt: pregunta
      al propio servidor qué sabe ya, así que se puede pedir al entrar sin
      gastar la sesión compartida con el ERP anterior. */
+  /* Le pregunta al terminal por quien se quedó a medias.
+
+     Hace falta porque el seguimiento de un enrolamiento vive en la memoria
+     del servidor: si la pantalla se cierra o pasa el tiempo, nadie vuelve a
+     preguntar y la ficha se queda en «esperando» aunque el equipo ya la
+     haya capturado. Recargar no servía: recargar lee la base.
+
+     Si falla, no se dice nada: es una puesta al día de fondo, y un aviso
+     rojo por no haber podido hablar con yunatt al entrar sería ruido. Lo
+     que sí se enseña es cuando encuentra algo. */
+  revisarEnrolamientos() {
+    this.api("/api/enrolamiento/revisar", { method: "POST" })
+      .then((d) => {
+        if (!this._vivo || !d || !d.enroladas) return;
+        this.setState({
+          bioAlDia: d.enroladas === 1
+            ? ("Se confirmó el enrolamiento de " + (d.nombres || [])[0] + ".")
+            : ("Se confirmaron " + d.enroladas + " enrolamientos: "
+               + (d.nombres || []).join(", ") + ".")
+        });
+        this.cargarIdentidades();
+        this.cargarCandidatos();
+      })
+      .catch(() => {});
+  }
+
   cargarEstadoTerminal() {
     this.api("/api/yunatt/estado")
       .then((d) => { if (this._vivo) this.setState({ terminal: d }); })
       .catch(() => { if (this._vivo) this.setState({ terminal: null }); });
   }
 
-  cargarRostrosWeb() {
-    this.api("/api/rostro-web/pendientes")
-      .then((d) => { if (this._vivo) this.setState({
-        rostrosWeb: d.personal || [] }); })
-      .catch(() => {});
-  }
 
   cargarIdentidades() {
     this.api("/api/identidades")
@@ -313,46 +333,10 @@
       bioHayEnrolados: (this.state.identidades || []).some((i) => i.enrolado),
       bioSinEnrolados: !(this.state.identidades || []).some((i) => i.enrolado),
 
-      /* ── Rostro para marcar por el celular ───────────────────────────
-         Otro enrolamiento distinto del terminal. Se cuenta aparte porque
-         estar en uno no dice nada del otro. */
-      rwTotal: (this.state.rostrosWeb || []).length,
-      rwConRostro: (this.state.rostrosWeb || []).filter((r) => r.creado).length,
-      rwFaltan: (this.state.rostrosWeb || []).filter((r) => !r.creado).length,
-      rwResumen: (() => {
-        const t = (this.state.rostrosWeb || []).length;
-        const c = (this.state.rostrosWeb || []).filter((r) => r.creado).length;
-        if (!t) return "No hay personal activo que listar.";
-        if (!c) return "Todavía no se ha registrado nadie. Cada persona lo "
-          + "hace desde su propio celular, en «Marcar asistencia».";
-        return c + " de " + t + " ya pueden marcar desde el celular.";
-      })(),
-      rwHayFaltan: (this.state.rostrosWeb || []).some((r) => !r.creado),
-      rwHayPuestos: (this.state.rostrosWeb || []).some((r) => r.creado),
-      rwListaFaltan: (this.state.rostrosWeb || [])
-        .filter((r) => !r.creado)
-        .filter((r) => !this.state.bioBusca
-          || (r.nombre || "").toLowerCase()
-               .indexOf(this.state.bioBusca.toLowerCase()) >= 0)
-        .map((r) => ({
-          nombre: r.nombre,
-          /* Que alguien haya aceptado el aviso y no tenga rostro significa
-             que lo dejó a medias: es distinto de no haber empezado. */
-          detalle: r.consintio
-            ? "Aceptó el aviso pero no llegó a tomarse la foto"
-            : (r.cargo || "Sin cargo"),
-          tono: r.consintio ? "#8a5c05" : "#7d8e9c",
-        })),
-      rwListaPuestos: (this.state.rostrosWeb || [])
-        .filter((r) => r.creado)
-        .filter((r) => !this.state.bioBusca
-          || (r.nombre || "").toLowerCase()
-               .indexOf(this.state.bioBusca.toLowerCase()) >= 0)
-        .map((r) => ({
-          nombre: r.nombre,
-          detalle: "Registrado el " + String(r.creado || "").slice(0, 10)
-            + " · " + (r.cargo || "sin cargo"),
-        })),
+      /* Aquí se contaba quién tenía rostro registrado para marcar por
+         el celular. Se retiró con su bloque de pantalla: marcar en el
+         terminal o por el celular es una elección, no un trámite
+         pendiente, y la lista lo presentaba como una falta. */
 
       /* ══ Gráficos ═══════════════════════════════════════════════════
          Barras de caja, como en el Dashboard. Un cero se dibuja de 3 px
@@ -560,6 +544,8 @@
       })(),
       ytHayEquipo: !!(this.state.terminal && this.state.terminal.configurado),
 
+      bioAlDia: this.state.bioAlDia || "",
+      bioHayAlDia: !!this.state.bioAlDia,
       bioBusca: this.state.bioBusca || "",
       onBioBusca: (e) => this.setState({ bioBusca: e.target.value }),
 

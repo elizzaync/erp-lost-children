@@ -40,6 +40,7 @@ import documento_permiso
 import firmas
 import reportes
 import fotos
+import lugares
 import invitaciones as invi
 import formulario as form
 import auth
@@ -695,6 +696,68 @@ def anular_invitacion_api(id_):
 # Tres operaciones y una sola forma de entrar: fotos.aceptar(). El día que
 # la foto llegue del formulario público, ese origen llama a lo mismo.
 
+@app.post("/api/enrolamiento/revisar")
+@auth.requiere("asistencia", "edicion")
+def revisar_enrolamientos():
+    """
+    Pone al día las identidades que se quedaron a medias.
+
+    El seguimiento de un enrolamiento vive en la memoria del proceso: en
+    cuanto la pantalla deja de sondear —se cierra, se agota el tiempo, se
+    reinicia el servidor— nadie vuelve a preguntarle al equipo, y la ficha
+    se queda en «esperando» aunque el terminal ya la haya capturado.
+    Recargar no ayudaba: recargar lee la base, y la base no se había
+    enterado. Esto es lo que le vuelve a preguntar.
+    """
+    try:
+        return jsonify(enrolamiento.revisar_pendientes())
+    except YunattError as e:
+        return _error(e, 502)
+    except Exception as e:
+        log.exception("fallo al revisar enrolamientos")
+        return _error(e, 500)
+
+
+@app.get("/api/personal/<int:id_>/foto")
+@auth.requiere("personal", "vista")
+def foto_personal(id_):
+    """
+    La foto de la ficha. La toma el terminal al registrar el rostro.
+
+    Igual que la de los responsables, que llegó antes por el formulario de
+    tutores: mismo almacén, mismas comprobaciones y la misma respuesta
+    cuando no hay.
+    """
+    r = db.persona_personal(id_)
+    if not r:
+        return _error(f"No existe la persona {id_}", 404)
+    ruta = fotos.ruta_de(r.get("foto"))
+    if not ruta:
+        return _error("Esa ficha no tiene foto", 404)
+    return send_file(ruta, mimetype=r.get("foto_mime") or "image/jpeg",
+                     as_attachment=False, download_name="foto.jpg")
+
+
+@app.get("/api/beneficiarios/<int:id_>/foto")
+@auth.requiere("beneficiarios", "vista")
+def foto_beneficiario(id_):
+    """
+    La foto del niño, la que tomó el terminal al registrar su rostro.
+
+    Exige permiso de VISTA sobre beneficiarios, como el resto de su
+    expediente: es la cara de un menor y no puede quedar accesible a quien
+    no tenga por qué verla.
+    """
+    b = db.beneficiario(id_)
+    if not b:
+        return _error(f"No existe el beneficiario {id_}", 404)
+    ruta = fotos.ruta_de(b.get("foto"))
+    if not ruta:
+        return _error("Esa ficha no tiene foto", 404)
+    return send_file(ruta, mimetype=b.get("foto_mime") or "image/jpeg",
+                     as_attachment=False, download_name="foto.jpg")
+
+
 @app.get("/api/responsables/<int:id_>/foto")
 @auth.requiere("responsables", "vista")
 def foto_responsable(id_):
@@ -1216,32 +1279,83 @@ def _persona_opcional(cuerpo, campo, etiqueta):
     return v, None
 
 
+# Sesiones e incidencias son cosas distintas —una es acompañamiento
+# planificado y la otra algo que pasó— pero viven en la misma pantalla y se
+# guardan igual. Lo que sigue es lo que tenían en común, escrito una vez.
+
+# De qué tabla sale cada cosa. Se escribe aquí y no se recibe de fuera: el
+# nombre de una tabla no puede venir de una petición.
+_TABLA_ACOMP = {
+    "sesion": ("sesiones_acompanamiento", "la sesión"),
+    "incidencia": ("incidencias", "la incidencia"),
+}
+
+
+def _acompanamiento(bid, **extra):
+    """
+    Lo que ve la pantalla del expediente después de cualquier cambio.
+
+    Las tres listas van siempre juntas: al corregir una sesión cambia el
+    recuento del año, y devolver solo la lista tocada dejaba el resto de la
+    pantalla enseñando números viejos hasta que alguien recargara.
+    """
+    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
+                    "incidencias": db.incidencias_de(bid),
+                    "sesiones_anio": db.sesiones_del_anio(bid), **extra})
+
+
+def _de_quien_es(que, id_):
+    """
+    A qué beneficiario pertenece esa fila. Devuelve (bid, error).
+
+    Hace falta en las cuatro puertas que corrigen o borran: la fila se
+    identifica sola, pero la respuesta es siempre el expediente entero del
+    niño, y para eso hay que saber de quién es.
+    """
+    tabla, etiqueta = _TABLA_ACOMP[que]
+    filas = db.consultar(
+        f"SELECT beneficiario_id FROM {tabla} WHERE id = ?", (id_,))
+    if not filas:
+        return None, _error(f"No existe {etiqueta} {id_}", 404)
+    return filas[0]["beneficiario_id"], None
+
+
+def _fecha_registrable(cuerpo, que):
+    """
+    La fecha del cuerpo, validada. Devuelve (fecha, error).
+
+    Ni vacía, ni con otro formato, ni futura: registrar un acompañamiento
+    que todavía no ha ocurrido convierte el expediente en una intención en
+    vez de un registro de lo que pasó.
+    """
+    fecha = str(cuerpo.get("fecha") or "").strip()
+    if not fecha:
+        return None, _error("La fecha es obligatoria", 400)
+    try:
+        f = date.fromisoformat(fecha)
+    except ValueError:
+        return None, _error("La fecha debe tener el formato AAAA-MM-DD", 400)
+    if f > date.today():
+        return None, _error(f"{que} no puede registrarse con fecha futura", 400)
+    return fecha, None
+
+
 @app.post("/api/beneficiarios/<int:id_>/sesiones")
 @auth.requiere("sesiones", "edicion")
 def crear_sesion_(id_):
     if not db.beneficiario(id_):
         return _error(f"No existe el beneficiario {id_}", 404)
     cuerpo = request.get_json(silent=True) or {}
-    fecha = str(cuerpo.get("fecha") or "").strip()
-    if not fecha:
-        return _error("La fecha es obligatoria", 400)
-    try:
-        f = date.fromisoformat(fecha)
-    except ValueError:
-        return _error("La fecha debe tener el formato AAAA-MM-DD", 400)
-    if f > date.today():
-        return _error("Una sesión no puede registrarse con fecha futura", 400)
-
+    fecha, err = _fecha_registrable(cuerpo, "Una sesión")
+    if err:
+        return err
     quien, err = _persona_opcional(cuerpo, "realizada_por", "responsable")
     if err:
         return _error(err, 400)
     try:
         nuevo = db.crear_sesion(id_, fecha, cuerpo.get("tipo") or "individual",
                                 quien, cuerpo.get("notas") or "")
-        return jsonify({"ok": True, "id": nuevo,
-                        "sesiones": db.sesiones_de(id_),
-                        "incidencias": db.incidencias_de(id_),
-                        "sesiones_anio": db.sesiones_del_anio(id_)})
+        return _acompanamiento(id_, id=nuevo)
     except ValueError as e:
         return _error(e, 400)
     except Exception as e:
@@ -1259,35 +1373,26 @@ def editar_sesion_(id_):
     escritas solo se arreglaban borrando la sesión entera, y con ella se
     iba la constancia de que ese acompañamiento ocurrió.
     """
-    filas = db.consultar(
-        "SELECT beneficiario_id FROM sesiones_acompanamiento WHERE id = ?", (id_,))
-    if not filas:
-        return _error(f"No existe la sesión {id_}", 404)
-    bid = filas[0]["beneficiario_id"]
-    cuerpo = request.get_json(silent=True) or {}
+    bid, err = _de_quien_es("sesion", id_)
+    if err:
+        return err
     try:
-        cambiadas = db.editar_sesion(id_, cuerpo)
+        cambiadas = db.editar_sesion(id_, request.get_json(silent=True) or {})
     except ValueError as e:
         return _error(e, 400)
     if not cambiadas:
         return _error("No llegó ningún cambio", 400)
-    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
-                    "incidencias": db.incidencias_de(bid),
-                    "sesiones_anio": db.sesiones_del_anio(bid)})
+    return _acompanamiento(bid)
 
 
 @app.delete("/api/sesiones/<int:id_>")
 @auth.requiere("sesiones", "edicion")
 def borrar_sesion_(id_):
-    filas = db.consultar(
-        "SELECT beneficiario_id FROM sesiones_acompanamiento WHERE id = ?", (id_,))
-    if not filas:
-        return _error(f"No existe la sesión {id_}", 404)
-    bid = filas[0]["beneficiario_id"]
+    bid, err = _de_quien_es("sesion", id_)
+    if err:
+        return err
     db.borrar_sesion(id_)
-    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
-                    "incidencias": db.incidencias_de(bid),
-                    "sesiones_anio": db.sesiones_del_anio(bid)})
+    return _acompanamiento(bid)
 
 
 @app.post("/api/beneficiarios/<int:id_>/incidencias")
@@ -1296,18 +1401,11 @@ def crear_incidencia_(id_):
     if not db.beneficiario(id_):
         return _error(f"No existe el beneficiario {id_}", 404)
     cuerpo = request.get_json(silent=True) or {}
-    fecha = str(cuerpo.get("fecha") or "").strip()
-    if not fecha:
-        return _error("La fecha es obligatoria", 400)
-    try:
-        f = date.fromisoformat(fecha)
-    except ValueError:
-        return _error("La fecha debe tener el formato AAAA-MM-DD", 400)
-    if f > date.today():
-        return _error("Una incidencia no puede registrarse con fecha futura", 400)
+    fecha, err = _fecha_registrable(cuerpo, "Una incidencia")
+    if err:
+        return err
     if not str(cuerpo.get("descripcion") or "").strip():
         return _error("La descripción es obligatoria", 400)
-
     quien, err = _persona_opcional(cuerpo, "reportada_por", "quien reporta")
     if err:
         return _error(err, 400)
@@ -1315,10 +1413,7 @@ def crear_incidencia_(id_):
         nuevo = db.crear_incidencia(id_, fecha, cuerpo.get("descripcion"),
                                     cuerpo.get("gravedad") or "leve", quien,
                                     cuerpo.get("seguimiento") or "")
-        return jsonify({"ok": True, "id": nuevo,
-                        "sesiones": db.sesiones_de(id_),
-                        "incidencias": db.incidencias_de(id_),
-                        "sesiones_anio": db.sesiones_del_anio(id_)})
+        return _acompanamiento(id_, id=nuevo)
     except ValueError as e:
         return _error(e, 400)
     except Exception as e:
@@ -1333,35 +1428,26 @@ def editar_incidencia_(id_):
     Corrige una incidencia ya registrada. Misma razón que las sesiones: lo
     que se escribió mal se arregla, no se borra.
     """
-    filas = db.consultar(
-        "SELECT beneficiario_id FROM incidencias WHERE id = ?", (id_,))
-    if not filas:
-        return _error(f"No existe la incidencia {id_}", 404)
-    bid = filas[0]["beneficiario_id"]
-    cuerpo = request.get_json(silent=True) or {}
+    bid, err = _de_quien_es("incidencia", id_)
+    if err:
+        return err
     try:
-        cambiadas = db.editar_incidencia(id_, cuerpo)
+        cambiadas = db.editar_incidencia(id_, request.get_json(silent=True) or {})
     except ValueError as e:
         return _error(e, 400)
     if not cambiadas:
         return _error("No llegó ningún cambio", 400)
-    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
-                    "incidencias": db.incidencias_de(bid),
-                    "sesiones_anio": db.sesiones_del_anio(bid)})
+    return _acompanamiento(bid)
 
 
 @app.delete("/api/incidencias/<int:id_>")
 @auth.requiere("incidencias", "edicion")
 def borrar_incidencia_(id_):
-    filas = db.consultar(
-        "SELECT beneficiario_id FROM incidencias WHERE id = ?", (id_,))
-    if not filas:
-        return _error(f"No existe la incidencia {id_}", 404)
-    bid = filas[0]["beneficiario_id"]
+    bid, err = _de_quien_es("incidencia", id_)
+    if err:
+        return err
     db.borrar_incidencia(id_)
-    return jsonify({"ok": True, "sesiones": db.sesiones_de(bid),
-                    "incidencias": db.incidencias_de(bid),
-                    "sesiones_anio": db.sesiones_del_anio(bid)})
+    return _acompanamiento(bid)
 
 
 @app.delete("/api/beneficiarios/<int:id_>")
@@ -1547,9 +1633,9 @@ def guardar_mi_firma():
     pid, error = _yo()
     if error:
         return error
-    ses = auth.sesion_actual()
-    if not auth.csrf_valido(ses):
-        return _error("Petición sin token de seguridad válido", 403)
+    ses, err_csrf = _sesion_con_csrf()
+    if err_csrf:
+        return err_csrf
     cuerpo = request.get_json(silent=True) or {}
     try:
         interno = firmas.aceptar(cuerpo.get("imagen"))
@@ -1569,9 +1655,9 @@ def borrar_mi_firma():
     pid, error = _yo()
     if error:
         return error
-    ses = auth.sesion_actual()
-    if not auth.csrf_valido(ses):
-        return _error("Petición sin token de seguridad válido", 403)
+    ses, err_csrf = _sesion_con_csrf()
+    if err_csrf:
+        return err_csrf
     p = db.persona_personal(pid)
     anterior = p.get("firma") if p else None
     db.guardar_firma(pid, None)
@@ -1895,9 +1981,9 @@ def cancelar_permiso(id_):
     sol = db.solicitud(id_)
     if not sol:
         return _error(f"No existe la solicitud {id_}", 404)
-    ses = auth.sesion_actual()
-    if not auth.csrf_valido(ses):
-        return _error("Petición sin token de seguridad válido", 403)
+    ses, err_csrf = _sesion_con_csrf()
+    if err_csrf:
+        return err_csrf
     mia = bool(ses) and ses.get("personal_id") == sol["personal_id"]
     if not mia and not auth.puede(ses, "permisos", "edicion"):
         return _error("Solo puedes cancelar tus propias solicitudes.", 403)
@@ -2070,6 +2156,22 @@ def borrar_seguimiento_(id_):
 #  filtrar por permisos de módulo, porque el propio endpoint no sabe hablar
 #  de otra persona que no sea la que está conectada.
 # ══════════════════════════════════════════════════════════════════════════
+
+def _sesion_con_csrf():
+    """
+    La sesión, si trae el token de seguridad. Devuelve (sesión, error).
+
+    Las puertas de módulo comprueban el token dentro de @auth.requiere.
+    Estas no llevan decorador —«mi firma», «cancelar mi permiso»: son cosas
+    de uno mismo, no de un módulo— y lo comprobaban a mano, con las mismas
+    tres líneas copiadas cuatro veces. Escrito una vez, la próxima puerta de
+    este tipo que se olvide de llamarlo canta a la vista.
+    """
+    ses = auth.sesion_actual()
+    if not auth.csrf_valido(ses):
+        return None, _error("Petición sin token de seguridad válido", 403)
+    return ses, None
+
 
 def _yo():
     """
@@ -2356,9 +2458,9 @@ def marcar_desde_el_movil():
     pid, err = _yo()
     if err:
         return err
-    ses = auth.sesion_actual()
-    if not auth.csrf_valido(ses):
-        return _error("Petición sin token de seguridad válido", 403)
+    ses, err_csrf = _sesion_con_csrf()
+    if err_csrf:
+        return err_csrf
 
     persona = db.persona_personal(pid)
     if not persona:
@@ -2406,26 +2508,20 @@ def marcar_desde_el_movil():
     except (TypeError, ValueError):
         lat = lon = None
 
+    # La distancia se CALCULA y se guarda, pero no rechaza nada.
+    #
+    # Antes: pasado el radio, 403 «lejos», y sin ubicación, 400. Ninguna de
+    # las dos se queda. Marcar siempre entra —esté quien marca donde esté— y
+    # lo que quede registrado lo mira RRHH, que es quien puede preguntar. Un
+    # GPS urbano se equivoca por decenas de metros y dentro de un edificio
+    # por más: rechazar por esa cifra es castigar a alguien por su teléfono.
+    # Una persona mirando «marcó a 300 m» decide bien; un umbral, no.
+    #
+    # El radio configurado sigue sirviendo: es con lo que la lista de
+    # asistencia señala quién marcó fuera, para que se vea sin buscarlo.
     sede = _sede_configurada()
     if sede and lat is not None:
         distancia = round(_metros_entre(lat, lon, sede[0], sede[1]), 1)
-        # El margen que declara el propio teléfono cuenta a favor de quien
-        # marca: rechazar a alguien que está dentro por un GPS impreciso
-        # sería castigarle por su aparato.
-        margen = min(precision or 0, 120)
-        if distancia - margen > sede[2]:
-            return jsonify({
-                "ok": False, "motivo": "lejos",
-                "distancia": distancia, "radio": sede[2],
-                "error": f"Estás a {int(distancia)} m de la sede y el límite "
-                         f"es de {sede[2]} m. Acércate y vuelve a intentarlo.",
-            }), 403
-    elif sede and lat is None:
-        return jsonify({
-            "ok": False, "motivo": "sin_ubicacion",
-            "error": "No se pudo obtener tu ubicación. Da permiso de "
-                     "ubicación al navegador y vuelve a intentarlo.",
-        }), 400
 
     # ── El rostro ────────────────────────────────────────────────────────
     # Aquí es donde la marca deja de ser «alguien con esta cuenta apretó un
@@ -2488,9 +2584,16 @@ def marcar_desde_el_movil():
     # marcó son dos cosas distintas. Antes ponía 'web' en las dos, de cuando
     # la marca por celular era solo una foto; desde que compara el rostro,
     # decir 'web' en el método escondía que hubo reconocimiento facial.
+    # El NOMBRE del sitio, resuelto una sola vez, aquí. No al pintar la
+    # pantalla: si se hiciera al mirar, abrir el Registro de Asistencia
+    # mandaría a un servicio de fuera la ubicación de todo el equipo cada
+    # vez que alguien entra. Si no se puede saber, la marca entra igual.
+    lugar = lugares.nombre_de(lat, lon)
+
     puesta = db.guardar_marca(ident["staff_number"], hoy, hora, "facial", "web",
                               foto=nombre_foto, lat=lat, lon=lon,
-                              precision_m=precision, distancia_m=distancia)
+                              precision_m=precision, distancia_m=distancia,
+                              lugar=lugar)
     if not puesta:
         # INSERT OR IGNORE: ya había una marca en ese mismo minuto.
         return jsonify({"ok": True, "repetida": True, "hora": hora,
@@ -2502,6 +2605,9 @@ def marcar_desde_el_movil():
              dist)
     return jsonify({"ok": True, "hora": hora, "fecha": hoy,
                     "distancia": distancia,
+                    # El nombre del sitio, para que el aviso diga dónde
+                    # marcó y no a cuántos metros de algo.
+                    "lugar": lugar,
                     "conFoto": bool(nombre_foto),
                     "sinRadio": sede is None})
 
@@ -2755,7 +2861,13 @@ def cancelar_enrolamiento(staff_number):
 @auth.requiere("asistencia", "vista")
 def asistencia():
     fecha = request.args.get("fecha") or date.today().isoformat()
-    return jsonify({"ok": True, "fecha": fecha, "filas": db.marcas_de(fecha)})
+    # El radio va con las filas: la pantalla lo necesita para señalar
+    # quién marcó fuera. No es un límite que rechace nada —marcar entra
+    # siempre— sino la referencia con la que RRHH sabe a quién preguntar.
+    sede = _sede_configurada()
+    return jsonify({"ok": True, "fecha": fecha, "filas": db.marcas_de(fecha),
+                    "radio": sede[2] if sede else None,
+                    "haySede": sede is not None})
 
 
 @app.get("/api/asistencia/resumen")
@@ -2815,6 +2927,34 @@ def asistencia_rango():
     return jsonify(
         {"ok": True, "desde": desde, "hasta": hasta, "personas": db.marcas_rango(desde, hasta)}
     )
+
+
+@app.get("/api/novedades")
+@auth.requiere("asistencia", "vista")
+def novedades():
+    """
+    Un par de números que cambian cuando cambia algo. Nada más.
+
+    Es lo que sondean las pantallas para saber si tienen que recargarse.
+    Tiene que ser BARATO: se pide cada pocos segundos y por cada persona
+    que tenga el sistema abierto. Dos MAX() sobre índices primarios no
+    tocan disco de forma apreciable.
+
+    No devuelve datos, solo señales: quien vea que cambiaron pide entonces
+    lo que necesite. Así una pantalla abierta y quieta no cuesta casi nada.
+    """
+    fila = db.consultar(
+        """SELECT (SELECT COALESCE(MAX(id), 0) FROM marcas)          AS marcas,
+                  (SELECT COUNT(*) FROM identidades)                 AS identidades,
+                  (SELECT COALESCE(MAX(estado), '') FROM identidades) AS estados"""
+    )[0]
+    return jsonify({"ok": True,
+                    "marcas": fila["marcas"],
+                    "identidades": fila["identidades"],
+                    # El estado biométrico cambia sin que cambien los
+                    # conteos: alguien que pasa de «esperando» a
+                    # «enrolado» no añade filas, y hay que enterarse.
+                    "sello": f"{fila['marcas']}·{fila['identidades']}·{fila['estados']}"})
 
 
 @app.post("/api/asistencia/sync")

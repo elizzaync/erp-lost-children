@@ -103,13 +103,13 @@
           <!-- Avance de enrolamiento: cifra y barra, no gráfico -->
           <div style="min-width:0;">
             <h2 style="font-size:22px; font-weight:600; margin:0 0 4px; letter-spacing:-0.3px; color:#0e3d69;">Enrolamiento en el terminal</h2>
-            <p style="margin:0 0 22px; font-size:14.5px; color:#7d8e9c;">Quien no está enrolado no puede marcar</p>
+            <p style="margin:0 0 22px; font-size:14.5px; color:#7d8e9c;">Del personal: quien no está enrolado no puede marcar en el terminal</p>
             <div style="display:flex; align-items:baseline; gap:12px;">
               <div style="font-size:38px; font-weight:600; letter-spacing:-1px; color:{{ enrolTono }}; font-variant-numeric:tabular-nums;">{{ enrolTexto }}</div>
               <div style="font-size:16px; color:#7d8e9c; font-variant-numeric:tabular-nums;">{{ enrolPct }}</div>
             </div>
-            <div style="height:14px; background:#e7e3de; border-radius:1px; margin-top:14px;">
-              <div style="height:100%; width:{{ enrolPct }}; background:{{ enrolTono }}; border-radius:1px;"></div>
+            <div style="height:14px; background:#e7e3de; border-radius:1px; margin-top:14px; overflow:hidden;">
+              <div style="height:100%; width:{{ enrolAncho }}; max-width:100%; background:{{ enrolTono }}; border-radius:1px;"></div>
             </div>
             <p style="margin:14px 0 0; font-size:14px; color:#5b7185; text-wrap:pretty;">{{ enrolNota }}</p>
           </div>

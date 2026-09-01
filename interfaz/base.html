@@ -254,7 +254,7 @@
       </div>
 
       <div style="display:flex; flex-direction:column; gap:1px;">
-        <div style="font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#5b7185; padding:0 10px 10px;">Otros módulos</div>
+        <div style="font-size:10px; letter-spacing:0.16em; text-transform:uppercase; color:#5b7185; padding:0 10px 10px;">Sistema</div>
         <sc-for list="{{ otherModules }}" as="mod" hint-placeholder-count="6">
           <button onClick="{{ mod.go }}" style="{{ mod.style }}">
             <span style="width:9px; height:9px; border:1px solid {{ mod.punto }}; display:block; flex-shrink:0; border-radius:1px;"></span>
@@ -278,7 +278,11 @@
   </aside>
 
   <main style="min-width:0; padding:0 0 90px;">
-    <header class="lc-cabecera" style="padding:32px 48px 0; background:#f4f3f1; position:sticky; top:0; z-index:20;">
+    <!-- La cabecera se va con el resto al bajar. Estuvo pegada arriba
+         (position:sticky) y no gustaba: el título de la pantalla se
+         quedaba clavado mientras el contenido pasaba por detrás. Ahora
+         se comporta como cualquier otra parte de la página. -->
+    <header class="lc-cabecera" style="padding:32px 48px 0; background:#f4f3f1;">
       <div style="display:flex; align-items:center; gap:14px; padding:11px 0 10px;">
         <!-- Solo se ve en pantalla pequeña: su regla está en la consulta
              de medios. En pantalla grande la barra ya está a la vista. -->

@@ -84,7 +84,79 @@
      persona y el fondo de aviso. Va aparte de filasReales() porque eso es
      el dato y esto es el aspecto; mezclarlos obligaría a tocar el dato
      cada vez que cambie el diseño. */
-  static adornoFila(f) {
+  /* Desde dónde marcó, dicho en una línea. Devuelve texto y color.
+
+     Sin marcas no dice nada: quien todavía no ha fichado no tiene
+     ubicación que enseñar, y escribir «sin ubicación» ahí lo señalaría
+     por algo que no ha hecho. */
+  /* Qué se puede decir de dónde marcó. Tres situaciones distintas que es
+     fácil confundir en una sola:
+
+       · Dio coordenadas Y hay sede → se sabe la distancia: «a 340 m».
+       · Dio coordenadas y NO hay sede → se sabe que las dio, pero no hay
+         punto contra el que medir: «con ubicación». Decir «sin ubicación»
+         aquí sería acusarla de algo que sí hizo.
+       · No dio coordenadas → «sin ubicación», sin más.
+
+     El terminal nunca da coordenadas y eso no es un descuido de nadie: no
+     tiene GPS. Por eso quien lo llama decide si preguntar. */
+  /* DÓNDE marcó, dicho con el nombre del sitio.
+
+     Antes esto decía «a 340 m de la sede». Una distancia no dice dónde
+     está nadie: quien fichó desde China aparecía como «a 18.000 km», que
+     es un dato inútil para quien tiene que decidir algo. El nombre del
+     sitio lo resuelve el servidor al guardar la marca y viaja con ella.
+
+     La distancia no se tira: sigue sirviendo para pintar en ámbar a quien
+     marcó fuera del radio, cuando hay sede configurada. Pero lo que se LEE
+     es el lugar. */
+  static ubicacionFila(f, radio) {
+    if (!(f.total > 0)) return { texto: "", color: "#7d8e9c" };
+    const m = f.distancia == null ? null : Number(f.distancia);
+    const fuera = m != null && radio != null && m > radio;
+    const color = fuera ? "#8a5c05" : "#7d8e9c";
+
+    if (f.lugar) return { texto: f.lugar, color: color };
+
+    /* Sin nombre: o no dio ubicación, o el servicio de mapas no contestó
+       cuando se guardó. Se distingue, porque no es lo mismo. */
+    const dioAlguna = (f.sin_ubicacion || 0) < (f.total || 0);
+    if (!dioAlguna) return { texto: "sin ubicación", color: "#7d8e9c" };
+    if (m != null) {
+      const dicho = m >= 1000 ? (m / 1000).toFixed(1) + " km"
+                              : Math.round(m) + " m";
+      return { texto: "a " + dicho + " de la sede", color: color };
+    }
+    return { texto: "con ubicación, sin nombre", color: "#7d8e9c" };
+  }
+
+  /* De dónde vino la marca de ese día, y desde dónde si fue del celular.
+
+     La columna se llamaba «Registro» y enseñaba el método biométrico
+     —Rostro o Huella—, que describe el enrolamiento y no el fichaje. Lo
+     que hace falta saber al mirar un día es si la persona estuvo delante
+     del equipo o fichó desde el teléfono, y en ese caso desde dónde. */
+  static origenFila(f, radio) {
+    if (!(f.total > 0)) return { texto: "—", icono: "ph-minus", color: "#9aa7b2" };
+    const cs = String(f.canales || "").split(",").filter(Boolean);
+    const web = cs.indexOf("web") >= 0;
+    const term = cs.indexOf("terminal") >= 0;
+
+    if (term && !web) {
+      /* El terminal no tiene GPS: no hay ubicación que enseñar y tampoco
+         que echar en falta. Estuvo en la puerta, y con eso basta. */
+      return { texto: "Terminal", icono: "ph-identification-card", color: "#0e3d69" };
+    }
+    const u = Component.ubicacionFila(f, radio);
+    const donde = u.texto ? (" · " + u.texto) : "";
+    if (web && term) {
+      return { texto: "Terminal y celular" + donde,
+               icono: "ph-arrows-left-right", color: u.color };
+    }
+    return { texto: "Celular" + donde, icono: "ph-device-mobile", color: u.color };
+  }
+
+  static adornoFila(f, radio) {
     const PALETA = [
       [BLUE_T, BLUE_D], [GREEN_T, GREEN_D], [GOLD_T, GOLD_D],
       [RED_T, RED_D], ["#efe7f5", "#5b3a7a"], ["#e6f0f2", "#2b5f68"],
@@ -96,7 +168,13 @@
     return {
       iniciales: ini(nombre) || "?",
       iniTint: par[0], iniColor: par[1],
+      /* Solo el rol. La distancia estuvo aquí un rato por falta de sitio
+         mejor; ahora tiene el suyo, en la columna «Registro». */
       subtitulo: f.rolLabel || "",
+      subColor: "#7d8e9c",
+      origen: Component.origenFila(f, radio).texto,
+      origenIcono: Component.origenFila(f, radio).icono,
+      origenColor: Component.origenFila(f, radio).color,
       /* Fondo de aviso solo para quien NO PUEDE marcar. A quien puede y
          todavía no ha marcado no se le pinta nada: puede que aún no haya
          llegado, y teñirle la fila lo señalaría sin motivo. */
@@ -344,7 +422,7 @@
         return this.realesVisibles(mtd, sc)
           .concat(mtd === "todos" ? this.filasSinEnrolar().filter(enAmbito) : [])
           .filter(coincide)
-          .map((f) => Object.assign({}, f, Component.adornoFila(f)));
+          .map((f) => Object.assign({}, f, Component.adornoFila(f, this.state.asisRadio)));
       })(),
       diaHay: (() => {
         const enAmbito = (f) => sc === "todos" || f.ambito === sc;

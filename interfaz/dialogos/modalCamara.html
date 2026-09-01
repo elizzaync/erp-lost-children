@@ -63,7 +63,10 @@
                 </div>
                 <div style="background:#f0ede9; border-radius:2px; padding:11px 13px;">
                   <div style="font-size:10.5px; letter-spacing:0.15em; text-transform:uppercase; color:#7d8e9c;">Ubicación</div>
-                  <div style="font-size:15px; color:#201e1d; margin-top:3px; font-variant-numeric:tabular-nums;">{{ camDondeTexto }}</div>
+                  <div style="font-size:15px; color:{{ camDondeColor }}; margin-top:3px; font-variant-numeric:tabular-nums;">{{ camDondeTexto }}</div>
+                  <sc-if value="{{ camHayNotaUbi }}">
+                    <div style="font-size:12px; color:#7d8e9c; margin-top:4px; text-wrap:pretty;">{{ camDondeNota }}</div>
+                  </sc-if>
                 </div>
               </div>
 

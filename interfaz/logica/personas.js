@@ -1,6 +1,10 @@
   cargarPersonas() {
     this.api("/api/asistencia?fecha=" + encodeURIComponent(this.state.fecha || this.fechaHoy()))
-      .then((d) => { if (this._vivo) this.setState({ personasReales: d.filas || [] }); })
+      .then((d) => { if (this._vivo) this.setState({
+          personasReales: d.filas || [],
+          /* El radio no limita nada: es con lo que la lista señala quién
+             marcó fuera, para que RRHH sepa a quién preguntar. */
+          asisRadio: d.radio == null ? null : Number(d.radio) }); })
       .catch(() => {});
   }
 

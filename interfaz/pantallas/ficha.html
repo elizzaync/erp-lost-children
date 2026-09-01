@@ -3,8 +3,20 @@
           <button onClick="{{ backToOrg }}" style="font-size:14px; color:#1462a5; margin-bottom:24px;" style-hover="color:#0e3d69">← Volver al organigrama</button>
 
           <div style="display:grid; grid-template-columns:230px minmax(0,1fr); gap:40px; align-items:start;">
-            <div style="width:230px; height:280px; background:#e9eef3; border-bottom:5px solid {{ emp.color }};">
-              <image-slot id="foto-ficha" shape="rect" placeholder="Foto del colaborador"></image-slot>
+            <!-- Aquí había un hueco de la maqueta que nunca enseñó nada.
+                 Ahora va la foto que tomó el TERMINAL al registrar el
+                 rostro; si esa persona todavía no se ha enrolado, se dice
+                 en vez de dejar un recuadro mudo. -->
+            <div style="width:230px; height:280px; background:#e9eef3; border-bottom:5px solid {{ emp.color }}; overflow:hidden;">
+              <sc-if value="{{ emp.tieneFoto }}">
+                <img src="{{ emp.fotoUrl }}" alt="Foto de {{ emp.nombre }}" style="width:230px; height:280px; object-fit:cover; display:block;" />
+              </sc-if>
+              <sc-if value="{{ emp.sinFoto }}">
+                <div style="width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:9px; padding:20px; text-align:center;">
+                  <i class="ph-duotone ph-user" style="font-size:38px; color:#9aa7b2;"></i>
+                  <div style="font-size:12.5px; color:#7d8e9c; text-wrap:pretty;">La toma el terminal al registrar el rostro</div>
+                </div>
+              </sc-if>
             </div>
 
             <div style="min-width:0;">
