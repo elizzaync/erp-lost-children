@@ -255,7 +255,11 @@ ROLES_SISTEMA = (ROL_DIRECTOR, ROL_RRHH)
 
 
 # ── yunatt ────────────────────────────────────────────────────────────────
-YUNATT_BASE = "https://global.yunatt.com"
+# La dirección de yunatt se lee del .env. Estuvo escrita a fuego hasta que
+# su servicio de siempre se cayó (01/09/2026) y no hubo forma de apuntar a
+# otro sitio sin tocar código. El valor de siempre queda de predeterminado:
+# quien no la ponga en el .env no nota el cambio.
+YUNATT_BASE = env("YUNATT_BASE", "https://global.yunatt.com").rstrip("/")
 
 YUNATT_EMAIL = env("YUNATT_EMAIL")
 YUNATT_PASSWORD = env("YUNATT_PASSWORD")

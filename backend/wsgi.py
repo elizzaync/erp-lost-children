@@ -29,5 +29,13 @@ log = logging.getLogger("rrhh.wsgi")
 db.iniciar()
 log.info("esquema verificado · base en %s", db.config.DB_PATH)
 
+# Trae las marcas del terminal solo. gunicorn no llama a app.main(), así
+# que hay que arrancarlo aquí también. Con -w 1 hay un único proceso, así
+# que un solo hilo pregunta a yunatt — que es lo que conviene con una
+# cuenta que no admite muchas sesiones a la vez.
+import sincronizador  # noqa: E402
+
+sincronizador.arrancar()
+
 # gunicorn busca este nombre.
 application = app

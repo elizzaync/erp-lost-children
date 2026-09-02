@@ -2,7 +2,7 @@
      que el del terminal: se puede estar en uno y no en el otro. */
   /* Cómo está la conexión con el terminal. No llama a yunatt: pregunta
      al propio servidor qué sabe ya, así que se puede pedir al entrar sin
-     gastar la sesión compartida con el ERP anterior. */
+     abrir sesión con ellos. */
   /* Le pregunta al terminal por quien se quedó a medias.
 
      Hace falta porque el seguimiento de un enrolamiento vive en la memoria
@@ -89,7 +89,8 @@
   }
 
   /* El backend cachea 4 s sus consultas a yunatt, así que sondear cada
-     1,5 s mantiene viva la interfaz sin castigar la cuenta compartida. */
+     1,5 s mantiene viva la interfaz sin castigar una plataforma que va
+     justa de por sí. */
 /*§CORTE§ linea original 5947 §*/
   programarSondeo() {
     if (this._sondeo) clearTimeout(this._sondeo);
@@ -108,8 +109,16 @@
 
 /*§CORTE§ linea original 5962 §*/
   aplicarEstado(d) {
+    /* 'en_cola' NO es esperar al terminal.
+       Se llega ahí cuando yunatt no respondía al pedir el enrolamiento: la
+       persona quedó creada aquí y no se mandó nada al equipo. Sin este
+       caso caía en «esperando» y la pantalla decía «acércate y mira a la
+       cámara» —falso, no hay nada esperando— y además se quedaba girando
+       para siempre, porque el sondeo solo continúa mientras el estado sea
+       «esperando». */
     const fase = d.estado === "ok" ? "ok"
       : (d.estado === "error" || d.estado === "cancelado") ? "error"
+      : d.estado === "en_cola" ? "cola"
       : "esperando";
 
     let msg = d.detalle || "";
@@ -165,11 +174,14 @@
   /* ══════════════════════════════════════════════════════════════════════
      EDITAR Y BORRAR PERSONAS ENROLADAS
 
-     El borrado NO es local: quita a la persona del dispositivo físico y de
-     la cuenta de yunatt, ambos compartidos con el ERP anterior. Por eso
-     nunca se dispara desde el botón de la fila: ese botón solo abre el
-     diálogo, y la acción real exige un segundo clic sobre una confirmación
-     que explica el alcance.
+     El borrado NO es local: manda al terminal la orden de quitar a esa
+     persona, y deja de poder fichar. Por eso nunca se dispara desde el
+     botón de la fila: ese botón solo abre el diálogo, y la acción real
+     exige un segundo clic sobre una confirmación que explica el alcance.
+
+     Lo que NO borra son sus marcas: se conservan siempre. Un fichaje
+     ocurrió, y no deja de haber ocurrido porque a alguien se le quite del
+     equipo.
      ══════════════════════════════════════════════════════════════════════ */
 
   /* Hoja de Vida: alta y edición de la ficha del personal. Comparte el mismo
@@ -233,21 +245,27 @@
       capCamClase: "ph-duotone "
         + (this.state.capFase === "ok" ? "ph-check-circle"
           : this.state.capFase === "error" ? "ph-warning-circle"
+          : this.state.capFase === "cola" ? "ph-clock-countdown"
           : this.state.capEtiqueta === "huella" ? "ph-fingerprint" : "ph-scan-smiley")
         + (this.state.capFase === "esperando" ? " rrhh-latido" : ""),
       /* La barra inferior toma el color del estado: en éxito o error el azul
          oscuro chocaba con el marco verde o rojo del recuadro. */
       capCamPieFondo: this.state.capFase === "ok" ? "rgba(28,95,58,0.90)"
         : this.state.capFase === "error" ? "rgba(168,50,31,0.90)"
+        : this.state.capFase === "cola" ? "rgba(138,92,5,0.90)"
         : "rgba(14,61,105,0.82)",
       capCamPie: this.state.capFase === "ok" ? "Captura completa"
         : this.state.capFase === "error" ? "Sin captura"
+        : this.state.capFase === "cola" ? "En cola"
         : this.state.capFase === "esperando"
           ? (this.state.capEtiqueta === "huella" ? "Leyendo huella…" : "Reconociendo…")
           : "Conectando con el terminal",
 
       capTitulo: this.state.capFase === "ok" ? "Captura correcta"
         : this.state.capFase === "error" ? "No se completó la captura"
+        /* En cola no es un error ni una espera al terminal: es que yunatt
+           no respondía y no se llegó a mandar nada. Se dice así. */
+        : this.state.capFase === "cola" ? "Queda pendiente de enviar"
         : this.state.capFase === "esperando"
           ? (this.state.capEtiqueta === "huella" ? "Leyendo huella…" : "Reconociendo…")
           : "Enviando comando…",
@@ -507,7 +525,17 @@
         const t = this.state.terminal;
         if (!t) return "No se pudo consultar el estado del terminal";
         if (!t.configurado) return "El terminal no está configurado";
-        if (t.ultimo_error) return "El terminal dio un error la última vez";
+        /* El título dice DE QUIÉN es el problema. Decía siempre «el
+           terminal dio un error», que era falso las más de las veces: con
+           la plataforma de yunatt caída, el terminal está perfectamente y
+           quien no contesta es el proveedor. */
+        if (t.ultimo_error) {
+          if (t.culpa === "proveedor") return "yunatt no responde";
+          if (t.culpa === "red") return "Problema de conexión con yunatt";
+          if (t.culpa === "cuenta") return "yunatt rechazó la cuenta";
+          if (t.culpa === "plataforma") return "Función no disponible en esta versión de yunatt";
+          return "El terminal dio un error la última vez";
+        }
         return t.sesion_activa ? "Terminal conectado"
                                : "Terminal configurado, sin sesión abierta";
       })(),
@@ -517,7 +545,14 @@
         if (!t.configurado)
           return "Faltan credenciales de yunatt: " + (t.faltan || []).join(", ")
             + ". Sin ellas no se puede enrolar a nadie ni traer marcas.";
-        if (t.ultimo_error) return String(t.ultimo_error).slice(0, 220);
+        /* La frase explicada, no el volcado de Python. Si algún día llega
+           un error que la tabla no sabe clasificar, `diagnostico` trae el
+           texto crudo recortado: peor que una frase buena, mejor que
+           esconder el problema. */
+        if (t.ultimo_error) {
+          const frase = t.diagnostico || String(t.ultimo_error).slice(0, 220);
+          return t.se_arregla_solo ? frase + " No hay que hacer nada." : frase;
+        }
         return t.sesion_activa
           ? "Hay sesión abierta con yunatt. Enrolar y sincronizar deberían funcionar."
           : "Se abrirá sola en la primera operación. No es un problema.";

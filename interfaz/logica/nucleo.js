@@ -1042,7 +1042,11 @@
      ninguna pantalla: lo único que sabe la interfaz es «algo cambió». */
   arrancarVigilancia() {
     if (this._vigila) return;
-    const CADA = 12000;
+    /* Cada 5 segundos. Estuvo en 12 y se quedaba corto: alguien fichaba en
+       el Timmy y tardaba en verse. La consulta son dos MAX() sobre índices
+       y no devuelve datos, solo un sello, así que preguntar más a menudo
+       no cuesta apenas — y con la pestaña de fondo ni se pregunta. */
+    const CADA = 5000;
 
     const mirar = (soloApuntar) => {
       /* Con la pestaña de fondo no se pregunta: no hay nadie mirando, y en

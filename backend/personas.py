@@ -127,12 +127,31 @@ def desenrolar(staff_number):
     resultado = {"staff_number": sn, "nombre": ident["nombre"],
                  "dispositivo": False, "nube": False, "local": False, "avisos": []}
 
-    fila = next(
-        (s for s in cliente.staff_en_nube() if str(s.get("staffNumber")) == str(sn)),
-        None,
-    )
-    if fila is None:
-        resultado["avisos"].append("No estaba en yunatt; solo se quitó aquí.")
+    # Si yunatt no contesta, esto NO puede abortar la operación.
+    #
+    # Antes se llamaba directo y la excepción salía de la función: con su
+    # plataforma caída —que va irregular— era imposible retirar a nadie ni
+    # siquiera aquí. Retirar es una decisión de la ONG, y no puede quedar
+    # en manos de que un proveedor esté disponible.
+    #
+    # Se retira igual y se avisa de que el terminal no se enteró. Queda en
+    # 'retirado' con sus biométricos a cero, así que la próxima revisión ya
+    # lo tratará como no enrolado.
+    fila = None
+    try:
+        fila = next(
+            (s for s in cliente.staff_en_nube()
+             if str(s.get("staffNumber")) == str(sn)),
+            None,
+        )
+        if fila is None:
+            resultado["avisos"].append("No estaba en yunatt; solo se quitó aquí.")
+    except Exception as e:
+        resultado["avisos"].append(
+            "yunatt no responde, así que el terminal no se ha enterado: "
+            "esa persona seguirá pudiendo fichar en el Timmy hasta que se "
+            "la quite de allí. Aquí ya está retirada.")
+        log.warning("personas: %s retirada sin poder avisar a yunatt — %s", sn, e)
     else:
         id_interno = fila["id"]
         # Primero el equipo: si se borra antes de la nube, yunatt ya no
@@ -140,6 +159,14 @@ def desenrolar(staff_number):
         try:
             cliente.borrar_del_dispositivo([id_interno])
             resultado["dispositivo"] = True
+            # «dispositivo: True» significa que yunatt ACEPTÓ la orden, no
+            # que el equipo ya la haya aplicado: el borrado es asíncrono y
+            # esta plataforma no informa del contenido del terminal —sus
+            # contadores useduser/usedface se quedan a cero—. El Timmy la
+            # aplica en cuanto sincroniza, normalmente en segundos.
+            resultado["avisos"].append(
+                "Orden enviada al terminal. El equipo la aplica al "
+                "sincronizar; yunatt no confirma cuándo.")
         except YunattError as e:
             resultado["avisos"].append(f"No se pudo quitar del terminal: {e}")
             log.warning(f"personas: {sn} no se quitó del dispositivo — {e}")
@@ -147,11 +174,42 @@ def desenrolar(staff_number):
             cliente.borrar_de_nube([id_interno])
             resultado["nube"] = True
         except YunattError as e:
-            resultado["avisos"].append(f"No se pudo quitar de yunatt: {e}")
+            # La plataforma oficial (www.yunatt.com:82) no expone ninguna
+            # ruta para borrar personal: /staff/batchRemove y cinco
+            # variantes más responden 404. No es un fallo que se pueda
+            # arreglar desde aquí, y tampoco rompe nada —quien no está en
+            # el terminal no puede fichar—, así que se dice tal cual en
+            # vez de enseñar un error que invita a reintentar.
+            if "404" in str(e):
+                resultado["avisos"].append(
+                    "Queda su ficha en yunatt: esta plataforma no permite "
+                    "borrar personal desde fuera. Se quita a mano en "
+                    "Staff Management, o se deja: no afecta a nada.")
+            else:
+                resultado["avisos"].append(f"No se pudo quitar de yunatt: {e}")
             log.warning(f"personas: {sn} no se quitó de la nube — {e}")
 
-    db.borrar_identidad(sn)
+    # NO se borra la fila: se marca como retirada.
+    #
+    # `marcas.staff_number` apunta a `identidades` con ON DELETE CASCADE,
+    # así que borrar la identidad se llevaba por delante TODO el historial
+    # de asistencia de esa persona. Pasó de verdad el 01/09/2026: quitar a
+    # dos personas para volver a enrolarlas borró sus marcas del día.
+    #
+    # Dejando la fila en 'retirado' y sin biométricos:
+    #   · las marcas se conservan —son un hecho, no dejan de haber ocurrido
+    #     porque a alguien se le quite del terminal—;
+    #   · `enrolado` en v_identidades pasa a 0 (se calcula de rostro/huella),
+    #     así que la persona reaparece como enrolable;
+    #   · al volver a enrolarla se reutiliza su MISMO staff_number, y su
+    #     historial anterior sigue siendo suyo.
+    marcas = db.consultar(
+        "SELECT COUNT(*) AS n FROM marcas WHERE staff_number = ?", (sn,)
+    )[0]["n"]
+    db.actualizar_identidad(sn, "retirado", rostro=0, huella=0,
+                            detalle="Retirada del terminal desde el sistema")
     resultado["local"] = True
+    resultado["marcas_conservadas"] = marcas
     log.info(f"personas: identidad {sn} '{ident['nombre']}' eliminada "
              f"(dispositivo={resultado['dispositivo']} nube={resultado['nube']})")
     return resultado

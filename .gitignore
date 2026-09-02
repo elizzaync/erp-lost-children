@@ -61,3 +61,48 @@ __pycache__/
 *.pyc
 .venv/
 venv/
+
+# cloudflared, que descarga herramientas\tunel-rrhh.bat la primera vez.
+# Son 52 MB de binario de terceros: no es código del proyecto y no tiene
+# nada que hacer en el repositorio. El .bat lo vuelve a descargar solo.
+herramientas/cloudflared.exe
+herramientas/tunel.log
+
+# ── Añadido el 02/09/2026 ────────────────────────────────────────────────
+
+# Copias de seguridad hechas antes de tocar un archivo. La del .env lleva
+# DENTRO la contraseña de yunatt, y el repositorio es público: ignorar solo
+# `backend/.env` no bastaba, porque el respaldo tiene otro nombre.
+*.respaldo-*
+*.bak
+
+# Perfiles de navegador que crean las suites al arrancar Chrome. Son ~50 000
+# archivos de estado de una máquina concreta, no del proyecto.
+pruebas/edge-*/
+pruebas/movil/
+pruebas/fallos/
+pruebas/fotos/
+pruebas/firmas/
+pruebas/__pycache__/
+
+# Estado de una corrida concreta, como la base: cada máquina tiene el suyo.
+pruebas/fixtura_montada.json
+
+# Fotografías de caras que usan las suites de reconocimiento facial. Son
+# 14 MB de personas REALES e identificables, y este repositorio es público:
+# republicarlas aquí sería difundir la cara de gente que no lo ha decidido.
+#
+# Las suites que las necesitan (prueba_modelo_rostro, prueba_rostro_*) leen
+# la carpeta y la ruta se puede cambiar con la variable CARAS. Quien clone
+# el repositorio y quiera correrlas tiene que poner sus propias imágenes.
+pruebas/caras/
+
+# Lo que dejan las corridas de prueba dentro de pruebas/. Nada de esto es
+# código: son bases copiadas, capturas y PDFs generados durante la
+# ejecución, y llevan dentro los datos que hubiera en la base real —nombres
+# del equipo incluidos—.
+pruebas/*.db
+pruebas/*.db-journal
+pruebas/*.png
+pruebas/*.pdf
+pruebas/*.y4m

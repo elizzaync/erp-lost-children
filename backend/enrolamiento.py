@@ -26,7 +26,7 @@ import time
 import config
 import db
 import fotos
-from yunatt_client import cliente, YunattError
+from yunatt_client import cliente, YunattError, traducir_fallo
 
 log = logging.getLogger("enrolamiento")
 
@@ -35,8 +35,8 @@ log = logging.getLogger("enrolamiento")
 TIEMPO_LIMITE = 120
 
 # Mínimo entre consultas reales a yunatt. La interfaz puede sondear cada
-# 1,5 s para sentirse viva, pero solo cada 4 s se golpea de verdad la cuenta
-# compartida — el resto se responde desde esta caché.
+# 1,5 s para sentirse viva, pero solo cada 4 s se pregunta de verdad a su
+# plataforma — el resto se responde desde esta caché.
 CACHE_SONDEO = 4.0
 
 # metodo del formulario -> secuencia de fases a ejecutar
@@ -137,6 +137,18 @@ def _lanzar_fase(sesion):
     )
 
 
+def _es_caida_del_proveedor(e):
+    """
+    ¿Este fallo es «yunatt no responde», o es un problema de verdad?
+
+    Se apoya en la misma tabla que usa la pantalla para explicar el estado,
+    para que no puedan discrepar: si allí se dice que la culpa es del
+    proveedor o de la red, aquí se encola en vez de dar error.
+    """
+    culpa, _frase, _solo = traducir_fallo(str(e))
+    return culpa in ("proveedor", "red")
+
+
 def iniciar(tipo, titular_id, metodo):
     """
     Arranca la captura para una persona QUE YA EXISTE (en personal, en
@@ -201,7 +213,18 @@ def iniciar(tipo, titular_id, metodo):
     else:
         # Reservar el número mirando local + nube, para no chocar con nada
         # creado a mano desde el panel de yunatt.
-        usados = [f.get("staffNumber") for f in cliente.staff_en_nube()]
+        try:
+            usados = [f.get("staffNumber") for f in cliente.staff_en_nube()]
+        except Exception as e:
+            if not _es_caida_del_proveedor(e):
+                raise
+            # Sin nube no se ven los números creados a mano en su panel. Se
+            # reserva mirando solo lo local: es lo mejor disponible, y no
+            # poder enrolar porque su servidor está caído sería peor que un
+            # choque de números que además casi nunca ocurre.
+            log.warning("yunatt no responde: se reserva el número solo con "
+                        "la base local")
+            usados = []
         sn = db.siguiente_staff_number(usados)
         config.validar_rango(sn)
 
@@ -215,8 +238,26 @@ def iniciar(tipo, titular_id, metodo):
         _lanzar_fase(sesion)
         return sesion.resumen()
     except Exception as e:
-        db.actualizar_identidad(sn, "error", detalle=str(e))
-        raise
+        if not _es_caida_del_proveedor(e):
+            db.actualizar_identidad(sn, "error", detalle=str(e))
+            raise
+        # El proveedor está caído. No hay nada roto y no hay nada que
+        # arreglar: la persona queda creada aquí, a la espera de poder
+        # mandarse. La cola se vacía sola desde revisar_pendientes(), que
+        # corre al entrar en Gestión Biométrica.
+        #
+        # Distinguirlo de «error» importa porque cambia qué hace quien lo
+        # lee: ante un error se intenta arreglar algo; ante «en cola», se
+        # espera, que es lo correcto.
+        _culpa, frase, _solo = traducir_fallo(str(e))
+        db.actualizar_identidad(sn, "en_cola", detalle=frase)
+        log.info("enrolamiento de %s encolado: yunatt no responde", nombre)
+        return {
+            "staff_number": sn, "nombre": nombre, "estado": "en_cola",
+            "detalle": frase, "fase": None, "fase_etiqueta": "",
+            "paso": 1, "total_pasos": len(fases), "segundos_restantes": 0,
+            "tiene_rostro": False, "tiene_huella": False, "en_cola": True,
+        }
 
 
 def estado(staff_number):
@@ -473,12 +514,24 @@ def revisar_pendientes():
     ficha se queda en «esperando» aunque el terminal ya la haya capturado.
     Esto es lo que permite ponerse al día después.
 
-    Una sola consulta al dispositivo para todas —la cuenta de yunatt está
-    compartida con el ERP anterior y conviene no gastarla— y el cruce se
-    hace aquí.
+    Una sola consulta al dispositivo para todas —su plataforma va justa y
+    no conviene multiplicar peticiones— y el cruce se hace aquí.
     """
     pendientes = [i for i in db.identidades()
-                  if i["estado"] in ("esperando", "error")]
+                  if i["estado"] in ("esperando", "error", "en_cola")]
+
+    # Las encoladas nunca llegaron a crearse en yunatt —el proveedor estaba
+    # caído cuando se pidieron—, así que no basta con preguntarle al equipo
+    # si ya las tiene: hay que volver a mandarlas.
+    for ident in [i for i in pendientes if i["estado"] == "en_cola"]:
+        try:
+            cliente.alta_staff(ident["staff_number"], ident["nombre"])
+            db.actualizar_identidad(ident["staff_number"], "esperando",
+                                    detalle="Enviada al volver la conexión")
+            log.info("cola: %s enviada a yunatt", ident["nombre"])
+        except Exception as e:
+            log.warning("cola: %s sigue esperando (%s)",
+                        ident["nombre"], str(e)[:100])
     if not pendientes:
         return {"ok": True, "revisadas": 0, "enroladas": 0, "fotos": 0,
                 "nombres": []}
@@ -517,10 +570,11 @@ def sincronizar_marcas():
     reservado. Se dispara a mano desde la interfaz, no en segundo plano.
     """
     import re
-    from datetime import datetime
+    from datetime import datetime, timedelta
 
     filas = cliente.marcas_del_mes()
     nuevas = 0
+    descartadas = 0
 
     for fila in filas:
         sn = fila.get("staffNumber")
@@ -536,9 +590,33 @@ def sincronizar_marcas():
                 if not parte:
                     continue
                 try:
-                    datetime.strptime(f"{dia} {parte}", "%Y-%m-%d %H:%M")
+                    cuando = datetime.strptime(f"{dia} {parte}", "%Y-%m-%d %H:%M")
                 except ValueError:
                     continue
+
+                # NADIE FICHA EN EL FUTURO.
+                #
+                # Si la zona horaria de la cuenta de yunatt no coincide con
+                # la de aquí, sus marcas llegan adelantadas: con la cuenta
+                # en Asia/Singapore, fichar a las 14:25 de Perú entraba
+                # como las 03:25 del día siguiente. Se colaron siete así, y
+                # quedaron duplicando fichajes reales.
+                #
+                # Una marca por delante del reloj es siempre un desajuste
+                # de zona, nunca un fichaje. Se descarta y se avisa: es la
+                # señal de que hay que revisar el timeZone de la cuenta
+                # (Company Information → America/Lima).
+                if cuando > datetime.now() + timedelta(minutes=5):
+                    descartadas += 1
+                    continue
+
                 nuevas += db.guardar_marca(sn, dia, parte)
 
-    return {"ok": True, "filas": len(filas), "nuevas": nuevas}
+    if descartadas:
+        log.warning(
+            "sincronizar_marcas: %s marcas venían con fecha futura y se "
+            "descartaron. Revisa el timeZone de la cuenta de yunatt: en "
+            "Company Information debe decir America/Lima.", descartadas)
+
+    return {"ok": True, "filas": len(filas), "nuevas": nuevas,
+            "descartadas": descartadas}

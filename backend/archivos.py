@@ -125,12 +125,3 @@ def borrar(interno):
         return False
 
 
-def tamano_legible(bytes_):
-    b = int(bytes_ or 0)
-    if b <= 0:
-        return ""
-    if b < 1024:
-        return f"{b} B"
-    if b < 1024 * 1024:
-        return f"{b / 1024:.0f} KB"
-    return f"{b / (1024 * 1024):.1f} MB"

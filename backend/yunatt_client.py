@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-yunatt_client.py — capa de transporte hacia global.yunatt.com.
+yunatt_client.py — capa de transporte hacia yunatt.com.
 
 CÓMO FUNCIONA LA INTEGRACIÓN (importante para entender el resto)
 
@@ -36,6 +36,79 @@ import config
 log = logging.getLogger("yunatt")
 
 
+# ── Traducir el fallo a algo que se pueda leer ────────────────────────────
+#
+# Con yunatt caído, la pantalla enseñaba esto:
+#
+#     El terminal dio un error la última vez
+#     error de red: HTTPSConnectionPool(host='global.yunatt.com', port=443):
+#     Max retries exceeded with url: / (Caused by NewConnectionError(...
+#
+# Eso no le dice nada a quien lo lee, y delante de un cliente parece un
+# sistema roto cuando el sistema está bien y el que no responde es el
+# proveedor. Cinco causas distintas producen excepciones distintas; esta
+# tabla las traduce a una frase con sujeto, que es lo que cambia qué hace
+# quien la lee: ante «error» se intenta arreglar algo, ante «su servidor
+# está caído» se espera.
+_CULPAS = (
+    # (marcas en el texto del error, culpa, frase, se_arregla_solo)
+    (("faltan variables", "faltan credenciales", "falta configurar"),
+     "config",
+     "Faltan credenciales de yunatt en backend/.env. Hasta que estén, no se "
+     "puede enrolar ni traer marcas.",
+     False),
+    (("connectionrefused", "denegó expresamente", "actively refused",
+      "newconnectionerror", "failed to establish", "max retries"),
+     "proveedor",
+     "yunatt no responde: su servidor está caído. No es este sistema, ni tu "
+     "red, ni el terminal. Se reconectará solo en cuanto vuelva.",
+     True),
+    (("timed out", "timeout"),
+     "red",
+     "yunatt tarda demasiado en contestar. Su plataforma va irregular. Se "
+     "reintenta solo.",
+     True),
+    (("nameresolution", "getaddrinfo", "no se pudo resolver"),
+     "red",
+     "No se pudo resolver la dirección de yunatt. Suele ser la conexión a "
+     "internet de esta computadora.",
+     True),
+    (("sslerror", "certificate", "handshake"),
+     "red",
+     "Falló el cifrado con yunatt. Si persiste, suele ser un antivirus o un "
+     "cortafuegos metiéndose en medio.",
+     False),
+    (("password error", "contraseña", "credenciales incorrectas",
+      "no autoriz", "unauthorized"),
+     "cuenta",
+     "yunatt rechazó la cuenta: revisa el correo y la contraseña en el .env.",
+     False),
+    (("404",),
+     "plataforma",
+     "Esta versión de yunatt no tiene esa función. No es un fallo del "
+     "sistema ni algo que reintentar arregle.",
+     False),
+)
+
+
+def traducir_fallo(motivo):
+    """
+    Del volcado de Python a una frase con sujeto.
+
+    Devuelve (culpa, frase, se_arregla_solo). Sin motivo, culpa vacía: no
+    hay nada que explicar.
+    """
+    if not motivo:
+        return "", "", False
+    t = str(motivo).lower()
+    for marcas, culpa, frase, solo in _CULPAS:
+        if any(m in t for m in marcas):
+            return culpa, frase, solo
+    # Sin clasificar se enseña el texto crudo recortado: peor que una frase
+    # buena, mejor que esconder el problema.
+    return "otro", str(motivo)[:200], False
+
+
 class YunattError(Exception):
     """Fallo al comunicarse con yunatt.com."""
 
@@ -65,13 +138,15 @@ class ClienteYunatt:
     Sesión con yunatt.com. Login perezoso: no se autentica al arrancar el
     servidor, sino la primera vez que hace falta de verdad.
 
-    Esto importa durante la transición: cuantas menos sesiones abiertas
-    simultáneas con la misma cuenta, menos riesgo de que yunatt invalide la
-    sesión del ERP anterior que sigue en producción.
+    Nació así porque la cuenta se compartía con el ERP anterior y cada
+    sesión nueva tiraba la del otro. Desde el 01/09/2026 la cuenta es
+    propia y ese conflicto se acabó, pero el login perezoso se queda: su
+    plataforma va irregular, y no abrir sesión hasta necesitarla evita
+    fallos al arrancar por algo que quizá no se va a usar.
     """
 
-    # Espera progresiva tras un login fallido, para no entrar en un bucle
-    # de reintentos que pelee con la sesión del ERP anterior.
+    # Espera progresiva tras un login fallido, para no insistir contra un
+    # servidor que ya dijo que no. Su plataforma se cae a ratos.
     ESPERAS_BACKOFF = (0, 5, 15, 45)
 
     def __init__(self):
@@ -252,13 +327,76 @@ class ClienteYunatt:
         Esta es la consulta clave del enrolamiento: 'backupnums' es lo que
         cambia cuando la persona termina de registrar su rostro o huella en
         el equipo, y por tanto lo que nos dice que la captura funcionó.
+
+        DE DÓNDE SALE EL DATO (cambiado el 01/09/2026)
+        ──────────────────────────────────────────────
+        Antes se pedía a /attenceMachine/queryStaff. Esa ruta existía en
+        global.yunatt.com, que se cayó; la plataforma oficial
+        (www.yunatt.com:82, según su propio manual) NO la tiene: responde
+        404.
+
+        Lo que sí trae esa plataforma es el recuento biométrico dentro de
+        la propia ficha: `faceNum` y `fingerNum`. Con eso se reconstruye
+        `backupnums` en el formato que espera el resto del sistema —50
+        para el rostro, 0..n-1 para las huellas, ver config.tiene_rostro
+        y config.tiene_huella—, así que ni el enrolamiento ni las
+        pantallas notan de dónde vino.
+
+        PERO ESOS CONTADORES NO SE ACTUALIZAN (medido el 01/09/2026)
+        ────────────────────────────────────────────────────────────
+        Se enroló a una persona de verdad: el Timmy la reconoce, y aun
+        así su ficha en la nube siguió con faceNum=0 y sin equipo
+        asignado. Se le pidió al equipo que entregara sus biométricos
+        (/staff/getFromMachine, que aceptó la orden) y se consultó seis
+        veces durante un minuto: nada cambió.
+
+        Lo que SÍ aparece al capturar es la FOTO. El terminal la toma
+        durante el enrolamiento y la sube, así que su presencia es la
+        señal de que la captura ocurrió — y es además la que acaba en la
+        ficha de la persona.
+
+        Por eso aquí una foto vale como rostro capturado. Es menos
+        preciso que preguntar al equipo, y quien tenga foto por otra vía
+        contaría como enrolado; a cambio, es lo único que esta
+        plataforma informa de verdad.
+
+        Se sigue intentando la ruta antigua primero: si algún día vuelve
+        el servidor de siempre, se usa la consulta directa al equipo, que
+        es más fiel —pregunta al terminal— que un recuento de la nube.
         """
-        d = self._post(
-            "/attenceMachine/queryStaff",
-            # [UN SOLO DISPOSITIVO] ver el bloque de config.py
-            {"attenceMachineId": str(config.DEVICE_ID)},
-        )
-        return d.get("rows", []) or []
+        try:
+            d = self._post(
+                "/attenceMachine/queryStaff",
+                # [UN SOLO DISPOSITIVO] ver el bloque de config.py
+                {"attenceMachineId": str(config.DEVICE_ID)},
+            )
+            return d.get("rows", []) or []
+        except YunattError as e:
+            if "404" not in str(e):
+                raise
+            log.debug("queryStaff no existe en esta plataforma; se deduce "
+                      "de la ficha")
+
+        filas = []
+        for s in self.staff_en_nube():
+            nums = []
+            # La foto es la señal fiable: la toma el terminal al capturar.
+            # Los contadores se consultan igual, porque si algún día la
+            # plataforma empieza a rellenarlos serán mejores que la foto.
+            if int(s.get("faceNum") or 0) > 0 or s.get("photo"):
+                nums.append(50)
+            nums += list(range(int(s.get("fingerNum") or 0)))
+            if not nums:
+                # Ficha creada en la nube pero sin capturar nada todavía:
+                # no está en el terminal. Darla por presente haría creer
+                # que el enrolamiento terminó.
+                continue
+            filas.append({
+                "enrollid": s.get("staffNumber"),
+                "name": s.get("name"),
+                "backupnums": nums,
+            })
+        return filas
 
     def estado_en_dispositivo(self, staff_number):
         """
@@ -478,15 +616,35 @@ class ClienteYunatt:
         raise YunattError(f"yunatt no borró el staff {ids}: {ultimo}")
 
     def borrar_del_dispositivo(self, ids_internos):
-        """Quita usuarios del equipo. ids_internos = campo 'id' de staff/query."""
+        """
+        Quita usuarios del equipo. ids_internos = campo 'id' de staff/query.
+
+        EL NOMBRE DEL PARÁMETRO CAMBIA ENTRE PLATAFORMAS (01/09/2026)
+        ────────────────────────────────────────────────────────────
+        global.yunatt.com esperaba `attenceMachineIds`, en plural y como
+        lista. La plataforma oficial (www.yunatt.com:82) usa
+        `attenceMachineId`, en singular — se lee en su propio panel:
+
+            $.post(url.removeInMachine, {ids: ids, attenceMachineId: ...})
+
+        Mandar el plural allí no da error: la orden se acepta y no se
+        quita a nadie del equipo. Por eso «quitar» desaparecía de la web
+        y la persona seguía en el Timmy.
+
+        Se mandan las dos formas a la vez. Un parámetro de más lo ignoran
+        las dos versiones, y así esto funciona en cualquiera de ellas sin
+        tener que saber a cuál se está hablando.
+        """
         if not ids_internos:
             return True
+        ids = [str(i) for i in ids_internos]
         d = self._post(
             "/staff/removeInMachine",
             {
-                "ids": [str(i) for i in ids_internos],
+                "ids": ids,
                 # [UN SOLO DISPOSITIVO]
-                "attenceMachineIds": [str(config.DEVICE_ID)],
+                "attenceMachineId": str(config.DEVICE_ID),   # plataforma oficial
+                "attenceMachineIds": [str(config.DEVICE_ID)],  # global.yunatt
             },
         )
         return bool(d.get("result"))
@@ -707,11 +865,18 @@ class ClienteYunatt:
 
     def estado(self):
         ok, faltan = config.configurado()
+        _culpa, _frase, _solo = traducir_fallo(self._ultimo_error)
         return {
             "configurado": ok,
             "faltan": faltan,
             "sesion_activa": self._sesion is not None,
+            # El texto crudo se conserva para quien tenga que depurar...
             "ultimo_error": self._ultimo_error,
+            # ...pero la pantalla enseña estos otros, que dicen QUIÉN falla
+            # y si hay algo que hacer o solo esperar.
+            "culpa": _culpa,
+            "diagnostico": _frase,
+            "se_arregla_solo": _solo,
             "dispositivo": str(config.DEVICE_ID) if config.DEVICE_ID else "",
             "departamento": str(config.DEPT_NAME),
             # Sin forzar la resolución: este endpoint no debe provocar un

@@ -60,7 +60,14 @@ de la casa es justo lo que no puede pasar.
 
 Así que **para la presentación no se usa el despliegue**, sino el túnel:
 
-    herramientas	unel-rrhh.bat
+    herramientas\tunel-rrhh.bat
+
+La primera vez descarga cloudflared (52 MB, un solo .exe sin
+instalador ni cuenta) y lo deja junto al .bat, fuera del repositorio.
+Antes de levantar nada comprueba que el servidor responde en el 7801:
+sin esa comprobacion el tunel levanta igual y da una direccion que
+contesta 502, y parece que falla el tunel cuando lo que falta es
+arrancar `py backend\servidor.py`.
 
 Levanta una dirección `https://algo.trycloudflare.com` contra el servidor
 que corre en la computadora. Va por HTTPS, así que la cámara y el GPS

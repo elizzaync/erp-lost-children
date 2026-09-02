@@ -2243,9 +2243,35 @@ def crear_identidad(staff_number, tipo, titular_id, metodo):
     """
     sn = config.validar_rango(staff_number)
     columna = _columna_titular(tipo)
+
+    # NUNCA «INSERT OR REPLACE», que en SQLite es BORRAR + INSERTAR.
+    #
+    # Como `marcas.staff_number` apunta aquí con ON DELETE CASCADE, ese
+    # borrado se llevaba todo el historial de asistencia de la persona cada
+    # vez que se la volvía a enrolar. Medido el 01/09/2026 sobre una copia
+    # de la base: seis marcas antes, cero después.
+    #
+    # Si la persona ya tiene identidad se REUTILIZA su número, aunque quien
+    # llama proponga otro: la tabla admite una identidad por persona
+    # (UNIQUE), y cambiarle el número dejaría sus marcas apuntando a un
+    # número que ya no es suyo.
+    previa = consultar(
+        f"SELECT staff_number FROM identidades WHERE {columna} = ?",
+        (int(titular_id),),
+    )
+    if previa:
+        sn = int(previa[0]["staff_number"])
+        ejecutar(
+            """UPDATE identidades
+                  SET metodo = ?, estado = 'esperando',
+                      tiene_rostro = 0, tiene_huella = 0, detalle = ''
+                WHERE staff_number = ?""",
+            (metodo or "facial", sn),
+        )
+        return sn
+
     ejecutar(
-        f"""INSERT OR REPLACE INTO identidades
-            (staff_number, {columna}, metodo, estado)
+        f"""INSERT INTO identidades (staff_number, {columna}, metodo, estado)
             VALUES (?, ?, ?, 'esperando')""",
         (sn, int(titular_id), metodo or "facial"),
     )
@@ -2271,10 +2297,18 @@ def actualizar_identidad(staff_number, estado, rostro=None, huella=None, detalle
     )
 
 
-def borrar_identidad(staff_number):
-    """Quita la identidad y sus marcas; la ficha de la persona se conserva."""
-    sn = config.validar_rango(staff_number)
-    return ejecutar("DELETE FROM identidades WHERE staff_number = ?", (sn,))
+# NO HAY borrar_identidad(), y es deliberado.
+#
+# La había, y borraba la fila. Como `marcas.staff_number` apunta aquí con
+# ON DELETE CASCADE, se llevaba por delante TODO el historial de asistencia
+# de esa persona. Ocurrió de verdad el 01/09/2026: retirar a dos personas
+# del terminal para volver a enrolarlas borró sus marcas del día.
+#
+# Retirar a alguien se hace ahora marcando la identidad como 'retirado' con
+# los biométricos a cero (ver personas.desenrolar): la persona reaparece
+# como enrolable, sus marcas se conservan, y al volver a enrolarla
+# reutiliza su mismo número. Borrar la ficha entera de la persona sí borra
+# su identidad, por la cascada desde `personal` — y ahí es lo correcto.
 
 
 def sin_enrolar():
@@ -2611,29 +2645,6 @@ def borrar_condicion(id_):
         return 1
 
 
-def personal_sin_condicion(en_fecha=None):
-    """
-    Quién no tiene condición vigente. Se muestran aparte en Planillas, con
-    el mismo criterio que 'sin jefe asignado' en el organigrama: no se
-    esconden ni se les inventa un sueldo.
-    """
-    f = en_fecha or _date.today().isoformat()
-    return consultar(
-        """SELECT p.id, p.nombre, p.cargo, p.area, p.vinculo
-             FROM personal p
-            WHERE p.estado = 'activo'
-              AND NOT EXISTS (
-                  SELECT 1 FROM condiciones_laborales c
-                   WHERE c.personal_id = p.id
-                     AND c.vigente_desde <= ?
-                     AND (c.vigente_hasta IS NULL OR c.vigente_hasta >= ?))
-            ORDER BY p.nivel, p.id""",
-        (f, f),
-    )
-
-
-# ── Boletas ───────────────────────────────────────────────────────────────
-
 def boletas_de(periodo):
     """Las boletas guardadas de un período, por persona."""
     filas = consultar(
@@ -2686,11 +2697,6 @@ def cambiar_estado_boleta(personal_id, periodo, estado):
 def borrar_boletas(periodo):
     """Reabrir un período: se descartan los valores congelados."""
     return ejecutar("DELETE FROM boletas WHERE periodo = ?", (periodo,))
-
-
-def periodos_con_boletas():
-    return [f["periodo"] for f in consultar(
-        "SELECT DISTINCT periodo FROM boletas ORDER BY periodo DESC")]
 
 
 # ── Solicitudes ───────────────────────────────────────────────────────────

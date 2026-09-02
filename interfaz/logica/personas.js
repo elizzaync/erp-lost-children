@@ -8,10 +8,11 @@
   /* Descarga del terminal las marcas del día (las entradas y salidas
      normales, no el enrolamiento).
 
-     Es MANUAL a propósito: cada sincronización consulta el informe mensual
-     de yunatt, y la cuenta está compartida con el ERP anterior mientras
-     dure la transición. Un hilo en segundo plano multiplicaría esas
-     consultas sin que nadie lo pidiera. */
+     Este botón fuerza la traída AHORA. Desde el 01/09/2026 ya no es la
+     única vía: el servidor trae las marcas solo cada 45 segundos (ver
+     backend/sincronizador.py), así que normalmente no hace falta pulsarlo.
+     Se conserva para cuando alguien quiere verlas ya, sin esperar al
+     siguiente ciclo. */
 /*§CORTE§ linea original 7312 §*/
   cargarResumenPersonas() {
     this.api("/api/personas/resumen")

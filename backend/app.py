@@ -2927,6 +2927,13 @@ def main():
     if pasados:
         log.info("sesiones migradas a huella: %s", pasados)
 
+    # Trae las marcas del terminal solo, cada pocos segundos. Va aquí y no
+    # al importar el módulo a propósito: las suites de prueba importan
+    # `app` muchas veces, y no deben abrir hilos hablando con yunatt de
+    # verdad. Ver backend/sincronizador.py.
+    import sincronizador
+    sincronizador.arrancar()
+
     ok, faltan = config.configurado()
     url = f"http://127.0.0.1:{config.PUERTO}/"
 
