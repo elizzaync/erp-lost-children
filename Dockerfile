@@ -7,8 +7,10 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# ca-certificates es imprescindible: el cliente de yunatt hace HTTPS saliente
-# hacia global.yunatt.com y sin los certificados raíz el handshake falla.
+# ca-certificates es imprescindible: hay HTTPS saliente hacia la API de Google
+# Sheets (el formulario de tutores) y sin los certificados raíz el handshake
+# falla. Ya no es por yunatt —desde el 01/09/2026 se habla con él por HTTP en
+# el puerto 82— pero sigue haciendo falta; no lo quites.
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates \
     && rm -rf /var/lib/apt/lists/*

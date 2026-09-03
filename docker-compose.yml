@@ -26,9 +26,16 @@ services:
 
     environment:
       # ── Terminal biométrico ───────────────────────────────────────────
-      # La cuenta está compartida con el ERP anterior mientras dure la
-      # transición. Sin estas dos, la asistencia y el enrolamiento quedan
-      # inactivos pero el resto del sistema funciona.
+      # Desde el 01/09/2026 la cuenta es propia, ya no compartida con el ERP
+      # anterior. Sin estas variables la asistencia y el enrolamiento quedan
+      # inactivos, pero el resto del sistema funciona: /api/health lo dice
+      # en «configurado» y «faltan».
+      #
+      # YUNATT_BASE tiene que estar aquí. Faltaba, y el contenedor —que no
+      # recibe backend/.env— se quedaba con el predeterminado de config.py,
+      # que apuntaba al servidor caído. Ponerla en el panel no servía de
+      # nada porque compose no la reenviaba.
+      YUNATT_BASE: ${YUNATT_BASE:-http://www.yunatt.com:82}
       YUNATT_EMAIL: ${YUNATT_EMAIL}
       YUNATT_PASSWORD: ${YUNATT_PASSWORD}
       YUNATT_DEVICE_ID: ${YUNATT_DEVICE_ID}

@@ -257,9 +257,18 @@ ROLES_SISTEMA = (ROL_DIRECTOR, ROL_RRHH)
 # ── yunatt ────────────────────────────────────────────────────────────────
 # La dirección de yunatt se lee del .env. Estuvo escrita a fuego hasta que
 # su servicio de siempre se cayó (01/09/2026) y no hubo forma de apuntar a
-# otro sitio sin tocar código. El valor de siempre queda de predeterminado:
-# quien no la ponga en el .env no nota el cambio.
-YUNATT_BASE = env("YUNATT_BASE", "https://global.yunatt.com").rstrip("/")
+# otro sitio sin tocar código.
+#
+# El predeterminado es la dirección OFICIAL del fabricante, la que dice su
+# propio manual: «Enter the URL www.yunatt.com:82 to enter the login page».
+# Va por HTTP porque en ese puerto no ofrecen HTTPS.
+#
+# Hasta el 03/09/2026 el predeterminado era https://global.yunatt.com, que
+# es OTRO servidor y está caído desde el 01/09: contesta pero no hay nada
+# escuchando en el 443. Aquí no se notaba —el .env local trae la dirección
+# buena— pero el contenedor, que no recibe ese .env, quedaba apuntando a un
+# sitio muerto.
+YUNATT_BASE = env("YUNATT_BASE", "http://www.yunatt.com:82").rstrip("/")
 
 YUNATT_EMAIL = env("YUNATT_EMAIL")
 YUNATT_PASSWORD = env("YUNATT_PASSWORD")
