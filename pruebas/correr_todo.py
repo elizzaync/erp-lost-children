@@ -29,7 +29,7 @@ NAVEGADOR = [
     "prueba_editar_benef", "prueba_sesiones", "prueba_resp_ui", "prueba_fecha", "prueba_vinculo", "prueba_benef_ficha", "prueba_hoja_vida", "prueba_campos_personal", "prueba_panel_personas", "prueba_biometria_lista", "prueba_biometria_vista", "prueba_dashboard_real", "prueba_mis_permisos", "prueba_revision_permisos", "prueba_panel_asistencia", "prueba_sin_dato", "prueba_sin_maqueta_asist", "prueba_foto_pantalla", "prueba_invit_pantalla", "prueba_biometria_estado", "prueba_bandeja", "prueba_rutas", "prueba_vocabulario", "prueba_series_benef", "prueba_pestana_dia", "prueba_corregir_ui",
 ]
 PYTHON = [
-    "verifica_ids", "prueba_dependencias", "prueba_columnas_declaradas", "prueba_fotos_separadas", "prueba_calculo", "prueba_archivos", "prueba_permisos", "prueba_pdf_permiso", "prueba_firma_pdf", "prueba_reportes",
+    "verifica_ids", "prueba_dependencias", "prueba_construir_lf", "prueba_columnas_declaradas", "prueba_fotos_separadas", "prueba_calculo", "prueba_archivos", "prueba_permisos", "prueba_pdf_permiso", "prueba_firma_pdf", "prueba_reportes",
     "migra_solicitudes", "migra_beneficiarios", "migra_sesiones", "migra_usuarios",
     "prueba_director", "prueba_login", "prueba_responsables", "prueba_foto_responsable", "prueba_invitaciones", "prueba_enrolado_real", "prueba_formulario_traida", "prueba_sondeo", "prueba_permisos_diseno",
     "prueba_migra_tutores", "prueba_vistas", "prueba_series_benef", "prueba_migra_identidades", # "prueba_migra_tipos" — comprobaba la migración a SEIS tipos, que el
