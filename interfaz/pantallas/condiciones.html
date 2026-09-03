@@ -85,4 +85,29 @@
             </sc-if>
           </div>
         </div>
+
+        <!-- Los documentos del sistema.
+
+             Van aquí porque es donde se busca «qué necesito para conectar
+             otro equipo»: junto a la configuración, no en una carpeta del
+             servidor a la que nadie del equipo tiene acceso. -->
+        <div style="background:#ffffff; border:1px solid #e7e3de; border-radius:3px; padding:22px 24px; margin-top:20px;">
+          <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Documentos del sistema</h2>
+          <p style="font-size:14.5px; color:#5b7185; margin:6px 0 18px; max-width:62ch;">Para leer, imprimir o llevar al sitio donde está el terminal. Se descargan en PDF.</p>
+
+          <sc-if value="{{ manualesVacio }}">
+            <div style="font-size:14px; color:#7d8e9c; padding:14px 0;">No hay documentos disponibles.</div>
+          </sc-if>
+
+          <sc-for each="{{ manuales }}" as="doc">
+            <a href="{{ doc.url }}" download style="display:flex; align-items:center; gap:13px; padding:12px 2px; border-bottom:1px solid #f0ede9; text-decoration:none; color:inherit;" style-hover="background:#f8f7f5">
+              <i class="ph-duotone ph-file-pdf" style="font-size:22px; color:#a8321f; flex-shrink:0;"></i>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:14.5px; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ doc.titulo }}</div>
+                <div style="font-size:12.5px; color:#9aa7b2; margin-top:1px; font-variant-numeric:tabular-nums;">{{ doc.peso }}</div>
+              </div>
+              <i class="ph-bold ph-download-simple" style="font-size:17px; color:#5b7185; flex-shrink:0;"></i>
+            </a>
+          </sc-for>
+        </div>
       </sc-if>

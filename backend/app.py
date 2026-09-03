@@ -18,11 +18,16 @@ import io
 import json
 import logging
 import os
+import re
 import sys
 import webbrowser
 from datetime import date
 
 from flask import Flask, jsonify, request, send_file, send_from_directory
+# send_from_directory lanza NotFound cuando el archivo no está o la ruta
+# se sale de la carpeta permitida. Se captura para responder en JSON,
+# como el resto de la API, en vez de con la página de error de Flask.
+from werkzeug.exceptions import NotFound
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -377,6 +382,192 @@ def yunatt_departamentos():
     except Exception as e:
         log.exception("fallo al listar departamentos")
         return _error(e, 500)
+
+
+@app.get("/api/manuales")
+@auth.requiere("configuracion", "vista")
+def listar_manuales():
+    """
+    Los documentos del sistema que se pueden descargar desde Configuración.
+
+    Se listan leyendo la carpeta, no una lista escrita a mano: añadir un
+    documento es dejar el PDF en docs/ y aparece solo. Una lista escrita
+    se queda desfasada el día que nadie se acuerde de tocarla.
+    """
+    carpeta = os.path.join(RAIZ, "docs")
+    fichas = []
+    for nombre in sorted(os.listdir(carpeta)) if os.path.isdir(carpeta) else []:
+        if not nombre.lower().endswith(".pdf"):
+            continue
+        ruta = os.path.join(carpeta, nombre)
+        fichas.append({
+            "archivo": nombre,
+            # El nombre del archivo lleva delante «Modulo RRHH - », que en
+            # una lista dentro del propio módulo sobra en cada línea.
+            "titulo": nombre[:-4].replace("Modulo RRHH - ", ""),
+            "kb": os.path.getsize(ruta) // 1024,
+        })
+    return jsonify({"ok": True, "manuales": fichas})
+
+
+@app.get("/api/manuales/<path:archivo>")
+@auth.requiere("configuracion", "vista")
+def bajar_manual(archivo):
+    """
+    Entrega uno de esos PDF.
+
+    `archivo` viene de fuera, así que NO se concatena con la carpeta sin
+    más: send_from_directory rechaza cualquier ruta que se salga de docs/,
+    que es justo lo que impide que alguien pida ../backend/.env.
+    """
+    if not archivo.lower().endswith(".pdf"):
+        return _error("Solo se sirven documentos PDF", 400)
+    try:
+        return send_from_directory(os.path.join(RAIZ, "docs"), archivo,
+                                   as_attachment=True)
+    except NotFound:
+        return _error(f"No existe el documento {archivo}", 404)
+
+
+# ══════════════════════════════════════════════════════════════════════════
+#  EL ROSTRO DE UN NIÑO, Y PASAR LISTA CON EL CELULAR
+# ══════════════════════════════════════════════════════════════════════════
+#
+#  Existe por lo que pasó el 01/09/2026: se cayó la nube del terminal y la
+#  casa se quedó sin forma de registrar asistencia. El celular era la
+#  alternativa, pero solo servía para trabajadores — los niños no tienen
+#  teléfono.
+#
+#  Aquí un trabajador registra el rostro del niño con SU teléfono, y toma
+#  la asistencia también con él. Dos diferencias con el canal del
+#  trabajador, y las dos importan:
+#
+#    · el permiso lo firma un TUTOR, no la persona cuyo rostro se guarda;
+#    · cada marca anota QUÉ ADULTO la tomó. Un niño no ficha solo, y sin
+#      ese dato la marca no tiene a nadie detrás que responda por ella.
+# ══════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
+@app.post("/api/asistencia/manual")
+@auth.requiere("asistencia", "edicion")
+def anotar_asistencia_manual():
+    """
+    Anota a mano la asistencia de alguien.
+
+    Para cuando ninguno de los dos canales automáticos sirve: la nube del
+    terminal caída, alguien sin rostro registrado en el celular, o un niño
+    —que no tiene teléfono con el que fichar—.
+
+    A diferencia de las otras marcas, esta NO la comprueba nadie: la
+    afirma quien la escribe. Por eso quedan las dos cosas que permiten
+    revisarla después: qué persona la anotó y con qué motivo.
+
+    Cuerpo: {tipo, titular_id, fecha, hora, motivo}
+    """
+    _ses, err_csrf = _sesion_con_csrf()
+    if err_csrf:
+        return err_csrf
+
+    cuerpo = request.get_json(silent=True) or {}
+    tipo = str(cuerpo.get("tipo") or "").strip()
+    if tipo not in db.COLUMNA_TITULAR:
+        return _error("Di de quién es: personal, beneficiario o responsable.", 400)
+
+    try:
+        titular = int(cuerpo.get("titular_id"))
+    except (TypeError, ValueError):
+        return _error("Falta decir de qué persona.", 400)
+
+    quien = {"personal": db.persona_personal,
+             "beneficiario": db.beneficiario,
+             "responsable": db.responsable}[tipo](titular)
+    if not quien:
+        return _error(f"No existe ese {tipo}.", 404)
+
+    fecha, err = _fecha_registrable(cuerpo, "Una asistencia")
+    if err:
+        return err
+
+    hora = str(cuerpo.get("hora") or "").strip()
+    if not re.match(r"^([01]\d|2[0-3]):[0-5]\d$", hora):
+        return _error("La hora debe ser HH:MM, entre 00:00 y 23:59.", 400)
+
+    # Una marca de hoy no puede ser de dentro de un rato.
+    ahora = datetime.datetime.now()
+    if fecha == ahora.strftime("%Y-%m-%d") and hora > ahora.strftime("%H:%M"):
+        return _error("Esa hora todavía no ha llegado.", 400)
+
+    motivo = str(cuerpo.get("motivo") or "").strip()
+    if len(motivo) < 4:
+        return _error(
+            "Escribe por qué se anota a mano. Una marca sin motivo no se "
+            "distingue de una inventada el día que alguien la revise.", 400)
+
+    # La marca necesita un número de terminal al que colgarse. Si la
+    # persona no tiene identidad todavía se le crea una: el día que se
+    # enrole en el Timmy se reutiliza ese mismo número.
+    ident = db.identidad_de(tipo, titular)
+    if not ident:
+        sn = db.siguiente_staff_number(
+            [r["staff_number"] for r in db.identidades()])
+        config.validar_rango(sn)
+        db.crear_identidad(sn, tipo, titular, "manual")
+        ident = db.identidad_de(tipo, titular)
+
+    # Quién la anota. Sin ficha de personal no se puede dejar constancia, y
+    # esa constancia es justamente lo que hace revisable una marca manual.
+    anotador, err_yo = _yo()
+    if err_yo:
+        return _error(
+            "Tu cuenta no está vinculada a una ficha de personal, así que no "
+            "se puede anotar quién registró la asistencia. Avisa a RRHH.", 409)
+
+    nuevas = db.guardar_marca(
+        ident["staff_number"], fecha, hora,
+        metodo="manual", canal="manual",
+        registrada_por=anotador, motivo=motivo[:300])
+
+    if not nuevas:
+        return jsonify({"ok": True, "repetida": True,
+                        "mensaje": f"{quien['nombre']} ya tenía una marca a "
+                                   f"esa hora ese día."})
+
+    log.info("asistencia manual: %s %s el %s %s, anotada por personal %s",
+             tipo, titular, fecha, hora, anotador)
+    return jsonify({"ok": True, "registrada": True,
+                    "nombre": quien["nombre"], "fecha": fecha, "hora": hora})
+
+
+# ── Por qué NO hay rutas para el rostro de un niño ────────────────────────
+#
+# Las hubo, el 02/09/2026, durante unas horas: registrar la cara de un niño
+# desde el teléfono de un trabajador, para poder pasar lista los días que
+# la nube del terminal se cayera.
+#
+# Se retiraron el mismo día por decisión de la ONG. El canal del celular es
+# para trabajadores, que leen el aviso y deciden por sí mismos. Guardar
+# biometría de doce menores para cubrir un caso excepcional es mucho coste
+# —legal y humano— para poco beneficio, y ese día se resuelve pasando lista
+# a mano.
+#
+# Lo que sí quedó de aquello, porque sirve igual:
+#   · marcas.registrada_por — qué persona registró una marca que no tomó
+#     el propio interesado. Lo necesita cualquier registro manual.
+#   · El aviso de tratamiento para menores en config.py, sin usar, por si
+#     algún día se retoma: escribirlo bien cuesta más que el código.
+#
+# Si se retoma, esto no se reabre sin revisión legal previa.
 
 
 @app.get("/api/parametros")

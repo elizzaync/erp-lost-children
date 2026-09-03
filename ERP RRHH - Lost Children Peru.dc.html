@@ -1615,7 +1615,11 @@
                          no cómo fichó hoy. -->
                     <div style="display:flex; align-items:center; gap:7px; min-width:0;">
                       <i class="ph-duotone {{ df.origenIcono }}" style="font-size:16px; color:{{ df.origenColor }}; flex-shrink:0;"></i>
-                      <span style="font-size:13px; color:{{ df.origenColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ df.origen }}">{{ df.origen }}</span>
+                      <!-- Con coordenadas, el sitio se puede abrir en el mapa.
+                           Va en pestaña nueva para no sacar a nadie de la
+                           pantalla de asistencia a media revisión. -->
+                      <a sc-if="{{ df.hayMapa }}" href="{{ df.mapaUrl }}" target="_blank" rel="noopener noreferrer" style="font-size:13px; color:{{ df.origenColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;" title="Abrir en el mapa: {{ df.origen }}">{{ df.origen }}</a>
+                      <span sc-if="{{ df.sinMapa }}" style="font-size:13px; color:{{ df.origenColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ df.origen }}">{{ df.origen }}</span>
                     </div>
                     <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#3c4a55;">{{ df.entrada }}</div>
                     <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#4d5b66;">{{ df.salida }}</div>
@@ -2011,6 +2015,31 @@
               <button onClick="{{ cfgGuardar }}" style="{{ cfgBotonStyle }}" style-hover="background:#1c5f3a">{{ cfgBotonLabel }}</button>
             </sc-if>
           </div>
+        </div>
+
+        <!-- Los documentos del sistema.
+
+             Van aquí porque es donde se busca «qué necesito para conectar
+             otro equipo»: junto a la configuración, no en una carpeta del
+             servidor a la que nadie del equipo tiene acceso. -->
+        <div style="background:#ffffff; border:1px solid #e7e3de; border-radius:3px; padding:22px 24px; margin-top:20px;">
+          <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Documentos del sistema</h2>
+          <p style="font-size:14.5px; color:#5b7185; margin:6px 0 18px; max-width:62ch;">Para leer, imprimir o llevar al sitio donde está el terminal. Se descargan en PDF.</p>
+
+          <sc-if value="{{ manualesVacio }}">
+            <div style="font-size:14px; color:#7d8e9c; padding:14px 0;">No hay documentos disponibles.</div>
+          </sc-if>
+
+          <sc-for each="{{ manuales }}" as="doc">
+            <a href="{{ doc.url }}" download style="display:flex; align-items:center; gap:13px; padding:12px 2px; border-bottom:1px solid #f0ede9; text-decoration:none; color:inherit;" style-hover="background:#f8f7f5">
+              <i class="ph-duotone ph-file-pdf" style="font-size:22px; color:#a8321f; flex-shrink:0;"></i>
+              <div style="flex:1; min-width:0;">
+                <div style="font-size:14.5px; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ doc.titulo }}</div>
+                <div style="font-size:12.5px; color:#9aa7b2; margin-top:1px; font-variant-numeric:tabular-nums;">{{ doc.peso }}</div>
+              </div>
+              <i class="ph-bold ph-download-simple" style="font-size:17px; color:#5b7185; flex-shrink:0;"></i>
+            </a>
+          </sc-for>
         </div>
       </sc-if>
 
@@ -3032,6 +3061,90 @@
         </div>
       </sc-if>
 
+      <sc-if value="{{ isEmergencia }}">
+        <!-- PASAR LISTA EN UNA EMERGENCIA
+
+             Existe por lo que pasó el 01/09/2026: se cayó la nube del
+             terminal y la casa se quedó sin forma de registrar que la
+             gente vino. Esta pantalla es la salida de ese día.
+
+             NO es un canal más. Es el último recurso, y la pantalla lo
+             dice en voz alta: si el Timmy funciona, esto no se usa. Cada
+             marca que sale de aquí la AFIRMA un adulto, no la comprueba
+             ninguna máquina, y queda con su nombre y su motivo. -->
+        <div style="max-width:640px; margin:0 auto;">
+
+          <div style="background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px; padding:15px 18px; margin-bottom:20px;">
+            <div style="font-size:15px; font-weight:600; color:#8a5c05; margin-bottom:5px;">Solo para emergencias</div>
+            <div style="font-size:14px; color:#8a5c05; line-height:1.55;">Si el terminal funciona, úsalo. Esto es para cuando no hay otra forma de dejar constancia: el equipo apagado, sin internet, o la nube del proveedor caída.</div>
+            <div style="font-size:13.5px; color:#8a5c05; margin-top:9px;">Cada marca queda con <b>tu nombre</b> y el motivo que escribas.</div>
+          </div>
+
+          <!-- El estado del terminal, aquí mismo. Es la información que
+               decide si esta pantalla debe usarse o no, así que no puede
+               estar en otra parte del sistema. -->
+          <div style="background:{{ emgTermTint }}; border:1px solid {{ emgTermBorde }}; border-radius:3px; padding:12px 15px; margin-bottom:20px; display:flex; align-items:center; gap:11px;">
+            <i class="ph-duotone {{ emgTermIcono }}" style="font-size:20px; color:{{ emgTermColor }}; flex-shrink:0;"></i>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:14px; font-weight:600; color:{{ emgTermColor }};">{{ emgTermTitulo }}</div>
+              <div style="font-size:13px; color:{{ emgTermColor }}; margin-top:1px;">{{ emgTermDetalle }}</div>
+            </div>
+          </div>
+
+          <div style="background:#ffffff; border:1px solid #e7e3de; border-radius:3px; padding:20px 22px;">
+            <h2 style="font-size:21px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Pasar lista</h2>
+            <p style="font-size:14px; color:#5b7185; margin:6px 0 16px;">Elige a quién estás viendo ahora y anota su asistencia.</p>
+
+            <div style="margin-bottom:14px;">
+              <label style="font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#7d8e9c; font-weight:600;">Por qué se anota a mano</label>
+              <input type="text" value="{{ emgMotivo }}" onChange="{{ onEmgMotivo }}" placeholder="Ej.: el terminal estuvo sin internet toda la mañana" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              <div style="font-size:12.5px; color:#9aa7b2; margin-top:5px;">Se guarda con cada marca. Sin esto no se puede anotar.</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px;">
+              <div>
+                <label style="font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#7d8e9c; font-weight:600;">Día</label>
+                <input type="date" value="{{ emgFecha }}" onChange="{{ onEmgFecha }}" style="width:100%; margin-top:7px; padding:9px 11px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+              </div>
+              <div>
+                <label style="font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#7d8e9c; font-weight:600;">Hora</label>
+                <input type="time" value="{{ emgHora }}" onChange="{{ onEmgHora }}" style="width:100%; margin-top:7px; padding:9px 11px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+              </div>
+            </div>
+
+            <div style="display:flex; gap:7px; margin-bottom:16px;">
+              <button onClick="{{ emgVerNinos }}" style="{{ emgEstiloNinos }}" style-hover="border-color:#1462a5">Niños</button>
+              <button onClick="{{ emgVerEquipo }}" style="{{ emgEstiloEquipo }}" style-hover="border-color:#1462a5">Equipo</button>
+            </div>
+
+            <sc-if value="{{ emgVacio }}">
+              <div style="font-size:14px; color:#7d8e9c; padding:20px 0; text-align:center;">No hay nadie que listar aquí.</div>
+            </sc-if>
+
+            <sc-for each="{{ emgLista }}" as="p">
+              <div style="display:flex; align-items:center; gap:12px; padding:11px 2px; border-bottom:1px solid #f0ede9;">
+                <div style="width:34px; height:34px; border-radius:2px; background:{{ p.tint }}; color:{{ p.color }}; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; flex-shrink:0;">{{ p.iniciales }}</div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:14.5px; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.nombre }}</div>
+                  <div style="font-size:12.5px; color:{{ p.estadoColor }}; margin-top:1px;">{{ p.estado }}</div>
+                </div>
+                <button onClick="{{ p.anotar }}" style="{{ p.botonEstilo }}" style-hover="background:#1c5f3a">{{ p.botonTexto }}</button>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ emgError }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px; font-size:13.5px; color:#a8321f;">{{ emgError }}</div>
+            </sc-if>
+            <sc-if value="{{ emgOk }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#e8f3ec; border-left:4px solid #2f8f5b; border-radius:2px; font-size:13.5px; color:#1c5f3a;">{{ emgOk }}</div>
+            </sc-if>
+          </div>
+
+          <div style="font-size:12.5px; color:#9aa7b2; margin-top:14px; line-height:1.6;">
+            Lo anotado aquí aparece en el registro de asistencia marcado como <b>manual</b>, no como si hubiera venido del terminal. Se distingue siempre.
+          </div>
+        </div>
+      </sc-if>
       <sc-if value="{{ isMarcar }}">
         <!-- Dos columnas: a la izquierda el acto de marcar, a la derecha lo
              que ya quedó registrado. En pantalla estrecha se apilan solas y
@@ -5047,6 +5160,7 @@ const RUTAS = [
   ["biometria",      { view: "biometria" }],
   ["permisos",       { view: "permisos" }],
   ["marcar",         { view: "marcar" }],
+  ["emergencia",     { view: "emergencia" }],
   ["mis-permisos",   { view: "misPermisos" }],
   ["usuarios",       { view: "usuarios" }],
   ["planillas",      { view: "nomina" }],
@@ -5105,6 +5219,165 @@ const SIN_BENEFICIARIO = { n: "Sin beneficiario seleccionado",
 
 
 class Component extends DCLogic {
+  /* ══════════════════════════════════════════════════════════════════════
+     PASAR LISTA EN UNA EMERGENCIA
+
+     La salida para los días en que ni el terminal ni el celular sirven.
+     Nació del 01/09/2026: se cayó la nube del proveedor y la casa se
+     quedó sin forma de dejar constancia de que la gente vino.
+
+     Sirve para niños y para el equipo. Para los niños es la ÚNICA vía
+     cuando el terminal falla —no tienen teléfono con el que fichar— y por
+     eso está pensada para usarse de pie, con el móvil en la mano,
+     mirando a quien tienes delante.
+     ══════════════════════════════════════════════════════════════════════ */
+
+  /* Al entrar se rellenan día y hora con AHORA. Casi siempre se pasa
+     lista en el momento, y obligar a escribir la fecha cada vez sería
+     pedir trabajo para el caso raro. */
+  prepararEmergencia() {
+    const ahora = new Date();
+    const dos = (n) => String(n).padStart(2, "0");
+    this.setState({
+      emgFecha: ahora.getFullYear() + "-" + dos(ahora.getMonth() + 1) + "-" + dos(ahora.getDate()),
+      emgHora: dos(ahora.getHours()) + ":" + dos(ahora.getMinutes()),
+      emgError: "", emgOk: "",
+      emgQuienes: this.state.emgQuienes || "ninos",
+    });
+    this.cargarEstadoTerminal();
+  }
+
+  /* Anota la asistencia de una persona.
+
+     El motivo se exige aquí y también en el servidor. Aquí para no hacer
+     ir y volver por algo que se ve de antemano; allí porque la pantalla
+     se puede saltar. */
+  anotarEmergencia(tipo, id, nombre) {
+    const motivo = (this.state.emgMotivo || "").trim();
+    if (motivo.length < 4) {
+      this.setState({ emgError: "Escribe primero por qué se anota a mano.", emgOk: "" });
+      return;
+    }
+    this.setState({ emgError: "", emgOk: "", emgAnotando: tipo + ":" + id });
+
+    this.api("/api/asistencia/manual", {
+      method: "POST",
+      body: JSON.stringify({
+        tipo: tipo, titular_id: id,
+        fecha: this.state.emgFecha, hora: this.state.emgHora,
+        motivo: motivo,
+      }),
+    })
+      .then((d) => {
+        if (!this._vivo) return;
+        const ya = (this.state.emgHechos || []).slice();
+        ya.push(tipo + ":" + id);
+        this.setState({
+          emgHechos: ya,
+          emgAnotando: "",
+          emgOk: d.repetida
+            ? (nombre + " ya tenía una marca a esa hora.")
+            : (nombre + " anotado a las " + this.state.emgHora + "."),
+        });
+        /* Que el registro de asistencia lo refleje sin recargar: es la
+           pantalla a la que se va después a comprobar. */
+        this.cargarPersonas();
+        this.cargarRango();
+      })
+      .catch((e) => {
+        if (this._vivo) this.setState({ emgAnotando: "",
+          emgError: String((e && e.message) || e) });
+      });
+  }
+
+  valoresEmergencia() {
+    const v = this.state.view;
+    const quienes = this.state.emgQuienes || "ninos";
+    const hechos = this.state.emgHechos || [];
+    const anotando = this.state.emgAnotando || "";
+
+    /* Quién se lista. Los niños primero porque son el motivo de que esta
+       pantalla exista: el equipo tiene el celular como alternativa, ellos
+       no. */
+    const fuente = quienes === "ninos"
+      ? (this.state.beneficiarios || []).map((b) => ({ tipo: "beneficiario", id: b.id, nombre: b.nombre }))
+      : (this.state.personal || []).map((p) => ({ tipo: "personal", id: p.id, nombre: p.nombre }));
+
+    const PALETA = [
+      ["#e4eef7", "#0e3d69"], ["#e2f1e8", "#1c5f3a"], ["#fbf0d9", "#8a5c05"],
+      ["#fbe7e3", "#a8321f"], ["#efe7f5", "#5b3a7a"], ["#e6f0f2", "#2b5f68"],
+    ];
+    const inicialesDe = (n) => String(n || "").trim().split(/\s+/)
+      .slice(0, 2).map((x) => x[0] || "").join("").toUpperCase() || "?";
+
+    const boton = (activo, hecho) => {
+      if (hecho) return "font-size:13px; color:#1c5f3a; background:#e2f1e8; "
+        + "padding:8px 14px; border-radius:2px; border:1px solid #a9d5bb; flex-shrink:0;";
+      if (activo) return "font-size:13px; color:#7d8e9c; background:#f0ede9; "
+        + "padding:8px 14px; border-radius:2px; border:1px solid #c9d4de; flex-shrink:0;";
+      return "font-size:13px; color:#ffffff; background:#2f8f5b; "
+        + "padding:8px 14px; border-radius:2px; border:1px solid #2f8f5b; flex-shrink:0;";
+    };
+
+    const t = this.state.terminal;
+    const termBien = !!(t && t.configurado && t.sesion_activa && !t.ultimo_error);
+
+    return {
+      isEmergencia: v === "emergencia",
+
+      emgMotivo: this.state.emgMotivo || "",
+      onEmgMotivo: (e) => this.setState({ emgMotivo: e.target.value, emgError: "", emgOk: "" }),
+      emgFecha: this.state.emgFecha || "",
+      onEmgFecha: (e) => this.setState({ emgFecha: e.target.value, emgError: "", emgOk: "" }),
+      emgHora: this.state.emgHora || "",
+      onEmgHora: (e) => this.setState({ emgHora: e.target.value, emgError: "", emgOk: "" }),
+
+      emgVerNinos: () => this.setState({ emgQuienes: "ninos", emgOk: "", emgError: "" }),
+      emgVerEquipo: () => this.setState({ emgQuienes: "equipo", emgOk: "", emgError: "" }),
+      emgEstiloNinos: "font-size:13.5px; padding:8px 16px; border-radius:2px; flex:1; "
+        + (quienes === "ninos"
+          ? "background:#e4eef7; color:#0e3d69; border:1px solid #1462a5;"
+          : "background:#ffffff; color:#5b7185; border:1px solid #c9d4de;"),
+      emgEstiloEquipo: "font-size:13.5px; padding:8px 16px; border-radius:2px; flex:1; "
+        + (quienes === "equipo"
+          ? "background:#e4eef7; color:#0e3d69; border:1px solid #1462a5;"
+          : "background:#ffffff; color:#5b7185; border:1px solid #c9d4de;"),
+
+      emgLista: fuente.map((p) => {
+        const clave = p.tipo + ":" + p.id;
+        const hecho = hechos.indexOf(clave) >= 0;
+        const activo = anotando === clave;
+        const par = PALETA[String(p.nombre || "").length % PALETA.length];
+        return {
+          nombre: p.nombre,
+          iniciales: inicialesDe(p.nombre),
+          tint: par[0], color: par[1],
+          estado: hecho ? "Anotado" : (activo ? "Anotando…" : "Sin anotar"),
+          estadoColor: hecho ? "#1c5f3a" : "#9aa7b2",
+          botonTexto: hecho ? "Hecho" : (activo ? "…" : "Anotar"),
+          botonEstilo: boton(activo, hecho),
+          anotar: () => { if (!hecho && !activo) this.anotarEmergencia(p.tipo, p.id, p.nombre); },
+        };
+      }),
+      emgVacio: fuente.length === 0,
+
+      /* El estado del terminal, para que quien abra esto vea de una que
+         quizá no le hace falta. */
+      emgTermTitulo: termBien ? "El terminal está funcionando"
+        : (t && !t.configurado) ? "El terminal no está configurado"
+        : "El terminal no está disponible",
+      emgTermDetalle: termBien
+        ? "Si puede fichar en el equipo, mejor usa el equipo."
+        : ((t && (t.diagnostico || t.ultimo_error)) || "No se pudo consultar su estado.").slice(0, 150),
+      emgTermTint: termBien ? "#e2f1e8" : "#fbf0d9",
+      emgTermBorde: termBien ? "#a9d5bb" : "#e8d09a",
+      emgTermColor: termBien ? "#1c5f3a" : "#8a5c05",
+      emgTermIcono: termBien ? "ph-check-circle" : "ph-warning-circle",
+
+      emgError: this.state.emgError || "",
+      emgOk: this.state.emgOk || "",
+    };
+  }
   state = {
     view: "login", loginUser: "", loginPass: "", showPass: false,
     loginErr: "", loading: false, sel: 11, scope: "todos", legajoTab: "dir",
@@ -7062,10 +7335,14 @@ class Component extends DCLogic {
     this.cargarIdentidades();
     this.cargarPersonal();
     this.cargarParametros();
+    this.cargarManuales();
     this.cargarAlertas();
     this.cargarVencimientos();
     this.cargarPlanilla();
     this.cargarBeneficiarios();
+    /* Día y hora de ahora para la pantalla de pasar lista. Se prepara al
+       arrancar y no al entrar: entrar en ella suele pasar con prisa. */
+    this.prepararEmergencia();
     this.cargarCamposRequeridos();
     if (this.puede("responsables", "vista")) this.cargarBandeja();
     if (this.puede("usuarios", "vista")) this.cargarUsuarios();
@@ -7232,6 +7509,16 @@ class Component extends DCLogic {
     this.api("/api/alertas")
       .then((d) => { if (this._vivo) this.setState({ vencimientos: d.vencimientos || {} }); })
       .catch(() => {});
+  }
+
+  /* Los PDF que se pueden descargar desde Configuración.
+     Si falla no se avisa: es una lista de documentos, no un dato del
+     trabajo, y un aviso rojo por no poder listarlos sería ruido. La
+     pantalla dice «no hay documentos» y ya. */
+  cargarManuales() {
+    this.api("/api/manuales")
+      .then((d) => { if (this._vivo) this.setState({ manuales: d.manuales || [] }); })
+      .catch(() => { if (this._vivo) this.setState({ manuales: [] }); });
   }
 
   cargarParametros() {
@@ -7746,6 +8033,10 @@ class Component extends DCLogic {
         total: p.total || 0,
         canales: p.canales || "",
         lugar: p.lugar || "",
+        /* Coordenadas del mismo fichaje del que salió el nombre del sitio,
+           para poder abrirlo en un mapa. */
+        lat: p.lat == null ? null : p.lat,
+        lon: p.lon == null ? null : p.lon,
         distancia: p.distancia == null ? null : p.distancia,
         sin_ubicacion: p.sin_ubicacion || 0,
         sub: Component.etiquetaRol(p) + " · enrolado aquí",
@@ -8005,6 +8296,22 @@ class Component extends DCLogic {
       origen: Component.origenFila(f).texto,
       origenIcono: Component.origenFila(f).icono,
       origenColor: Component.origenFila(f).color,
+      /* Abrir el punto exacto en un mapa.
+         Solo cuando hay coordenadas Y nombre: sin nombre no hay nada que
+         pulsar, y sin coordenadas el enlace llevaría a ninguna parte.
+         Se usa la búsqueda por coordenadas de Google Maps, que funciona
+         igual en el navegador y en la aplicación del teléfono.
+         Ojo: al pulsarlo se le dice a Google dónde estuvo esa persona.
+         Por eso es un clic deliberado de quien mira, y no algo que la
+         pantalla cargue sola al abrirse. */
+      mapaUrl: (f.lat != null && f.lon != null && f.lugar)
+        ? ("https://www.google.com/maps/search/?api=1&query="
+           + encodeURIComponent(f.lat + "," + f.lon))
+        : "",
+      hayMapa: !!(f.lat != null && f.lon != null && f.lugar),
+      /* El runtime no tiene sc-else: la condición contraria se
+         declara a mano o la fila se quedaría sin texto. */
+      sinMapa: !(f.lat != null && f.lon != null && f.lugar),
       /* Fondo de aviso solo para quien NO PUEDE marcar. A quien puede y
          todavía no ha marcado no se le pinta nada: puede que aún no haya
          llegado, y teñirle la fila lo señalaría sin motivo. */
@@ -9352,6 +9659,8 @@ class Component extends DCLogic {
         "Enrolamiento de rostro y huella en el terminal TIMMY, a través de yunatt."],
       marcar: ["Marcar asistencia",
         "Registra tu entrada y tu salida desde el celular. Queda con tu nombre y la hora del servidor."],
+      emergencia: ["Pasar lista",
+        "Solo para emergencias: anotar a mano la asistencia cuando el terminal no está disponible. Queda con tu nombre y el motivo."],
       misPermisos: ["Mis Permisos",
         "Tus solicitudes de permiso y vacaciones: lo que pediste, en qué estado va y a quién le toca resolverlo."],
       permisos: ["Gestión de Permisos",
@@ -9432,6 +9741,11 @@ class Component extends DCLogic {
            no puede exigir el permiso que autoriza a aprobarlos. */
         {label:"Marcar asistencia", icon:"ph-fingerprint", mods:[],
          vista:"marcar"},
+        /* Pasar lista a mano. Pide EDICIÓN sobre asistencia: quien lo abre
+           va a afirmar que vio a alguien, y eso no lo puede hacer quien
+           solo tiene permiso de mirar. */
+        {label:"Pasar lista", icon:"ph-clipboard-text", mods:["asistencia"],
+         vista:"emergencia"},
         {label:"Mis Permisos", icon:"ph-hand-palm", mods:[],
          vista:"misPermisos",
          badge:String((this.state.misSolicitudes || [])
@@ -11366,6 +11680,18 @@ class Component extends DCLogic {
       })(),
 
       isConfig: v === "config",
+
+      /* Los documentos descargables.
+         La lista viene del servidor leyendo la carpeta docs/, así que
+         dejar un PDF nuevo ahí basta para que aparezca: no hay ninguna
+         lista escrita a mano que se quede desfasada. */
+      manuales: (this.state.manuales || []).map((m) => ({
+        titulo: m.titulo,
+        peso: m.kb >= 1024 ? ((m.kb / 1024).toFixed(1) + " MB") : (m.kb + " KB"),
+        url: "/api/manuales/" + encodeURIComponent(m.archivo),
+      })),
+      manualesVacio: (this.state.manuales || []).length === 0,
+
       cfgOrg: this.state.cfgOrg || "",
       cfgCiudad: this.state.cfgCiudad || "",
       cfgFundacion: this.state.cfgFundacion || "",
@@ -13234,6 +13560,10 @@ class Component extends DCLogic {
 
       weekDays: ["Lun","Mar","Mié","Jue","Vie","Sáb","Dom"],
 
+      /* Los valores de la pantalla de emergencia. Se calculan en su
+         propio método y se esparcen aquí: meter treinta líneas de
+         cálculo dentro de este objeto lo haría ilegible. */
+      ...this.valoresEmergencia(),
       /* ── Planillas ──────────────────────────────────────────────────
          Todo sale de /api/planillas: el sueldo de las condiciones de cada
          ficha y los días de las marcas del terminal. Aqui no hay ni un

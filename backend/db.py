@@ -318,6 +318,11 @@ CREATE TABLE IF NOT EXISTS marcas (
     -- trabajador. Ambos canales terminan en ESTA tabla a propósito —un solo
     -- historial— pero se puede saber cuál fue cada marca.
     canal        TEXT DEFAULT 'terminal',
+    -- Qué TRABAJADOR registró esta marca, cuando no la registró la
+    -- propia persona. Un niño no ficha solo: su asistencia la toma un
+    -- adulto con su teléfono, y tiene que quedar constancia de cuál.
+    -- Vacío cuando la persona fichó por sí misma o en el terminal.
+    registrada_por INTEGER REFERENCES personal(id) ON DELETE SET NULL,
     UNIQUE (staff_number, fecha, hora)
 );
 
@@ -330,7 +335,13 @@ CREATE TABLE IF NOT EXISTS marcas (
 -- trabajador pasa por dos enrolamientos.
 -- ─────────────────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS rostros_web (
-    personal_id INTEGER PRIMARY KEY REFERENCES personal(id) ON DELETE CASCADE,
+    -- Clave propia, no `personal_id`, porque aquí caben DOS tipos de
+    -- persona: el trabajador que registra su cara desde su teléfono,
+    -- y el niño cuya cara registra un trabajador con el suyo. Con la
+    -- clave en personal_id no había sitio para los segundos.
+    id              INTEGER PRIMARY KEY AUTOINCREMENT,
+    personal_id     INTEGER REFERENCES personal(id)      ON DELETE CASCADE,
+    beneficiario_id INTEGER REFERENCES beneficiarios(id) ON DELETE CASCADE,
 
     -- El descriptor: un vector de números en JSON. NO es una imagen y no se
     -- reconstruye una cara con él. La foto se procesa en el navegador del
@@ -342,16 +353,30 @@ CREATE TABLE IF NOT EXISTS rostros_web (
     creado      TEXT DEFAULT (datetime('now','localtime')),
     actualizado TEXT DEFAULT (datetime('now','localtime')),
 
-    -- Quién hizo el enrolamiento. En el canal web lo hace la propia persona,
-    -- pero puede acompañarla RRHH en la sesión que agenden.
-    registrado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL
+    -- Quién hizo el enrolamiento. En el canal web lo hace la propia
+    -- persona, pero puede acompañarla RRHH. Y cuando el rostro es de
+    -- un niño SIEMPRE lo registra un adulto: aquí queda cuál.
+    registrado_por INTEGER REFERENCES usuarios(id) ON DELETE SET NULL,
+
+    -- Exactamente un dueño. Con cero el rostro no es de nadie; con
+    -- dos, no se sabría a quién atribuir la marca.
+    CHECK ((personal_id IS NOT NULL) + (beneficiario_id IS NOT NULL) = 1),
+    UNIQUE (personal_id),
+    UNIQUE (beneficiario_id)
 );
 
 -- El consentimiento. Vive aparte del rostro a propósito: si mañana se borra
 -- el descriptor, la constancia de que se pidió permiso NO debe irse con él.
 CREATE TABLE IF NOT EXISTS consentimientos (
     id          INTEGER PRIMARY KEY AUTOINCREMENT,
-    personal_id INTEGER NOT NULL REFERENCES personal(id) ON DELETE CASCADE,
+    -- Igual que en rostros_web: el consentimiento puede ser de un
+    -- trabajador —que decide por sí mismo— o de un niño, y entonces
+    -- lo da su tutor.
+    personal_id     INTEGER REFERENCES personal(id)      ON DELETE CASCADE,
+    beneficiario_id INTEGER REFERENCES beneficiarios(id) ON DELETE CASCADE,
+    -- Qué tutor firmó, cuando el consentimiento es de un niño. Para
+    -- un trabajador queda vacío: firma él mismo.
+    responsable_id  INTEGER REFERENCES responsables(id)  ON DELETE SET NULL,
     tipo        TEXT NOT NULL DEFAULT 'rostro_web',
     aceptado    INTEGER NOT NULL DEFAULT 0,   -- 0 = lo rechazó, y eso también consta
 
@@ -365,7 +390,8 @@ CREATE TABLE IF NOT EXISTS consentimientos (
     agente      TEXT DEFAULT '',
     -- Se guarda el histórico completo: revocar es un registro nuevo, no
     -- borrar el anterior.
-    revocado_el TEXT DEFAULT ''
+    revocado_el TEXT DEFAULT '',
+    CHECK ((personal_id IS NOT NULL) + (beneficiario_id IS NOT NULL) = 1)
 );
 CREATE INDEX IF NOT EXISTS idx_consent_persona
     ON consentimientos(personal_id, tipo);
@@ -829,6 +855,11 @@ _COLUMNAS_NUEVAS = {
         # el canal web no existía. El valor por defecto es correcto, no una
         # suposición cómoda.
         "canal": "TEXT DEFAULT 'terminal'",
+        # Por qué se escribió una marca a mano. Vacío en las que
+        # vinieron del terminal o del celular, que no necesitan
+        # explicación: las comprobó una máquina. Una marca manual sin
+        # motivo no se distingue de una inventada.
+        "motivo": "TEXT DEFAULT ''",
         # Lo que acompaña a una marca hecha desde el celular. Nulo en las
         # del terminal, que no tienen ni foto ni ubicación.
         "foto":       "TEXT DEFAULT NULL",
@@ -1949,16 +1980,39 @@ def borrar_seguimiento(id_):
 # comprueba en app.py antes de escribir, y aquí se le da lo que necesita para
 # poder comprobarla.
 
-def consentimiento_vigente(personal_id, tipo="rostro_web"):
+def _dueno_rostro(personal_id=None, beneficiario_id=None):
+    """
+    (columna, id) de la persona a la que pertenece un rostro.
+
+    Existe para no repetir el mismo `if` en las seis funciones de abajo, y
+    para que la regla —exactamente uno— esté escrita en un solo sitio. La
+    tabla lo impone con un CHECK; esto lo detecta antes, con un mensaje que
+    dice qué pasó.
+    """
+    if (personal_id is None) == (beneficiario_id is None):
+        raise ValueError(
+            "Un rostro es de un trabajador O de un beneficiario, nunca de "
+            "los dos ni de ninguno.")
+    if personal_id is not None:
+        return "personal_id", int(personal_id)
+    return "beneficiario_id", int(beneficiario_id)
+
+
+def consentimiento_vigente(personal_id=None, tipo="rostro_web",
+                           beneficiario_id=None):
     """
     El último consentimiento de esta persona, aceptado y no revocado. None si
     nunca aceptó, si dijo que no, o si lo revocó después.
+
+    Para un niño el consentimiento lo da su tutor, pero se guarda contra el
+    niño: es SU dato biométrico, y quién firmó queda en responsable_id.
     """
+    columna, ident = _dueno_rostro(personal_id, beneficiario_id)
     filas = consultar(
-        """SELECT * FROM consentimientos
-            WHERE personal_id = ? AND tipo = ?
+        f"""SELECT * FROM consentimientos
+            WHERE {columna} = ? AND tipo = ?
             ORDER BY id DESC LIMIT 1""",
-        (int(personal_id), tipo),
+        (ident, tipo),
     )
     if not filas:
         return None
@@ -1979,17 +2033,26 @@ def consentimientos_de(personal_id, tipo=None):
         (int(personal_id),))
 
 
-def registrar_consentimiento(personal_id, aceptado, version, texto,
-                             tipo="rostro_web", ip="", agente=""):
+def registrar_consentimiento(personal_id=None, aceptado=0, version="",
+                             texto="", tipo="rostro_web", ip="", agente="",
+                             beneficiario_id=None, responsable_id=None):
     """
     Siempre INSERTA. Nunca actualiza el anterior: el histórico de quién
     aceptó qué y cuándo es justamente lo que hay que poder demostrar.
+
+    Para un niño el permiso se guarda contra el NIÑO —es su dato
+    biométrico— y `responsable_id` dice qué tutor lo firmó. Un permiso sin
+    firmante identificado no serviría de nada el día que alguien pregunte
+    quién autorizó esto.
     """
+    columna, ident = _dueno_rostro(personal_id, beneficiario_id)
     return ejecutar(
-        """INSERT INTO consentimientos
-               (personal_id, tipo, aceptado, version, texto, ip, agente)
-           VALUES (?, ?, ?, ?, ?, ?, ?)""",
-        (int(personal_id), tipo, 1 if aceptado else 0, version, texto, ip, agente),
+        f"""INSERT INTO consentimientos
+               ({columna}, responsable_id, tipo, aceptado, version,
+                texto, ip, agente)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+        (ident, responsable_id, tipo, 1 if aceptado else 0, version, texto,
+         ip, agente),
     )
 
 
@@ -2009,10 +2072,30 @@ def revocar_consentimiento(personal_id, tipo="rostro_web"):
 
 # ── El rostro del canal web ───────────────────────────────────────────────
 
-def rostro_web(personal_id):
-    filas = consultar("SELECT * FROM rostros_web WHERE personal_id = ?",
-                      (int(personal_id),))
+def rostro_web(personal_id=None, beneficiario_id=None):
+    columna, ident = _dueno_rostro(personal_id, beneficiario_id)
+    filas = consultar(f"SELECT * FROM rostros_web WHERE {columna} = ?", (ident,))
     return filas[0] if filas else None
+
+
+def rostros_para_reconocer():
+    """
+    Todos los descriptores registrados, con a quién pertenecen.
+
+    Es lo que necesita el celular de un trabajador para tomar asistencia:
+    compara la cara que ve contra esta lista. Va el vector, el nombre y el
+    tipo — nunca una fotografía, porque no se guarda ninguna.
+    """
+    return consultar(
+        """SELECT r.descriptor, r.dimension, r.modelo,
+                  r.personal_id, r.beneficiario_id,
+                  COALESCE(p.nombre, b.nombre) AS nombre,
+                  CASE WHEN r.personal_id IS NOT NULL
+                       THEN 'personal' ELSE 'beneficiario' END AS tipo
+             FROM rostros_web r
+             LEFT JOIN personal      p ON p.id = r.personal_id
+             LEFT JOIN beneficiarios b ON b.id = r.beneficiario_id
+            ORDER BY nombre""")
 
 
 # Aquí estaba rostros_web_registrados(). La usaba una sola puerta —la
@@ -2021,34 +2104,35 @@ def rostro_web(personal_id):
 
 
 
-def guardar_rostro_web(personal_id, descriptor_json, dimension, modelo,
-                       registrado_por=None):
+def guardar_rostro_web(personal_id=None, descriptor_json=None, dimension=0,
+                       modelo="", registrado_por=None, beneficiario_id=None):
     """
     Crea o reemplaza el descriptor. Reemplazar es lo correcto: si alguien
     vuelve a enrolarse es porque el anterior no servía.
     """
+    columna, ident = _dueno_rostro(personal_id, beneficiario_id)
     ejecutar(
-        """INSERT INTO rostros_web
-               (personal_id, descriptor, dimension, modelo, registrado_por)
+        f"""INSERT INTO rostros_web
+               ({columna}, descriptor, dimension, modelo, registrado_por)
            VALUES (?, ?, ?, ?, ?)
-           ON CONFLICT(personal_id) DO UPDATE SET
+           ON CONFLICT({columna}) DO UPDATE SET
                descriptor = excluded.descriptor,
                dimension = excluded.dimension,
                modelo = excluded.modelo,
                registrado_por = excluded.registrado_por,
                actualizado = datetime('now','localtime')""",
-        (int(personal_id), descriptor_json, int(dimension), modelo,
-         registrado_por),
+        (ident, descriptor_json, int(dimension), modelo, registrado_por),
     )
 
 
-def borrar_rostro_web(personal_id):
+def borrar_rostro_web(personal_id=None, beneficiario_id=None):
     """
     Se lleva el descriptor y deja el consentimiento. Son cosas distintas: el
     dato biométrico se puede eliminar; la constancia de que se pidió permiso
     hay que conservarla.
     """
-    ejecutar("DELETE FROM rostros_web WHERE personal_id = ?", (int(personal_id),))
+    columna, ident = _dueno_rostro(personal_id, beneficiario_id)
+    ejecutar(f"DELETE FROM rostros_web WHERE {columna} = ?", (ident,))
 
 
 # ── Responsables / tutores ────────────────────────────────────────────────
@@ -2410,13 +2494,19 @@ def guardar_marca(staff_number, fecha, hora, metodo="facial", canal="terminal",
     return ejecutar(
         """INSERT OR IGNORE INTO marcas
                (staff_number, fecha, hora, metodo, canal,
-                foto, lat, lon, precision_m, distancia_m, lugar)
-           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS
+                foto, lat, lon, precision_m, distancia_m, lugar,
+                registrada_por, motivo)
+           SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ? WHERE EXISTS
            (SELECT 1 FROM identidades WHERE staff_number = ?)""",
         (int(staff_number), fecha, hora, metodo, canal,
          extra.get("foto"), extra.get("lat"), extra.get("lon"),
          extra.get("precision_m"), extra.get("distancia_m"),
          extra.get("lugar") or "",
+         # Qué trabajador tomó esta asistencia. Vacío cuando la persona
+         # fichó por sí misma o en el terminal; con valor cuando la tomó
+         # un adulto, que es siempre el caso de un niño.
+         extra.get("registrada_por"),
+         extra.get("motivo") or "",
          int(staff_number)),
     )
 
@@ -2454,7 +2544,21 @@ def marcas_de(fecha):
                     WHERE m2.staff_number = v.staff_number
                       AND m2.fecha = ?
                       AND m2.lugar IS NOT NULL AND m2.lugar <> ''
-                    ORDER BY m2.hora DESC LIMIT 1) AS lugar
+                    ORDER BY m2.hora DESC LIMIT 1) AS lugar,
+                  -- Las coordenadas de ESA MISMA marca, para poder abrir el
+                  -- punto en un mapa. Se sacan aparte y con el mismo orden
+                  -- que el nombre: coger el lugar de una marca y las
+                  -- coordenadas de otra señalaría un sitio equivocado.
+                  (SELECT m3.lat FROM marcas m3
+                    WHERE m3.staff_number = v.staff_number
+                      AND m3.fecha = ?
+                      AND m3.lugar IS NOT NULL AND m3.lugar <> ''
+                    ORDER BY m3.hora DESC LIMIT 1) AS lat,
+                  (SELECT m4.lon FROM marcas m4
+                    WHERE m4.staff_number = v.staff_number
+                      AND m4.fecha = ?
+                      AND m4.lugar IS NOT NULL AND m4.lugar <> ''
+                    ORDER BY m4.hora DESC LIMIT 1) AS lon
              FROM v_identidades v
              LEFT JOIN marcas m
                ON m.staff_number = v.staff_number AND m.fecha = ?
@@ -2468,9 +2572,10 @@ def marcas_de(fecha):
             WHERE v.enrolado = 1 OR m.id IS NOT NULL OR m.id IS NOT NULL
             GROUP BY v.staff_number
             ORDER BY v.staff_number""",
-        # La fecha va dos veces: una para el LEFT JOIN de las marcas y
-        # otra para la subconsulta que busca el último sitio con nombre.
-        (fecha, fecha),
+        # La fecha va CUATRO veces, en el orden en que aparecen los «?»:
+        # las tres subconsultas del último sitio con nombre —el nombre, su
+        # latitud y su longitud— y el LEFT JOIN de las marcas.
+        (fecha, fecha, fecha, fecha),
     )
     for f in filas:
         if (f["total"] or 0) < 2:

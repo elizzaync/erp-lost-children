@@ -41,6 +41,10 @@
         total: p.total || 0,
         canales: p.canales || "",
         lugar: p.lugar || "",
+        /* Coordenadas del mismo fichaje del que salió el nombre del sitio,
+           para poder abrirlo en un mapa. */
+        lat: p.lat == null ? null : p.lat,
+        lon: p.lon == null ? null : p.lon,
         distancia: p.distancia == null ? null : p.distancia,
         sin_ubicacion: p.sin_ubicacion || 0,
         sub: Component.etiquetaRol(p) + " · enrolado aquí",

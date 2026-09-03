@@ -156,6 +156,9 @@ class ClienteYunatt:
         self._proximo_intento = 0.0
         self._ultimo_error = ""
         self._dept_id = None      # resuelto por nombre, ver resolver_departamento()
+        # ¿Esta plataforma tiene /attenceMachine/queryStaff? Se
+        # descubre al primer intento y no se vuelve a preguntar.
+        self._sin_query_staff = False
 
     # ── Sesión ────────────────────────────────────────────────────────────
 
@@ -364,18 +367,26 @@ class ClienteYunatt:
         el servidor de siempre, se usa la consulta directa al equipo, que
         es más fiel —pregunta al terminal— que un recuento de la nube.
         """
-        try:
-            d = self._post(
-                "/attenceMachine/queryStaff",
-                # [UN SOLO DISPOSITIVO] ver el bloque de config.py
-                {"attenceMachineId": str(config.DEVICE_ID)},
-            )
-            return d.get("rows", []) or []
-        except YunattError as e:
-            if "404" not in str(e):
-                raise
-            log.debug("queryStaff no existe en esta plataforma; se deduce "
-                      "de la ficha")
+        # La ruta antigua se prueba UNA vez por proceso, no en cada consulta.
+        #
+        # Se intentaba siempre, y en la plataforma oficial siempre responde
+        # 404: eran entre 0,3 y 0,7 s tirados por consulta —medido— y durante
+        # un enrolamiento se consulta cada pocos segundos. Al primer 404 se
+        # apunta que no existe y no se vuelve a preguntar.
+        if not self._sin_query_staff:
+            try:
+                d = self._post(
+                    "/attenceMachine/queryStaff",
+                    # [UN SOLO DISPOSITIVO] ver el bloque de config.py
+                    {"attenceMachineId": str(config.DEVICE_ID)},
+                )
+                return d.get("rows", []) or []
+            except YunattError as e:
+                if "404" not in str(e):
+                    raise
+                self._sin_query_staff = True
+                log.info("queryStaff no existe en esta plataforma: se deduce "
+                         "de la ficha a partir de ahora")
 
         filas = []
         for s in self.staff_en_nube():

@@ -106,3 +106,9 @@ pruebas/*.db-journal
 pruebas/*.png
 pruebas/*.pdf
 pruebas/*.y4m
+
+# Los respaldos también con nombre corto. El patrón *.respaldo-* no cubría
+# los .resp-HHMMSS que se hicieron a mano: un respaldo del .env o de la
+# base con ese nombre habría acabado en un repositorio público.
+*.resp-*
+*.antes-*

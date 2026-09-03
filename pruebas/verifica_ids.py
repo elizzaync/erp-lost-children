@@ -22,6 +22,35 @@ for m in re.finditer(r'\{\{\s*([A-Za-z_$][\w$]*)\s*(?:\}\}|\.)', s):
     usados.setdefault(m.group(1), s.count("\n", 0, m.start()) + 1)
 
 cuerpo = s[s.index("renderVals()"):]
+
+# Las claves que llegan por esparcido: `...this.valoresEmergencia(),`.
+#
+# renderVals se reparte entre archivos, y algún bloque calcula sus
+# valores en un método propio para no meter treinta líneas de cálculo
+# dentro del objeto. Ese método se define ANTES de renderVals, así que
+# buscando solo hacia abajo sus claves parecían no existir.
+#
+# Se añade el cuerpo de esos métodos —y solo de esos— al texto donde se
+# buscan las definiciones. Ensancharlo a todo el archivo dejaría la
+# comprobación sin valor: cualquier `algo:` de cualquier objeto la
+# satisfaría.
+PATRON_ESPARCIDO = re.compile(r'[.]{3}this[.](\w+)[(][)]')
+for _metodo in PATRON_ESPARCIDO.findall(cuerpo):
+    _abre = re.search(r'\b' + _metodo + r'[(][)]\s*[{]', s)
+    if not _abre:
+        print(f'  OJO: renderVals esparce {_metodo}() y no encuentro el método')
+        continue
+    # Recorrer llaves para quedarse con el método completo y nada más.
+    _prof, _i = 0, _abre.end() - 1
+    while _i < len(s):
+        if s[_i] == '{':
+            _prof += 1
+        elif s[_i] == '}':
+            _prof -= 1
+            if _prof == 0:
+                break
+        _i += 1
+    cuerpo += s[_abre.start():_i + 1]
 faltan = {k: v for k, v in usados.items()
           if k not in locales and not re.search(r'\b' + re.escape(k) + r'\s*:', cuerpo)}
 

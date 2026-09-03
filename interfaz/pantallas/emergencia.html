@@ -1,0 +1,84 @@
+      <sc-if value="{{ isEmergencia }}">
+        <!-- PASAR LISTA EN UNA EMERGENCIA
+
+             Existe por lo que pasó el 01/09/2026: se cayó la nube del
+             terminal y la casa se quedó sin forma de registrar que la
+             gente vino. Esta pantalla es la salida de ese día.
+
+             NO es un canal más. Es el último recurso, y la pantalla lo
+             dice en voz alta: si el Timmy funciona, esto no se usa. Cada
+             marca que sale de aquí la AFIRMA un adulto, no la comprueba
+             ninguna máquina, y queda con su nombre y su motivo. -->
+        <div style="max-width:640px; margin:0 auto;">
+
+          <div style="background:#fbf0d9; border-left:4px solid #e0a11c; border-radius:2px; padding:15px 18px; margin-bottom:20px;">
+            <div style="font-size:15px; font-weight:600; color:#8a5c05; margin-bottom:5px;">Solo para emergencias</div>
+            <div style="font-size:14px; color:#8a5c05; line-height:1.55;">Si el terminal funciona, úsalo. Esto es para cuando no hay otra forma de dejar constancia: el equipo apagado, sin internet, o la nube del proveedor caída.</div>
+            <div style="font-size:13.5px; color:#8a5c05; margin-top:9px;">Cada marca queda con <b>tu nombre</b> y el motivo que escribas.</div>
+          </div>
+
+          <!-- El estado del terminal, aquí mismo. Es la información que
+               decide si esta pantalla debe usarse o no, así que no puede
+               estar en otra parte del sistema. -->
+          <div style="background:{{ emgTermTint }}; border:1px solid {{ emgTermBorde }}; border-radius:3px; padding:12px 15px; margin-bottom:20px; display:flex; align-items:center; gap:11px;">
+            <i class="ph-duotone {{ emgTermIcono }}" style="font-size:20px; color:{{ emgTermColor }}; flex-shrink:0;"></i>
+            <div style="flex:1; min-width:0;">
+              <div style="font-size:14px; font-weight:600; color:{{ emgTermColor }};">{{ emgTermTitulo }}</div>
+              <div style="font-size:13px; color:{{ emgTermColor }}; margin-top:1px;">{{ emgTermDetalle }}</div>
+            </div>
+          </div>
+
+          <div style="background:#ffffff; border:1px solid #e7e3de; border-radius:3px; padding:20px 22px;">
+            <h2 style="font-size:21px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Pasar lista</h2>
+            <p style="font-size:14px; color:#5b7185; margin:6px 0 16px;">Elige a quién estás viendo ahora y anota su asistencia.</p>
+
+            <div style="margin-bottom:14px;">
+              <label style="font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#7d8e9c; font-weight:600;">Por qué se anota a mano</label>
+              <input type="text" value="{{ emgMotivo }}" onChange="{{ onEmgMotivo }}" placeholder="Ej.: el terminal estuvo sin internet toda la mañana" style="width:100%; margin-top:7px; padding:10px 12px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:15px; color:#201e1d; outline:none;" />
+              <div style="font-size:12.5px; color:#9aa7b2; margin-top:5px;">Se guarda con cada marca. Sin esto no se puede anotar.</div>
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px;">
+              <div>
+                <label style="font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#7d8e9c; font-weight:600;">Día</label>
+                <input type="date" value="{{ emgFecha }}" onChange="{{ onEmgFecha }}" style="width:100%; margin-top:7px; padding:9px 11px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+              </div>
+              <div>
+                <label style="font-size:12px; letter-spacing:0.05em; text-transform:uppercase; color:#7d8e9c; font-weight:600;">Hora</label>
+                <input type="time" value="{{ emgHora }}" onChange="{{ onEmgHora }}" style="width:100%; margin-top:7px; padding:9px 11px; background:#ffffff; border:1px solid #c9d4de; border-radius:2px; font-family:inherit; font-size:14.5px; color:#201e1d; outline:none;" />
+              </div>
+            </div>
+
+            <div style="display:flex; gap:7px; margin-bottom:16px;">
+              <button onClick="{{ emgVerNinos }}" style="{{ emgEstiloNinos }}" style-hover="border-color:#1462a5">Niños</button>
+              <button onClick="{{ emgVerEquipo }}" style="{{ emgEstiloEquipo }}" style-hover="border-color:#1462a5">Equipo</button>
+            </div>
+
+            <sc-if value="{{ emgVacio }}">
+              <div style="font-size:14px; color:#7d8e9c; padding:20px 0; text-align:center;">No hay nadie que listar aquí.</div>
+            </sc-if>
+
+            <sc-for each="{{ emgLista }}" as="p">
+              <div style="display:flex; align-items:center; gap:12px; padding:11px 2px; border-bottom:1px solid #f0ede9;">
+                <div style="width:34px; height:34px; border-radius:2px; background:{{ p.tint }}; color:{{ p.color }}; display:flex; align-items:center; justify-content:center; font-size:12.5px; font-weight:600; flex-shrink:0;">{{ p.iniciales }}</div>
+                <div style="flex:1; min-width:0;">
+                  <div style="font-size:14.5px; color:#201e1d; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ p.nombre }}</div>
+                  <div style="font-size:12.5px; color:{{ p.estadoColor }}; margin-top:1px;">{{ p.estado }}</div>
+                </div>
+                <button onClick="{{ p.anotar }}" style="{{ p.botonEstilo }}" style-hover="background:#1c5f3a">{{ p.botonTexto }}</button>
+              </div>
+            </sc-for>
+
+            <sc-if value="{{ emgError }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#fbe7e3; border-left:4px solid #e2503c; border-radius:2px; font-size:13.5px; color:#a8321f;">{{ emgError }}</div>
+            </sc-if>
+            <sc-if value="{{ emgOk }}">
+              <div style="margin-top:16px; padding:11px 14px; background:#e8f3ec; border-left:4px solid #2f8f5b; border-radius:2px; font-size:13.5px; color:#1c5f3a;">{{ emgOk }}</div>
+            </sc-if>
+          </div>
+
+          <div style="font-size:12.5px; color:#9aa7b2; margin-top:14px; line-height:1.6;">
+            Lo anotado aquí aparece en el registro de asistencia marcado como <b>manual</b>, no como si hubiera venido del terminal. Se distingue siempre.
+          </div>
+        </div>
+      </sc-if>

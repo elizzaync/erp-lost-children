@@ -1,3 +1,13 @@
+  /* Los PDF que se pueden descargar desde Configuración.
+     Si falla no se avisa: es una lista de documentos, no un dato del
+     trabajo, y un aviso rojo por no poder listarlos sería ruido. La
+     pantalla dice «no hay documentos» y ya. */
+  cargarManuales() {
+    this.api("/api/manuales")
+      .then((d) => { if (this._vivo) this.setState({ manuales: d.manuales || [] }); })
+      .catch(() => { if (this._vivo) this.setState({ manuales: [] }); });
+  }
+
   cargarParametros() {
     this.api("/api/parametros")
       .then((d) => {

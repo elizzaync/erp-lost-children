@@ -355,6 +355,18 @@
       })(),
 
       isConfig: v === "config",
+
+      /* Los documentos descargables.
+         La lista viene del servidor leyendo la carpeta docs/, así que
+         dejar un PDF nuevo ahí basta para que aparezca: no hay ninguna
+         lista escrita a mano que se quede desfasada. */
+      manuales: (this.state.manuales || []).map((m) => ({
+        titulo: m.titulo,
+        peso: m.kb >= 1024 ? ((m.kb / 1024).toFixed(1) + " MB") : (m.kb + " KB"),
+        url: "/api/manuales/" + encodeURIComponent(m.archivo),
+      })),
+      manualesVacio: (this.state.manuales || []).length === 0,
+
       cfgOrg: this.state.cfgOrg || "",
       cfgCiudad: this.state.cfgCiudad || "",
       cfgFundacion: this.state.cfgFundacion || "",

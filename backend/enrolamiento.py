@@ -37,7 +37,11 @@ TIEMPO_LIMITE = 120
 # Mínimo entre consultas reales a yunatt. La interfaz puede sondear cada
 # 1,5 s para sentirse viva, pero solo cada 4 s se pregunta de verdad a su
 # plataforma — el resto se responde desde esta caché.
-CACHE_SONDEO = 4.0
+# Bajado de 4 s a 1,5 s el 02/09/2026: con la plataforma oficial la
+# confirmación de una captura llega por la FOTO que sube el terminal, y
+# encima de esa espera —que no controlamos— había hasta 4 s más de
+# caché. Enrolando a alguien se notaba.
+CACHE_SONDEO = 1.5
 
 # metodo del formulario -> secuencia de fases a ejecutar
 SECUENCIAS = {

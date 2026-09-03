@@ -120,7 +120,11 @@
                          no cómo fichó hoy. -->
                     <div style="display:flex; align-items:center; gap:7px; min-width:0;">
                       <i class="ph-duotone {{ df.origenIcono }}" style="font-size:16px; color:{{ df.origenColor }}; flex-shrink:0;"></i>
-                      <span style="font-size:13px; color:{{ df.origenColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ df.origen }}">{{ df.origen }}</span>
+                      <!-- Con coordenadas, el sitio se puede abrir en el mapa.
+                           Va en pestaña nueva para no sacar a nadie de la
+                           pantalla de asistencia a media revisión. -->
+                      <a sc-if="{{ df.hayMapa }}" href="{{ df.mapaUrl }}" target="_blank" rel="noopener noreferrer" style="font-size:13px; color:{{ df.origenColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; text-decoration:underline; text-decoration-style:dotted; text-underline-offset:3px; cursor:pointer;" title="Abrir en el mapa: {{ df.origen }}">{{ df.origen }}</a>
+                      <span sc-if="{{ df.sinMapa }}" style="font-size:13px; color:{{ df.origenColor }}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ df.origen }}">{{ df.origen }}</span>
                     </div>
                     <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#3c4a55;">{{ df.entrada }}</div>
                     <div style="font-size:14.5px; text-align:right; font-variant-numeric:tabular-nums; color:#4d5b66;">{{ df.salida }}</div>

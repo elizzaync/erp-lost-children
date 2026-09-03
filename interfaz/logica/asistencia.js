@@ -174,6 +174,22 @@
       origen: Component.origenFila(f).texto,
       origenIcono: Component.origenFila(f).icono,
       origenColor: Component.origenFila(f).color,
+      /* Abrir el punto exacto en un mapa.
+         Solo cuando hay coordenadas Y nombre: sin nombre no hay nada que
+         pulsar, y sin coordenadas el enlace llevaría a ninguna parte.
+         Se usa la búsqueda por coordenadas de Google Maps, que funciona
+         igual en el navegador y en la aplicación del teléfono.
+         Ojo: al pulsarlo se le dice a Google dónde estuvo esa persona.
+         Por eso es un clic deliberado de quien mira, y no algo que la
+         pantalla cargue sola al abrirse. */
+      mapaUrl: (f.lat != null && f.lon != null && f.lugar)
+        ? ("https://www.google.com/maps/search/?api=1&query="
+           + encodeURIComponent(f.lat + "," + f.lon))
+        : "",
+      hayMapa: !!(f.lat != null && f.lon != null && f.lugar),
+      /* El runtime no tiene sc-else: la condición contraria se
+         declara a mano o la fila se quedaría sin texto. */
+      sinMapa: !(f.lat != null && f.lon != null && f.lugar),
       /* Fondo de aviso solo para quien NO PUEDE marcar. A quien puede y
          todavía no ha marcado no se le pinta nada: puede que aún no haya
          llegado, y teñirle la fila lo señalaría sin motivo. */

@@ -338,7 +338,12 @@ ROSTRO_WEB_DIMENSION = int(env("ROSTRO_WEB_DIMENSION", "128"))
 # doble toque en el botón deja dos marcas seguidas.
 ROSTRO_WEB_MINUTOS_ENTRE_MARCAS = 2
 
-CANALES_MARCA = ("terminal", "web")
+# De dónde puede venir una marca.
+#   terminal — el Timmy, comprobado por la máquina
+#   web      — el celular de la propia persona, comprobado por su cara
+#   manual   — la escribió RRHH. No la comprueba nadie: la AFIRMA una
+#              persona, y por eso guarda quién y por qué.
+CANALES_MARCA = ("terminal", "web", "manual")
 
 # El texto del consentimiento, versionado.
 #
@@ -382,6 +387,63 @@ Tus derechos
 
 Marcar por el celular es una alternativa, no una obligación: el terminal
 biométrico sigue funcionando igual.
+"""
+
+# ── El mismo aviso, para un niño ──────────────────────────────────────────
+#
+# Texto aparte, no una variante del de arriba. Aquel está escrito en
+# segunda persona porque lo lee y lo acepta la misma persona cuyo rostro
+# se registra. Aquí no: firma un tutor, por alguien que no puede decidir
+# por sí mismo, y eso cambia lo que hay que explicar.
+#
+# La versión se lleva por separado a propósito. Si mañana se corrige uno
+# de los dos textos, solo hay que volver a pedir el permiso a quien
+# aceptó ESE, no a todo el mundo.
+CONSENTIMIENTO_ROSTRO_NINO_VERSION = "v1-2026-09"
+CONSENTIMIENTO_ROSTRO_NINO_TEXTO = """\
+La casa hogar registra la asistencia de los niños y niñas acogidos. Para
+poder hacerlo cuando el terminal biométrico no está disponible, el sistema
+necesita registrar una referencia del rostro del menor.
+
+Este permiso lo firma su padre, madre o tutor legal.
+
+Qué se guarda
+  · Un código numérico calculado a partir del rostro del menor. No es una
+    fotografía y no se puede reconstruir su cara a partir de él.
+  · La fecha, la hora y el nombre del trabajador de la casa que registró
+    cada asistencia.
+
+Qué NO se guarda
+  · La fotografía con la que se registra el rostro. Se procesa en el propio
+    teléfono del trabajador, se convierte en el código numérico y se
+    descarta ahí mismo: esa imagen no llega al servidor.
+  · Fotografías del menor al pasar lista.
+
+Quién lo hace y para qué
+  · Lo registra un trabajador de la casa hogar con su teléfono, nunca el
+    propio menor, y queda anotado qué trabajador fue.
+  · Se usa únicamente para dejar constancia de que el niño o niña estuvo
+    presente ese día. No se usa para vigilancia, no se analiza su rostro
+    para ninguna otra cosa, y no se comparte con terceros.
+
+Dónde se guarda
+  · En el servidor de la organización. No sale de ahí, y el reconocimiento
+    se calcula en el teléfono del trabajador, no en internet.
+
+Sus derechos como tutor
+  · Puede retirar este permiso cuando quiera, sin dar explicaciones. Al
+    hacerlo se elimina la referencia del rostro del menor.
+  · Puede pedir que se le muestre, corrija o elimine este dato.
+  · Retirar el permiso NO afecta en nada a la atención que recibe el menor
+    en la casa hogar. La asistencia se seguirá tomando de otra forma.
+
+Cuando el menor deja la casa hogar
+  · La referencia de su rostro se elimina. El registro de sus asistencias
+    se conserva como parte de su expediente, sin ningún dato biométrico.
+
+Ley N.º 29733 de Protección de Datos Personales. El tratamiento de datos
+biométricos de menores de edad requiere el consentimiento previo, expreso
+e informado de quien ejerce la patria potestad o tutela.
 """
 
 # ── Archivos adjuntos ─────────────────────────────────────────────────────

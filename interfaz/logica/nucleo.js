@@ -1099,10 +1099,14 @@
     this.cargarIdentidades();
     this.cargarPersonal();
     this.cargarParametros();
+    this.cargarManuales();
     this.cargarAlertas();
     this.cargarVencimientos();
     this.cargarPlanilla();
     this.cargarBeneficiarios();
+    /* Día y hora de ahora para la pantalla de pasar lista. Se prepara al
+       arrancar y no al entrar: entrar en ella suele pasar con prisa. */
+    this.prepararEmergencia();
     this.cargarCamposRequeridos();
     if (this.puede("responsables", "vista")) this.cargarBandeja();
     if (this.puede("usuarios", "vista")) this.cargarUsuarios();
@@ -1375,6 +1379,8 @@
         "Enrolamiento de rostro y huella en el terminal TIMMY, a través de yunatt."],
       marcar: ["Marcar asistencia",
         "Registra tu entrada y tu salida desde el celular. Queda con tu nombre y la hora del servidor."],
+      emergencia: ["Pasar lista",
+        "Solo para emergencias: anotar a mano la asistencia cuando el terminal no está disponible. Queda con tu nombre y el motivo."],
       misPermisos: ["Mis Permisos",
         "Tus solicitudes de permiso y vacaciones: lo que pediste, en qué estado va y a quién le toca resolverlo."],
       permisos: ["Gestión de Permisos",
@@ -1455,6 +1461,11 @@
            no puede exigir el permiso que autoriza a aprobarlos. */
         {label:"Marcar asistencia", icon:"ph-fingerprint", mods:[],
          vista:"marcar"},
+        /* Pasar lista a mano. Pide EDICIÓN sobre asistencia: quien lo abre
+           va a afirmar que vio a alguien, y eso no lo puede hacer quien
+           solo tiene permiso de mirar. */
+        {label:"Pasar lista", icon:"ph-clipboard-text", mods:["asistencia"],
+         vista:"emergencia"},
         {label:"Mis Permisos", icon:"ph-hand-palm", mods:[],
          vista:"misPermisos",
          badge:String((this.state.misSolicitudes || [])

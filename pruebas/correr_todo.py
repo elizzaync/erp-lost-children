@@ -38,7 +38,7 @@ PYTHON = [
     # la casa: afirma que «licencia» se conserva, y hoy «licencia» no
     # existe. La cubre prueba_dos_firmas.
     "prueba_permisos_api", "prueba_permisos_rol", "verifica_aplicado",
-    "prueba_canal_web", "prueba_marca_web", "prueba_marca_lejos", "prueba_fichas",
+    "prueba_canal_web", "prueba_marca_web", "prueba_marca_lejos", "prueba_marca_manual", "prueba_fichas",
     "prueba_tokens",
     "prueba_dos_firmas",
     "prueba_corregir",
