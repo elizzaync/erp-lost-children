@@ -519,10 +519,36 @@ FORM_CREDENCIAL = env("FORM_CREDENCIAL", "")
 if FORM_CREDENCIAL and not os.path.isabs(FORM_CREDENCIAL):
     FORM_CREDENCIAL = os.path.join(RAIZ_PROYECTO, FORM_CREDENCIAL)
 
+# La misma llave, pero pegada entera como texto. Existe por el contenedor.
+#
+# En una máquina de trabajo la llave es un archivo dentro de
+# data/credenciales/, que está en .gitignore —y data/ entero en
+# .dockerignore— para que una clave privada no acabe nunca en un
+# repositorio público. Eso es correcto, pero deja al contenedor sin ella: no
+# recibe ese archivo, y Coolify no puede montarlo porque en las
+# aplicaciones de Docker Compose los montajes solo se declaran en el
+# docker-compose.yml... que es justo lo que se versiona.
+#
+# Así que en el contenedor se pasa por variable. Vive en el panel, no en el
+# repositorio, y el archivo sigue mandando cuando existe: en esta máquina no
+# cambia nada.
+FORM_CREDENCIAL_JSON = env("FORM_CREDENCIAL_JSON", "")
+
 
 def credencial_lista():
-    """¿Está la llave donde dice la configuración?"""
-    return bool(FORM_CREDENCIAL) and os.path.isfile(FORM_CREDENCIAL)
+    """¿Hay llave, sea el archivo o la variable?"""
+    if FORM_CREDENCIAL and os.path.isfile(FORM_CREDENCIAL):
+        return True
+    return bool(FORM_CREDENCIAL_JSON.strip())
+
+
+def donde_esta_la_llave():
+    """Para los mensajes de error: de dónde saldría la llave, si saliera."""
+    if FORM_CREDENCIAL and os.path.isfile(FORM_CREDENCIAL):
+        return FORM_CREDENCIAL
+    if FORM_CREDENCIAL_JSON.strip():
+        return "la variable FORM_CREDENCIAL_JSON"
+    return FORM_CREDENCIAL or "data/credenciales/"
 
 # 15 MB. Un escaneo de DNI o un contrato firmado no llega ni de lejos;
 # el tope está para que un error no llene el disco.

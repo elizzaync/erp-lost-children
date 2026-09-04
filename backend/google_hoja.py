@@ -23,6 +23,7 @@ modificar lo que las familias enviaron.
 """
 import base64
 import json
+import os
 import time
 
 import requests
@@ -49,13 +50,37 @@ class GoogleError(Exception):
 
 
 def _credencial():
+    """La llave, venga del archivo o de la variable de entorno.
+
+    El archivo manda: si está, se usa. La variable es para el contenedor,
+    que no recibe data/ — ver config.FORM_CREDENCIAL_JSON.
+    """
     if not config.credencial_lista():
         raise GoogleError(
-            "No está la llave de Google. Debería estar en "
-            f"{config.FORM_CREDENCIAL or 'data/credenciales/'} — se genera en "
-            "console.cloud.google.com, en la cuenta de servicio.")
-    with open(config.FORM_CREDENCIAL, encoding="utf-8") as fh:
-        d = json.load(fh)
+            "No está la llave de Google. Se genera en console.cloud.google.com, "
+            "en la cuenta de servicio, y se pone de una de estas dos formas: "
+            f"como archivo en {config.FORM_CREDENCIAL or 'data/credenciales/'}, "
+            "o pegada entera en la variable FORM_CREDENCIAL_JSON —esta última "
+            "es la del contenedor, que no recibe la carpeta data/.")
+
+    if config.FORM_CREDENCIAL and os.path.isfile(config.FORM_CREDENCIAL):
+        with open(config.FORM_CREDENCIAL, encoding="utf-8") as fh:
+            crudo = fh.read()
+        de_donde = config.FORM_CREDENCIAL
+    else:
+        crudo = config.FORM_CREDENCIAL_JSON
+        de_donde = "la variable FORM_CREDENCIAL_JSON"
+
+    try:
+        d = json.loads(crudo)
+    except ValueError as e:
+        # Sin el texto del error: llevaría dentro trozos de la clave privada.
+        raise GoogleError(
+            f"La llave de Google no se entiende como JSON ({de_donde}). "
+            "Tiene que ser el archivo entero de la cuenta de servicio, "
+            "desde la llave inicial hasta la final.") from e
+    if not isinstance(d, dict):
+        raise GoogleError(f"La llave de Google no es un objeto JSON ({de_donde}).")
     faltan = [k for k in ("client_email", "private_key", "token_uri") if not d.get(k)]
     if faltan:
         raise GoogleError(f"La llave de Google está incompleta: falta {', '.join(faltan)}.")

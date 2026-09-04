@@ -42,6 +42,25 @@ services:
       YUNATT_DEPT_ID: ${YUNATT_DEPT_ID}
       YUNATT_DEPT_NAME: ${YUNATT_DEPT_NAME:-RRHH-Nuevo}
 
+      # ── Formulario de tutores (Google) ────────────────────────────────
+      # FORM_CREDENCIAL_JSON lleva la llave de la cuenta de servicio PEGADA
+      # ENTERA. En una máquina de trabajo es un archivo dentro de
+      # data/credenciales/, pero esa carpeta no viaja: está en .gitignore y
+      # data/ entero en .dockerignore, porque una clave privada no puede
+      # acabar en un repositorio público. Y montarla como archivo tampoco
+      # vale: en las aplicaciones de Docker Compose los montajes se declaran
+      # aquí, que es justo lo que se versiona. Así que va por variable, y
+      # vive solo en el panel de Coolify.
+      #
+      # Sin ella el sistema funciona: la pantalla de Respuestas avisa de que
+      # no hay llave y no se traen respuestas. Nada más se ve afectado.
+      FORM_CREDENCIAL_JSON: ${FORM_CREDENCIAL_JSON}
+      FORM_HOJA_ID: ${FORM_HOJA_ID}
+      FORM_URL_PRELLENADO: ${FORM_URL_PRELLENADO}
+      FORM_MARCA_TOKEN: ${FORM_MARCA_TOKEN:-PLANTILLA}
+      FORM_DIAS_VIGENCIA: ${FORM_DIAS_VIGENCIA:-30}
+      FORM_MINUTOS_SONDEO: ${FORM_MINUTOS_SONDEO:-10}
+
       # ── Acceso ────────────────────────────────────────────────────────
       # El corte. Dejarlo en 0 hasta que Coolify sirva el dominio por HTTPS:
       # con login real y sin TLS, las contraseñas viajarían en claro. Una vez
