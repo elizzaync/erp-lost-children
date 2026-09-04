@@ -32,12 +32,16 @@ corruptos. Así, en cambio, el motor valida ambas FK, el CHECK garantiza
 exactamente un titular y los UNIQUE impiden identidades duplicadas.
 """
 import json
+import logging
 import os
+import re
 from datetime import date as _date
 import sqlite3
 import threading
 
 import config
+
+log = logging.getLogger("rrhh.db")
 
 _lock = threading.Lock()
 
@@ -999,6 +1003,107 @@ def _asegurar_columnas(con):
                 con.execute(f"ALTER TABLE {tabla} ADD COLUMN {nombre} {definicion}")
 
 
+def _ddl_identidades(nombre):
+    """La definición de 'identidades' que hay en ESQUEMA, con otro nombre.
+
+    Se saca de ESQUEMA a propósito, en vez de copiarla aquí: dos copias de
+    la misma definición acaban separándose, y entonces la reconstrucción
+    crearía una tabla distinta de la que el resto del código espera.
+    """
+    m = re.search(r"CREATE TABLE IF NOT EXISTS identidades \(.*?\n\);",
+                  ESQUEMA, re.S)
+    if not m:
+        raise RuntimeError(
+            "no se encontró la definición de 'identidades' dentro de ESQUEMA")
+    return m.group(0).replace("CREATE TABLE IF NOT EXISTS identidades (",
+                              "CREATE TABLE " + nombre + " (", 1)
+
+
+def _migrar_identidades(con):
+    """Reconstruye 'identidades' si le falta responsable_id.
+
+    POR QUÉ NO BASTA UN ALTER TABLE
+    ───────────────────────────────
+    La tabla lleva un CHECK que exige exactamente un dueño. Antes contaba
+    dos entidades; ahora cuenta tres. Añadir la columna suelta no sirve:
+    una fila que solo tenga responsable_id sumaría 0 y el CHECK la
+    rechazaría. Y sería peor que inútil, porque deja pasar filas con dos
+    dueños. SQLite no permite alterar un CHECK: hay que rehacer la tabla.
+
+    POR QUÉ SE HACE SOLA
+    ────────────────────
+    Existía backend/migrar_identidades.py, pero había que lanzarlo a mano.
+    El contenedor nunca lo hacía, así que el 04/09/2026 el despliegue
+    arrancaba «healthy» y /api/personal y /api/beneficiarios devolvían 500
+    con `no such column: i.responsable_id`. Una base creada por una versión
+    anterior se quedaba rota para siempre sin que nada lo dijera.
+
+    CUIDADO CON LAS CLAVES FORÁNEAS
+    ───────────────────────────────
+    'marcas' apunta a identidades(staff_number) con ON DELETE CASCADE. Con
+    las foráneas activas, el DROP TABLE de en medio se lleva por delante
+    TODOS los fichajes. Por eso se apagan durante la reconstrucción —y el
+    PRAGMA solo surte efecto fuera de una transacción— y por eso se
+    comprueba el recuento de marcas antes de confirmar.
+    """
+    if not _tabla_existe(con, "identidades"):
+        return False
+    viejas = [f["name"] for f in con.execute("PRAGMA table_info(identidades)")]
+    if "responsable_id" in viejas:
+        return False
+
+    log.warning("identidades: falta responsable_id — se reconstruye la tabla")
+
+    con.commit()                                # que no quede transacción abierta
+    con.execute("PRAGMA foreign_keys = OFF")    # dentro de una, no haría nada
+    try:
+        con.execute("BEGIN")
+        con.execute("DROP VIEW IF EXISTS v_identidades")
+        con.execute("DROP TABLE IF EXISTS identidades_nueva")
+        con.execute(_ddl_identidades("identidades_nueva"))
+
+        nuevas = {f["name"] for f in
+                  con.execute("PRAGMA table_info(identidades_nueva)")}
+        comunes = [c for c in viejas if c in nuevas]
+
+        antes = con.execute("SELECT COUNT(*) FROM identidades").fetchone()[0]
+        hay_marcas = _tabla_existe(con, "marcas")
+        marcas_antes = (con.execute("SELECT COUNT(*) FROM marcas").fetchone()[0]
+                        if hay_marcas else 0)
+
+        cols = ", ".join(comunes)
+        con.execute("INSERT INTO identidades_nueva (" + cols + ") "
+                    "SELECT " + cols + " FROM identidades")
+        copiadas = con.execute(
+            "SELECT COUNT(*) FROM identidades_nueva").fetchone()[0]
+        if copiadas != antes:
+            raise RuntimeError(
+                "se copiaron %d de %d identidades" % (copiadas, antes))
+
+        con.execute("DROP TABLE identidades")
+        con.execute("ALTER TABLE identidades_nueva RENAME TO identidades")
+
+        # La comprobación que de verdad importa: que el DROP no se haya
+        # llevado los fichajes en cascada. Si pasara, se deshace todo.
+        marcas_despues = (con.execute("SELECT COUNT(*) FROM marcas").fetchone()[0]
+                          if hay_marcas else 0)
+        if marcas_despues != marcas_antes:
+            raise RuntimeError(
+                "la reconstrucción se llevó marcas: %d antes, %d después"
+                % (marcas_antes, marcas_despues))
+
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    finally:
+        con.execute("PRAGMA foreign_keys = ON")
+
+    log.warning("identidades: reconstruida · %d identidad(es), %d marca(s) intactas",
+                copiadas, marcas_despues)
+    return True
+
+
 def iniciar():
     with _lock, _conectar() as con:
         # 'marcas' existía antes apuntando a la tabla 'personas'. Si está la
@@ -1009,6 +1114,11 @@ def iniciar():
             marcas_viejas = [dict(f) for f in con.execute(
                 "SELECT staff_number, fecha, hora, metodo FROM marcas")]
             con.execute("DROP TABLE marcas")
+
+        # Antes de nada: una base creada por una versión anterior puede
+        # tener 'identidades' sin responsable_id. Hay que rehacerla ANTES de
+        # crear la vista, que la nombra. Ver _migrar_identidades.
+        _migrar_identidades(con)
 
         # Las vistas se rehacen siempre. No guardan datos —son consultas
         # con nombre— y con IF NOT EXISTS una base ya creada conserva la
