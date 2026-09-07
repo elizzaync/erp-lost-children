@@ -112,3 +112,8 @@ pruebas/*.y4m
 # base con ese nombre habría acabado en un repositorio público.
 *.resp-*
 *.antes-*
+
+# Los respaldos completos. Llevan la base entera y los archivos del
+# equipo: datos de trabajadores, de niños y de sus tutores. El
+# repositorio es PÚBLICO — esto no puede entrar aquí jamás.
+respaldos/
