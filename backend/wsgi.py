@@ -37,5 +37,22 @@ import sincronizador  # noqa: E402
 
 sincronizador.arrancar()
 
+# Y lo mismo con el formulario de tutores, por el mismo motivo: lo arrancaba
+# solo app.main(), que en el contenedor no se ejecuta nunca. Sin esto las
+# respuestas de las familias solo llegan cuando alguien abre la pantalla y
+# pulsa el botón — y nadie sabría que se está perdiendo nada, porque la
+# bandeja se ve igual de vacía tanto si no hay respuestas nuevas como si el
+# sondeo no está corriendo.
+#
+# Se protege aparte: si falla, el servidor tiene que arrancar igual. Traer
+# respuestas es útil, pero no vale tumbar la asistencia de todo el equipo
+# porque Google esté de mal humor.
+import sondeo_formulario  # noqa: E402
+
+try:
+    log.info("formulario: %s", sondeo_formulario.arrancar())
+except Exception:
+    log.exception("formulario: no se pudo arrancar el sondeo")
+
 # gunicorn busca este nombre.
 application = app

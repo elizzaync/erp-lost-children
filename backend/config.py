@@ -12,7 +12,16 @@ import os
 
 RAIZ_BACKEND = os.path.dirname(os.path.abspath(__file__))
 RAIZ_PROYECTO = os.path.dirname(RAIZ_BACKEND)
-_ENV_PATH = os.path.join(RAIZ_BACKEND, ".env")
+
+# De dónde se lee el .env. Se puede apuntar a otro sitio con RRHH_ENV_PATH,
+# y eso NO es un capricho: todas las constantes de este archivo se calculan
+# al importarlo, así que cambiar _ENV_PATH después no sirve de nada. Sin
+# esta variable no hay forma honesta de probar cómo arranca el sistema SIN
+# .env —que es justo la situación del contenedor—, y una prueba que cree
+# estar simulando el contenedor mientras lee el .env de la máquina da una
+# tranquilidad falsa. Pasó: el 04/09/2026 la simulación decía "arranca
+# bien" leyendo la configuración de verdad por detrás.
+_ENV_PATH = os.environ.get("RRHH_ENV_PATH") or os.path.join(RAIZ_BACKEND, ".env")
 
 _cache = None
 
