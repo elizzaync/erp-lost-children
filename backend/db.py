@@ -859,6 +859,14 @@ _COLUMNAS_NUEVAS = {
         # el canal web no existía. El valor por defecto es correcto, no una
         # suposición cómoda.
         "canal": "TEXT DEFAULT 'terminal'",
+        # Qué trabajador registró la marca, cuando no la registró la propia
+        # persona. Faltaba aquí: estaba en el CREATE TABLE pero no en esta
+        # lista, así que las bases anteriores nunca la recibían y el
+        # sincronizador moría en cada intento con «table marcas has no
+        # column named registrada_por». Se descubrió el 07/09/2026 leyendo
+        # el registro del contenedor, no antes: aquí la base es nueva y la
+        # columna estaba desde el principio.
+        "registrada_por": "INTEGER REFERENCES personal(id) ON DELETE SET NULL",
         # Por qué se escribió una marca a mano. Vacío en las que
         # vinieron del terminal o del celular, que no necesitan
         # explicación: las comprobó una máquina. Una marca manual sin
@@ -1104,6 +1112,51 @@ def _migrar_identidades(con):
     return True
 
 
+def _migrar_rostros_web(con):
+    """Reconstruye rostros_web y consentimientos si son de antes de los niños.
+
+    Las dos tablas nacieron pensando solo en el personal: `personal_id` y
+    nada más. Cuando los beneficiarios pudieron tener rostro hubo que
+    añadir `beneficiario_id` y aflojar la regla que exigía personal_id —y
+    eso no se puede hacer con un ALTER, hay que rehacer la tabla.
+
+    Existía backend/migrar_rostros_ninos.py, pero había que lanzarlo A
+    MANO. Es exactamente lo que ya pasó con identidades: el contenedor
+    nunca lo lanzaba y la base se quedaba a medias para siempre. Aquí se
+    reutiliza ese mismo código —no se copia— y se llama solo.
+
+    Afecta a las bases creadas entre el 21/08 y el 02/09/2026. Lo detectó
+    pruebas/prueba_esquema_al_dia.py el 07/09, comparando esquemas
+    históricos de verdad sacados de git.
+    """
+    if not (_tabla_existe(con, "rostros_web")
+            and _tabla_existe(con, "consentimientos")):
+        return False
+
+    import migrar_rostros_ninos as mig
+
+    faltan = mig.hace_falta(con)
+    if not faltan:
+        return False
+
+    log.warning("rostros/consentimientos: esquema antiguo (%s) — se reconstruye",
+                ", ".join(faltan))
+
+    con.commit()
+    con.execute("PRAGMA foreign_keys = OFF")
+    try:
+        con.execute("BEGIN")
+        for hecho in mig.migrar(con):
+            log.warning("  %s", hecho)
+        con.execute("COMMIT")
+    except Exception:
+        con.execute("ROLLBACK")
+        raise
+    finally:
+        con.execute("PRAGMA foreign_keys = ON")
+    return True
+
+
 def iniciar():
     with _lock, _conectar() as con:
         # 'marcas' existía antes apuntando a la tabla 'personas'. Si está la
@@ -1127,6 +1180,9 @@ def iniciar():
         con.execute("DROP VIEW IF EXISTS v_identidades")
         con.executescript(ESQUEMA)
         _asegurar_columnas(con)
+        # Después de las columnas sueltas: estas dos tablas hay que
+        # REHACERLAS, y solo se sabe si hace falta mirando sus columnas.
+        _migrar_rostros_web(con)
         _sembrar_personal(con)
         _migrar_personas(con)
 
