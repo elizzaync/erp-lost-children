@@ -8,6 +8,39 @@
       .catch(() => { if (this._vivo) this.setState({ manuales: [] }); });
   }
 
+  /* ── Copia de seguridad ──────────────────────────────────────────
+     Se espera a la respuesta a propósito, en vez de decir «se está
+     haciendo» y soltar: un respaldo que no se sabe si salió bien es lo
+     mismo que no tenerlo. Tarda unos segundos. */
+  cargarRespaldo() {
+    this.api("/api/respaldo")
+      .then((d) => { if (this._vivo) this.setState({ respEstado: d }); })
+      .catch(() => {});
+  }
+
+  hacerRespaldo() {
+    if (this.state.respHaciendo) return;
+    this.setState({ respHaciendo: true, respAviso: "", respError: "", respFuera: false });
+    this.api("/api/respaldo", { method: "POST" })
+      .then((d) => {
+        if (!this._vivo) return;
+        const mb = (d.bytes / (1024 * 1024)).toFixed(1);
+        /* Se dice SIEMPRE si salió de esta máquina. Callarlo dejaría a
+           quien pulsa el botón creyendo que está cubierto cuando no. */
+        const aviso = d.fuera
+          ? ("Copia hecha y enviada al servidor · " + mb + " MB. Ya no depende de este ordenador.")
+          : ("Copia hecha aquí · " + mb + " MB, pero NO se pudo mandar al servidor"
+             + (d.motivo ? " (" + d.motivo + ")" : "")
+             + ". Protege de un borrado por error, no de que falle este disco.");
+        this.setState({ respHaciendo: false, respAviso: aviso, respFuera: !!d.fuera });
+        this.cargarRespaldo();
+      })
+      .catch((e) => {
+        if (!this._vivo) return;
+        this.setState({ respHaciendo: false, respError: String(e.message || e) });
+      });
+  }
+
   cargarParametros() {
     this.api("/api/parametros")
       .then((d) => {

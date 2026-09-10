@@ -402,6 +402,40 @@
       cfgBotonStyle: "font-size:13.5px; padding:9px 18px; border-radius:2px; color:#f4f3f1; background:"
         + (this.state.cfgGuardando ? "#9aa7b2" : "#2f8f5b") + ";",
 
+      /* ── Copia de seguridad ────────────────────────────────────────
+         La nota de al lado del botón dice DOS cosas que no hay que
+         confundir: cuándo se hizo la última copia, y si esa copia salió de
+         este ordenador. Una copia en el mismo disco protege de un borrado
+         por error; no protege de que el disco muera. */
+      respBotonLabel: this.state.respHaciendo ? "Haciendo la copia…" : "Hacer copia ahora",
+      respBotonIcono: this.state.respHaciendo ? "ph-hourglass" : "ph-shield-check",
+      respBotonStyle: "display:flex; align-items:center; gap:8px; font-size:13.5px; padding:9px 18px; border-radius:2px; font-weight:600; color:#f4f3f1; background:"
+        + (this.state.respHaciendo ? "#9aa7b2" : "#2f8f5b") + ";",
+
+      respNota: (() => {
+        const e = this.state.respEstado;
+        if (!e) return "";
+        if (!e.ultima) return "Todavía no hay ninguna copia.";
+        const d = e.dias;
+        const cuando = d === 0 ? "hoy" : (d === 1 ? "ayer" : "hace " + d + " días");
+        return "Última copia " + cuando + " · " + e.ultima.cuando;
+      })(),
+      respNotaColor: (() => {
+        const e = this.state.respEstado;
+        if (!e || !e.ultima) return "#a8321f";
+        return (e.dias != null && e.dias >= 7) ? "#8a5c05" : "#7d8e9c";
+      })(),
+
+      respHayAviso: !!(this.state.respAviso || this.state.respError),
+      respAviso: this.state.respError || this.state.respAviso || "",
+      respAvisoBorde: this.state.respError ? "#e2503c"
+        : (this.state.respFuera ? "#2f8f5b" : "#e0a11c"),
+      respAvisoFondo: this.state.respError ? "#fbe7e3"
+        : (this.state.respFuera ? "#e2f1e8" : "#fbf0d9"),
+      respAvisoTexto: this.state.respError ? "#a8321f"
+        : (this.state.respFuera ? "#1c5f3a" : "#8a5c05"),
+      respHacer: () => this.hacerRespaldo(),
+
       /* El árbol del menú, aplanado a una sola lista con sangría en los
          hijos. Se aplana en vez de anidar un sc-for dentro de otro, que es
          terreno del runtime que no tengo comprobado.

@@ -138,6 +138,17 @@ def hacer(donde=None):
     destino_dir.mkdir(parents=True, exist_ok=True)
     zip_final = destino_dir / f"rrhh-{sello}.zip"
 
+    # El nombre tiene precisión de segundo. Dos copias en el mismo segundo
+    # —dos clics rápidos en el botón de Configuración— compartirían nombre y
+    # la segunda pisaría a la primera. Es improbable y da igual cuál se
+    # quede... salvo que la segunda falle a mitad de escritura: entonces se
+    # habría destruido una copia buena para dejar una rota en su sitio. Un
+    # respaldo no sobrescribe a otro nunca.
+    n = 2
+    while zip_final.exists():
+        zip_final = destino_dir / f"rrhh-{sello}-{n}.zip"
+        n += 1
+
     print("=" * 68)
     print("  RESPALDO DEL MÓDULO RRHH")
     print("=" * 68)

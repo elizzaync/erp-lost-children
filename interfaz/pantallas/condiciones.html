@@ -86,6 +86,36 @@
           </div>
         </div>
 
+        <!-- ══ Copia de seguridad ═══════════════════════════════════
+             Está aquí y no escondida en un comando porque la copia la tiene
+             que poder hacer cualquiera del equipo, no solo quien sepa
+             escribir en una terminal. Lo que no se puede hacer con un botón,
+             en la práctica no se hace.
+
+             Se dice SIEMPRE si la copia salió de esta máquina o no. Una
+             copia en el mismo disco protege de un borrado por error; no
+             protege de que el disco muera. Son cosas distintas y quien pulsa
+             el botón tiene derecho a saber cuál tiene. -->
+        <div style="background:#ffffff; border:1px solid #e7e3de; border-radius:3px; padding:22px 24px; margin-top:20px;">
+          <h2 style="font-size:22px; font-weight:600; margin:0; letter-spacing:-0.3px; color:#0e3d69;">Copia de seguridad</h2>
+          <p style="font-size:14.5px; color:#5b7185; margin:6px 0 18px; max-width:62ch;">Guarda la base entera y los archivos del equipo —contratos, fotos y firmas— en un solo archivo, y lo manda al servidor para que no dependa de este ordenador.</p>
+
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <sc-if value="{{ puedeConfig }}">
+              <button onClick="{{ respHacer }}" style="{{ respBotonStyle }}" style-hover="background:#1c5f3a">
+                <i class="ph-duotone {{ respBotonIcono }}" style="font-size:17px;"></i>{{ respBotonLabel }}
+              </button>
+            </sc-if>
+            <div style="font-size:13.5px; color:{{ respNotaColor }};">{{ respNota }}</div>
+          </div>
+
+          <sc-if value="{{ respHayAviso }}">
+            <div style="margin-top:16px; padding:12px 15px; border-left:3px solid {{ respAvisoBorde }}; background:{{ respAvisoFondo }}; border-radius:2px;">
+              <div style="font-size:13.5px; color:{{ respAvisoTexto }}; line-height:1.55; text-wrap:pretty;">{{ respAviso }}</div>
+            </div>
+          </sc-if>
+        </div>
+
         <!-- Los documentos del sistema.
 
              Van aquí porque es donde se busca «qué necesito para conectar

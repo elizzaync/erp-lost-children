@@ -1100,6 +1100,7 @@
     this.cargarPersonal();
     this.cargarParametros();
     this.cargarManuales();
+    if (this.puede("configuracion", "vista")) this.cargarRespaldo();
     this.cargarAlertas();
     this.cargarVencimientos();
     this.cargarPlanilla();

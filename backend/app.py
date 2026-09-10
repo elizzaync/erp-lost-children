@@ -44,6 +44,7 @@ import archivos
 import documento_permiso
 import firmas
 import reportes
+import respaldos
 import fotos
 import lugares
 import invitaciones as invi
@@ -382,6 +383,36 @@ def yunatt_departamentos():
     except Exception as e:
         log.exception("fallo al listar departamentos")
         return _error(e, 500)
+
+
+@app.get("/api/respaldo")
+@auth.requiere("configuracion", "vista")
+def respaldo_estado():
+    """Qué copias de seguridad hay y cuándo fue la última."""
+    return jsonify({"ok": True, **respaldos.estado()})
+
+
+@app.post("/api/respaldo")
+@auth.requiere("configuracion", "edicion")
+def respaldo_hacer():
+    """Hace una copia ahora, desde el botón de Configuración.
+
+    Tarda unos segundos: comprime la base y los archivos, comprueba que la
+    copia se puede volver a abrir, y trata de mandarla al servidor. Se hace
+    en la propia petición a propósito — el equipo tiene que ver el
+    resultado, no un «se está haciendo» que nadie vuelve a mirar.
+    """
+    try:
+        info = respaldos.hacer()
+    except RuntimeError as e:
+        return jsonify({"ok": False, "error": str(e)}), 409
+    except Exception:
+        log.exception("no se pudo hacer el respaldo")
+        return jsonify({"ok": False,
+                        "error": "No se pudo hacer la copia. Quedó anotado "
+                                 "en el registro del servidor."}), 500
+    auth.anotar_acceso(auth.sesion_actual(), "configuracion", "respaldo", True)
+    return jsonify({"ok": True, **info})
 
 
 @app.get("/api/manuales")

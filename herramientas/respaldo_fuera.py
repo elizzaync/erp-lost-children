@@ -75,6 +75,45 @@ def listar():
         print("   ", linea)
 
 
+def enviar_zip(zip_local, hablar=print):
+    """Manda un .zip ya hecho al servidor y comprueba que llegó entero.
+
+    Separado de enviar() para que lo pueda usar también el botón de la
+    pantalla de Configuración, que hace la copia por su cuenta. Devuelve
+    la huella; levanta RuntimeError si algo va mal, en vez de SystemExit:
+    esto corre dentro del servidor web y ahí un SystemExit mataría al
+    proceso entero.
+    """
+    zip_local = pathlib.Path(zip_local)
+
+    aqui = _huella(zip_local)
+    hablar(f"  huella aquí  {aqui[:32]}…")
+
+    hablar("  enviando…")
+    r = subprocess.run(
+        ["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
+         str(zip_local), f"{SERVIDOR}:{CARPETA_REMOTA}/"],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=300)
+    if r.returncode != 0:
+        raise RuntimeError("no se pudo enviar al servidor: "
+                           + (r.stderr.strip() or "scp falló"))
+
+    alli = _ssh(f"sha256sum {CARPETA_REMOTA}/{zip_local.name} | cut -d' ' -f1")
+    hablar(f"  huella allí  {alli[:32]}…")
+
+    if aqui != alli:
+        raise RuntimeError(
+            "las huellas no coinciden: el archivo se corrompió por el camino. "
+            "No se ha borrado ninguna copia anterior.")
+    hablar("  IDÉNTICOS — llegó entero")
+
+    # Aclarar sitio, SOLO después de confirmar que la nueva está bien.
+    _ssh(f"cd {CARPETA_REMOTA} && ls -1t *.zip 2>/dev/null | "
+         f"tail -n +{GUARDAR_FUERA + 1} | xargs -r rm -f")
+    return aqui
+
+
 def enviar():
     import respaldo
 
@@ -88,32 +127,14 @@ def enviar():
     print(f"  destino {SERVIDOR}:{CARPETA_REMOTA}")
     print()
 
-    aqui = _huella(zip_local)
-    print(f"  huella aquí  {aqui[:32]}…")
+    try:
+        enviar_zip(zip_local)
+    except RuntimeError as e:
+        raise SystemExit("  " + str(e))
 
-    print("  enviando…")
-    r = subprocess.run(
-        ["scp", "-o", "BatchMode=yes", "-o", "ConnectTimeout=15",
-         str(zip_local), f"{SERVIDOR}:{CARPETA_REMOTA}/"],
-        capture_output=True, text=True, encoding="utf-8", errors="replace",
-        timeout=300)
-    if r.returncode != 0:
-        raise SystemExit(f"  no se pudo enviar:\n  {r.stderr.strip()}")
-
-    alli = _ssh(f"sha256sum {CARPETA_REMOTA}/{zip_local.name} | cut -d' ' -f1")
-    print(f"  huella allí  {alli[:32]}…")
-
-    if aqui != alli:
-        raise SystemExit(
-            "  LAS HUELLAS NO COINCIDEN. El archivo se corrompió por el "
-            "camino y no sirve. No se borra nada; vuelve a intentarlo.")
-    print("  IDÉNTICOS — llegó entero")
-
-    # ── Aclarar sitio, solo después de confirmar que la nueva está bien ──
+    # La poda de allí la hace enviar_zip, después de confirmar que la copia
+    # nueva llegó bien. Aquí solo se cuenta cómo quedó.
     print()
-    print(f"  dejando las {GUARDAR_FUERA} más recientes allí")
-    _ssh(f"cd {CARPETA_REMOTA} && ls -1t *.zip 2>/dev/null | "
-         f"tail -n +{GUARDAR_FUERA + 1} | xargs -r rm -f")
     cuantas = _ssh(f"ls -1 {CARPETA_REMOTA}/*.zip 2>/dev/null | wc -l")
     sitio = _ssh("df -h / | tail -1 | awk '{print $4\" libres\"}'")
     print(f"  quedan {cuantas} copia(s) · {sitio} en el servidor")
