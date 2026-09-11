@@ -117,3 +117,8 @@ pruebas/*.y4m
 # equipo: datos de trabajadores, de niños y de sus tutores. El
 # repositorio es PÚBLICO — esto no puede entrar aquí jamás.
 respaldos/
+
+# El registro del servidor cuando arranca solo. Lleva las rutas que
+# se piden y los nombres que se buscan: no es para un repositorio
+# publico, y ademas cambia cada segundo.
+registro/
