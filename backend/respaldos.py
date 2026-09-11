@@ -36,7 +36,10 @@ log = logging.getLogger("rrhh.respaldos")
 
 RAIZ = pathlib.Path(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 HERRAMIENTAS = RAIZ / "herramientas"
-CARPETA = RAIZ / "respaldos"
+# Tiene que ser la MISMA carpeta a la que escribe la herramienta, o la
+# pantalla diría «no hay ninguna copia» justo después de hacer una. Por eso
+# se lee la misma variable, no una parecida.
+CARPETA = pathlib.Path(os.environ.get("RESPALDOS_DIR") or (RAIZ / "respaldos"))
 
 # Una copia a la vez. Dos a la vez no se corrompen —cada una escribe su
 # propio archivo— pero sí duplican el trabajo y confunden al que mira la

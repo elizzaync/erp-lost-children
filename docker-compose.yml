@@ -76,6 +76,13 @@ services:
       # se pone a 0 EN EL PANEL y se vuelve a 1 al terminar.
       COOKIE_SECURE: ${COOKIE_SECURE:-1}
 
+      # Dónde deja el botón de Configuración las copias de seguridad.
+      # TIENE que caer dentro del volumen persistente: /app se rehace en
+      # cada despliegue, así que una copia en /app/respaldos desaparecería
+      # justo cuando más falta hace. Un respaldo que no sobrevive al
+      # despliegue es peor que ninguno: da una tranquilidad que no existe.
+      RESPALDOS_DIR: /app/data/respaldos
+
       PUERTO: "7801"
 
     volumes:

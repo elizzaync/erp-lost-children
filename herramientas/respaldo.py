@@ -134,7 +134,16 @@ def hacer(donde=None):
 
     carpeta_datos = base.parent
     sello = datetime.now().strftime("%Y%m%d-%H%M%S")
-    destino_dir = pathlib.Path(donde) if donde else (RAIZ / "respaldos")
+
+    # Dónde se deja la copia. En esta máquina, respaldos/ junto al proyecto.
+    # En el contenedor NO puede ser ahí: /app se rehace en cada despliegue y
+    # la copia desaparecería justo cuando más falta hace. Por eso se puede
+    # apuntar a otro sitio con RESPALDOS_DIR, y el docker-compose la manda
+    # al volumen persistente. Un respaldo que no sobrevive al despliegue es
+    # peor que ninguno: da una tranquilidad que no existe.
+    destino_dir = (pathlib.Path(donde) if donde
+                   else pathlib.Path(os.environ.get("RESPALDOS_DIR")
+                                     or (RAIZ / "respaldos")))
     destino_dir.mkdir(parents=True, exist_ok=True)
     zip_final = destino_dir / f"rrhh-{sello}.zip"
 
